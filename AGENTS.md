@@ -15,11 +15,11 @@ The definitions for the personas are located in `agents/definitions/`.
 *   [Orbit (DevOps/Infra)](agents/definitions/orbit.md)
 
 ## 🗣️ The Standup Protocol
-All decisions are made via the Standup Protocol.
+All decisions are made via the Standup Protocol. This process concludes with mandatory documentation updates.
 See the full protocol here: [STANDUP_PROTOCOL.md](protocols/STANDUP_PROTOCOL.md)
 
 ## 📓 Journals
-Each agent maintains a journal for long-term tracking:
+Each agent maintains a journal for long-term tracking. **These must be updated after every standup to reflect the agent's wins, concerns, and blockers.**
 *   [Brain Journal](agents/journals/brain_journal.md)
 *   [Bolt Journal](agents/journals/bolt_journal.md)
 *   [Boom Journal](agents/journals/boom_journal.md)

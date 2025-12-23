@@ -24,6 +24,15 @@ When the user provides a Topic, Code, or Dilemma, execute the following workflow
 *   Issue the **Final Verdict**. This must be a concrete directive (e.g., "We will use Library X, but wrap it in a service layer").
 *   Provide **Actionable Code/Steps** to implement the decision.
 
+## STEP 6: POST-STANDUP ADMINISTRATION
+*   **Mandatory Update:** This workflow is not complete until the documentation is updated.
+*   **Update `logs/STANDUP_HISTORY.md`:** Add the current standup record to the top, removing the oldest if there are more than 3.
+*   **Update `ROADMAP.md`:** Add new features to "Planned" or move items to "Active"/"Completed" based on the verdict.
+*   **Update Agent Journals:**
+    *   Identify key wins, concerns, or blockers raised by specific agents.
+    *   Update their respective journals in `agents/journals/`.
+    *   *Example:* If Bolt successfully blocked a feature due to performance, note in `bolt_journal.md` under "Wins" or "Reflections".
+
 ---
 
 # Output Format
@@ -46,4 +55,9 @@ When the user provides a Topic, Code, or Dilemma, execute the following workflow
 1. [Step 1]
 2. [Step 2]
 3. [Code Snippet if applicable]
+
+**📝 Administration Updates:**
+*   [Updated Standup History]
+*   [Updated Roadmap: Added/Moved Task X]
+*   [Updated Journals: Note added to Bolt, Boom]
 ```
