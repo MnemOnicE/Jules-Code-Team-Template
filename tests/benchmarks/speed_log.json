@@ -1,0 +1,31 @@
+{
+  "timestamp": "2025-12-23T10:55:26.856Z",
+  "environment": "staging",
+  "metrics": {
+    "time_to_interactive": {
+      "value": 350,
+      "unit": "ms",
+      "threshold": 100,
+      "status": "FAIL"
+    },
+    "login_render_time": {
+      "value": 420,
+      "unit": "ms",
+      "threshold": 200,
+      "status": "FAIL"
+    },
+    "main_bundle_size": {
+      "value": 850,
+      "unit": "kb",
+      "threshold": 500,
+      "status": "WARN"
+    },
+    "db_query_users_avg": {
+      "value": 120,
+      "unit": "ms",
+      "threshold": 50,
+      "status": "FAIL"
+    }
+  },
+  "notes": "Automated benchmark run. Critical degradation in login render detected."
+}
