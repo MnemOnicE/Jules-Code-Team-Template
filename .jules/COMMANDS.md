@@ -10,6 +10,7 @@ The user may invoke these commands at the start of a prompt to trigger specific 
 | **/panic** | `protocols/INCIDENT_PROTOCOL.md` | **The War Room.** Bypasses debate. Fixes critical bugs immediately. |
 | **/reflect** | `logs/TEAM_MEMORY.md` | **Scribe** forces a memory commit. Summarizes the session into the permanent log. |
 | **/status** | `ROADMAP.md` | **Brain** reports current active task and next planned items. |
+| **/audit** | `protocols/AUDIT_PROTOCOL.md` | **Brain** performs a full repository state analysis (Blueprint, Debt, Status, Reflect). |
 | **/auto** | `protocols/AUTOPILOT_PROTOCOL.md` | **The Scout.** Brain scans the Roadmap and Memory to find the next best task automatically. |
 | **/refactor** `[file]` | `protocols/REFACTOR_PROTOCOL.md` | **The Janitor.** Bolt and Scribe clean up code without changing logic. |
 | **/ship** `[ver]` | `protocols/RELEASE_PROTOCOL.md` | **The Release Manager.** Prepares changelogs and verifies builds. |
