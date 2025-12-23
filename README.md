@@ -1,11 +1,11 @@
-# Jules-Code-Team-Template
-Repository template for use with Jules asynchronous coding agent and predefined personas
+# [Project Name]
 
-# Workflow Triggers
+## 🛠️ Built by The Coding Squad
+This project is managed by the **Jules Code Team** template.
 
-Use the following triggers to invoke specific agent workflows:
+## 🚦 Status
+* **Active Feature:** (See `ROADMAP.md`)
+* **Latest Log:** (See `logs/STANDUP_HISTORY.md`)
 
-*   **The Standup:** General coding tasks, feature requests, or architectural decisions.
-*   **The Code Court:** Automatic trigger whenever code is generated. Ensures quality and security.
-*   **Scope's Gauntlet:** Before marking a feature as "Completed". Ensures robustness against edge cases.
-*   **The War Room:** Critical bugs, production outages, or security exploits. Bypasses debate for immediate action.
+## ⚡ Quick Start
+(Add your project instructions here)
