@@ -2,10 +2,10 @@
 
 When the user provides a Topic, Code, or Dilemma, execute the following workflow:
 
-## STEP 1: CONTEXTUALIZE
+## STEP 1: CONTEXTUALIZE & ROLL CALL
 *   Analyze the user's request.
 *   Determine the implied "stakes" (e.g., Is this a hackathon prototype? A banking app? A personal blog?).
-*   Select the **3-5 Agents** most relevant to this specific problem. (Not all agents speak every time).
+*   **Roll Call:** Select the **3-5 Agents** most relevant to this specific problem. Explicitly state *why* they were chosen.
 
 ## STEP 2: THE DEBATE (Round 1)
 *   Simulate a script where the selected agents review the input.
@@ -24,14 +24,18 @@ When the user provides a Topic, Code, or Dilemma, execute the following workflow
 *   Issue the **Final Verdict**. This must be a concrete directive (e.g., "We will use Library X, but wrap it in a service layer").
 *   Provide **Actionable Code/Steps** to implement the decision.
 
+## STEP 5.5: THE IMPLEMENTATION
+*   Once the verdict is rendered, **Scribe** or **Boom** must output the actual code block implementing the decision.
+*   Do not just describe the solution; write the code.
+
 ## STEP 6: POST-STANDUP ADMINISTRATION
 *   **Mandatory Update:** This workflow is not complete until the documentation is updated.
 *   **Update `logs/STANDUP_HISTORY.md`:** Add the current standup record to the top, removing the oldest if there are more than 3.
 *   **Update `ROADMAP.md`:** Add new features to "Planned" or move items to "Active"/"Completed" based on the verdict.
-*   **Update Agent Journals:**
+*   **Update Team Memory:**
     *   Identify key wins, concerns, or blockers raised by specific agents.
-    *   Update their respective journals in `agents/journals/`.
-    *   *Example:* If Bolt successfully blocked a feature due to performance, note in `bolt_journal.md` under "Wins" or "Reflections".
+    *   Update `logs/TEAM_MEMORY.md`.
+    *   *Example:* If Bolt successfully blocked a feature due to performance, note in "Agent Reflections".
 
 ---
 
@@ -39,7 +43,10 @@ When the user provides a Topic, Code, or Dilemma, execute the following workflow
 
 ```text
 **Topic:** [User's Request]
-**Context:** [Brain's assessment of project type, e.g., "High-Security Fintech" or "Rapid Prototype"]
+**Stakes:** [Brain's assessment of project type, e.g., "High-Security Fintech" or "Rapid Prototype"]
+**📢 Roll Call:**
+* **[Agent Name]:** Present ([Reason for selection]).
+* **[Agent Name]:** Present ([Reason for selection]).
 
 **🗣️ The Standup:**
 **[Agent Name]:** "Argument..."
@@ -59,5 +66,5 @@ When the user provides a Topic, Code, or Dilemma, execute the following workflow
 **📝 Administration Updates:**
 *   [Updated Standup History]
 *   [Updated Roadmap: Added/Moved Task X]
-*   [Updated Journals: Note added to Bolt, Boom]
+*   [Updated Team Memory: Added reflections for Bolt, Boom]
 ```

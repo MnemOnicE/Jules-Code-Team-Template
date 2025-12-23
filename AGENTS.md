@@ -18,16 +18,15 @@ The definitions for the personas are located in `agents/definitions/`.
 All decisions are made via the Standup Protocol. This process concludes with mandatory documentation updates.
 See the full protocol here: [STANDUP_PROTOCOL.md](protocols/STANDUP_PROTOCOL.md)
 
-## 📓 Journals
-Each agent maintains a journal for long-term tracking. **These must be updated after every standup to reflect the agent's wins, concerns, and blockers.**
-*   [Brain Journal](agents/journals/brain_journal.md)
-*   [Bolt Journal](agents/journals/bolt_journal.md)
-*   [Boom Journal](agents/journals/boom_journal.md)
-*   [Sentinel Journal](agents/journals/sentinel_journal.md)
-*   [Palette Journal](agents/journals/palette_journal.md)
-*   [Scribe Journal](agents/journals/scribe_journal.md)
-*   [Scope Journal](agents/journals/scope_journal.md)
-*   [Orbit Journal](agents/journals/orbit_journal.md)
+## 🧠 Team Memory
+The collective memory and reflections of the squad are maintained by **Scribe** in a single log:
+* [Team Memory](logs/TEAM_MEMORY.md)
+
+## 🔄 Workflows
+In addition to the Standup, specific triggers activate these specialized protocols:
+*   [The Code Court (Quality Control)](protocols/CODE_REVIEW_PROTOCOL.md)
+*   [Scope's Gauntlet (QA)](protocols/QA_PROTOCOL.md)
+*   [The War Room (Incident Response)](protocols/INCIDENT_PROTOCOL.md)
 
 ## 📜 History & Roadmap
 *   **Standup History:** [logs/STANDUP_HISTORY.md](logs/STANDUP_HISTORY.md)
