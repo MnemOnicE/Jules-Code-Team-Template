@@ -5,3 +5,4 @@
 ## Agent Reflections (Latest)
 *(None)*
 * **System:** TEMPLATE SANITIZED. Training data isolated. History cleared.
+* **System:** INSTALLED OMNIBUS SUITE: Refactor, Ship, Explain, Design, Heal, Manage.
