@@ -1,7 +1,7 @@
 # Project Roadmap
 
 ## 🚀 Active Features
-- [ ] Refactor Login Page Background (Lightweight CSS Animation)
+- [ ] (Awaiting Initial Scope - Run /standup to begin)
 
 ## 📅 Planned
 - [ ] (Add planned features here)
