@@ -18,3 +18,4 @@ The user may invoke these commands at the start of a prompt to trigger specific 
 | **/design** `[idea]` | `protocols/DESIGN_PROTOCOL.md` | **The Architect.** Generates technical specs in `specs/` before coding. |
 | **/heal** `[log]` | `protocols/HEAL_PROTOCOL.md` | **The Medic.** Autonomously diagnoses and patches errors. |
 | **/manage** `[goal]` | `protocols/CONDUCTOR_PROTOCOL.md` | **The Conductor.** Chains multiple protocols to solve complex goals. |
+| **/sidebar** | `N/A` | **Break Character.** Drops all personas to answer queries directly and concisely. No logs. |

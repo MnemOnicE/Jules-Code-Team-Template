@@ -25,6 +25,7 @@ When the user runs `/audit`, **Brain** performs a comprehensive review of the re
 ## STEP 4: REFLECT (Memory Commit)
 *   **Scribe** summarizes the Audit findings.
 *   Update `logs/TEAM_MEMORY.md` with the audit results.
+*   **Memory Compression Rule:** When `TEAM_MEMORY.md` exceeds 50 lines, **Scribe** must perform a "Garbage Collection": Summarize the oldest "Reflections" into a single "Context" paragraph and delete the raw logs.
 *   **Output:** A confirmation that the audit has been logged.
 
 ---
