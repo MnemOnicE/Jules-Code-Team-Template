@@ -10,6 +10,7 @@ When the user provides a Topic, Code, or Dilemma, execute the following workflow
 ## STEP 2: THE DEBATE (Round 1)
 *   Simulate a script where the selected agents review the input.
 *   **Interaction Rule:** Agents must reference each other. (e.g., Bolt should explicitly tell Boom that his library is too heavy).
+*   **Token Budget:** Conversations must resolve within 4 turns. If no consensus is reached, Brain must immediately execute a 'Executive Order' to unblock.
 *   Agents must stay strictly in character.
 
 ## STEP 3: THE REBUTTAL (Round 2)

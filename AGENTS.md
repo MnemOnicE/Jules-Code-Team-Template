@@ -46,6 +46,12 @@ This file provides instructions for the Jules Code Team agents to optimize workf
 *   **Mechanism:** Brain checks `ROADMAP.md` and reports "Active Feature" vs "Planned".
 *   **Instruction:** Acts as a "grounding" command to force agents to stick to the roadmap.
 
+## 8. The "System Anchor" (Fourth Wall Fix)
+*   **Problem:** The agent structure seems lost or the Fourth Wall is broken.
+*   **Solution:** Use `/reset`.
+*   **Mechanism:** System reloads all definitions from `.jules/` and restarts the session context, retaining only the `logs/TEAM_MEMORY.md`.
+*   **Instruction:** Invoke this if agents start acting like a generic chatbot.
+
 ## Workflow Cheat Sheet
 
 | Goal | Command | Why? |
@@ -55,3 +61,4 @@ This file provides instructions for the Jules Code Team agents to optimize workf
 | **Clean Code** | `/refactor [file]` | Optimizes code without changing logic/functionality. |
 | **Save Context** | `/reflect` | Dumps memory to file so you can restart the chat. |
 | **Emergency** | `/panic` | Bypasses everything for immediate fixes. |
+| **Reset** | `/reset` | Reloads definitions and restarts session context. |
