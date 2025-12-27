@@ -28,7 +28,7 @@ def test_scaffold_speed():
 
 def test_data_generation_speed():
     """
-    Benchmark the execution speed of the V3 data generation (Mocked).
+    Benchmark the execution speed of the V3 data generation using the actual script.
     Goal: < 5 seconds.
     """
     # Create a temp env first (not timed)
@@ -37,25 +37,18 @@ def test_data_generation_speed():
         destination = os.path.join(temp_dir, "new_project")
         shutil.copytree(source, destination)
 
-        # Setup mock script
-        scripts_dir = os.path.join(temp_dir, "scripts")
-        os.makedirs(scripts_dir, exist_ok=True)
-        mock_script_path = os.path.join(scripts_dir, "mock_gen.js")
-
-        with open(mock_script_path, "w") as f:
-            f.write('console.log("Starting...");')
-            f.write('// Simulate work\n')
-            f.write('for(let i=0; i<100000; i++) {};\n')
-            f.write('console.log("Done");')
+        # Path to the actual script inside the scaffold
+        # Now located at scripts/generate_v3_data.js inside the template
+        script_path = os.path.join(destination, "scripts", "generate_v3_data.js")
 
         # Start timing
         start_time = time.time()
 
         result = subprocess.run(
-            ["node", mock_script_path],
+            ["node", script_path],
             capture_output=True,
             text=True,
-            cwd=temp_dir
+            cwd=destination
         )
 
         end_time = time.time()

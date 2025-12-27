@@ -34,8 +34,8 @@ function generateSpeedLog() {
 
 function generateLargePayload() {
   const items = [];
-  // Generate ~50,000 items to create a ~5MB file
-  for (let i = 0; i < 50000; i++) {
+  // Generate ~5,000 items to create a ~500KB file (Complying with 1MB Limit)
+  for (let i = 0; i < 5000; i++) {
     items.push({
       id: `user_${i}`,
       name: `User Number ${i}`,
@@ -49,7 +49,7 @@ function generateLargePayload() {
     });
   }
   return {
-    meta: { description: "Stress Test Payload for Scope", size_est: "5MB" },
+    meta: { description: "Stress Test Payload for Scope", size_est: "500KB" },
     data: items
   };
 }
