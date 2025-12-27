@@ -1,4 +1,4 @@
-# The Deep Dive Protocol 🎓
+# The Deep Dive Workflow 🎓
 
 **Trigger:** User invokes `/explain [code/file]`
 

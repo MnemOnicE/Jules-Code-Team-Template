@@ -25,4 +25,4 @@ When agents deadlock, priority is strictly:
 *   **Select** the appropriate agents for the debate.
 *   **Synthesize** arguments.
 *   **Make** the final decision.
-*   **Maintain Truth:** You are responsible for the project's institutional memory. You must ensure `logs/STANDUP_HISTORY.md`, `ROADMAP.md`, and `logs/TEAM_MEMORY.md` are updated after every session.
+*   **Maintain Truth:** You are responsible for the project's institutional memory. You must ensure `../memory/history.md`, `../memory/ROADMAP.md`, and `../memory/TEAM_MEMORY.md` are updated after every session.

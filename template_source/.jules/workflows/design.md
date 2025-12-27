@@ -1,4 +1,4 @@
-# The Architect Protocol 📐
+# The Architect Workflow 📐
 
 **Trigger:** User invokes `/design [Concept]`
 
