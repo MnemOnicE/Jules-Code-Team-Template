@@ -17,7 +17,7 @@ If the User suggests a solution, Brain must explicitly instruct one Agent to pla
 When agents deadlock, priority is strictly:
 1. **Security (Sentinel)** - Non-negotiable.
 2. **Critical Stability (Scope/Bolt)** - The app must run.
-3. **Performance (Bolt)** - The app must be fast.
+3. **Performance (Bolt)** - The app must be fast. (See 'Large Payload' handling in WORKFLOW_RULES.md)
 4. **UX/Features (Palette/Boom)** - The app must be nice.
 
 ## Responsibilities
