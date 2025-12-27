@@ -34,8 +34,8 @@ function generateSpeedLog() {
 
 function generateLargePayload() {
   const items = [];
-  // Generate ~5,000 items to create a ~500KB file (Complying with 1MB Limit)
-  for (let i = 0; i < 5000; i++) {
+  // Generate ~1,000 items to create a ~500KB file (Complying with 1MB Limit)
+  for (let i = 0; i < 1000; i++) {
     items.push({
       id: `user_${i}`,
       name: `User Number ${i}`,
