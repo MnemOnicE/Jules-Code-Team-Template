@@ -1,4 +1,4 @@
-# The Scout Protocol (Autopilot) 🔭
+# The Scout Workflow (Autopilot) 🔭
 
 **Trigger:** User initiates "Autopilot" or provides no specific task.
 
@@ -8,7 +8,7 @@
 2.  **Is there a "Planned" task?** -> **STOP.** Select the top priority item.
 
 ## STEP 2: DEBT CHECK (If Roadmap is empty)
-**Brain** reads `logs/TEAM_MEMORY.md`.
+**Brain** reads `.jules/memory/TEAM_MEMORY.md`.
 1.  **Are there unresolved "Reflections" or "Concerns"?** -> **STOP.** Select the most critical debt item (e.g., Bolt's performance complaint).
 
 ## STEP 3: THE HUNT (If Debt is clear)
@@ -19,5 +19,5 @@
 * **Scope:** "Generate a test case for a random function."
 
 ## STEP 4: HANDOFF
-**Brain** passes the discovered task to **The Standup Protocol** with the message:
+**Brain** passes the discovered task to **The Standup Workflow** with the message:
 > "Autopilot discovered task: [Task Name]"

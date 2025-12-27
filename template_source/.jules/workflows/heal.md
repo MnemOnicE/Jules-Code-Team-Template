@@ -1,4 +1,4 @@
-# The Medic Protocol 🚑
+# The Medic Workflow 🚑
 
 **Trigger:** User invokes `/heal [Error Log]`
 
@@ -14,4 +14,4 @@
 * **Sentinel:** Ensure the fix doesn't open a security hole.
 
 ## STEP 4: POST-OP
-* **Scribe:** Log the incident resolution in `logs/TEAM_MEMORY.md`.
+* **Scribe:** Log the incident resolution in `.jules/memory/TEAM_MEMORY.md`.

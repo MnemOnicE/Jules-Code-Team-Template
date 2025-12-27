@@ -1,4 +1,4 @@
-# The Conductor Protocol 🎼
+# The Conductor Workflow 🎼
 
 **Trigger:** User invokes `/manage [Complex Goal]`
 
@@ -7,13 +7,13 @@
 * **Brain:** Break the goal into discrete sequential phases.
 
 ## STEP 2: ORCHESTRATION
-* **Brain:** Map each phase to an existing Protocol Trigger.
+* **Brain:** Map each phase to an existing Workflow Trigger.
     * *Example:* "Phase 1: Architecture" -> `/design`
     * *Example:* "Phase 2: Coding" -> `/standup`
     * *Example:* "Phase 3: Cleanup" -> `/refactor`
 
 ## STEP 3: THE PLAYLIST
-* **Scribe:** Log the full "Campaign Plan" in `logs/TEAM_MEMORY.md`.
+* **Scribe:** Log the full "Campaign Plan" in `.jules/memory/TEAM_MEMORY.md`.
 * **Brain:** explicitly state: "Initiating Phase 1..."
 * **System:** Execute the Trigger for Phase 1 immediately.
 

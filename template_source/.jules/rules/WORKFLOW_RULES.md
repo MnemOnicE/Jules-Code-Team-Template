@@ -4,52 +4,52 @@ This file provides instructions for the Jules Code Team agents to optimize workf
 
 ## 1. The "Overkill" Issue (Too much debate for small tasks)
 *   **Problem:** You don't need a 5-person philosophical debate to change a CSS color.
-*   **Solution:** Use the **Autopilot / Scout Protocol**.
-*   **Mechanism:** Triggered by `/auto` or generic "Go" prompts (`protocols/AUTOPILOT_PROTOCOL.md`).
-*   **Instruction:** Brain immediately checks `ROADMAP.md` or `logs/TEAM_MEMORY.md` for the next logical step and executes it, skipping the "User Input -> Contextualize -> Debate" cycle.
+*   **Solution:** Use the **Autopilot / Scout Workflow**.
+*   **Mechanism:** Triggered by `/auto` or generic "Go" prompts (`workflows/autopilot.md`).
+*   **Instruction:** Brain immediately checks `memory/ROADMAP.md` or `memory/TEAM_MEMORY.md` for the next logical step and executes it, skipping the "User Input -> Contextualize -> Debate" cycle.
 *   **Optimization:** Instruct Brain to "Run Autopilot on this specific small task" to bypass standup simulation.
 
 ## 2. The "Token Overhead" Issue (Context window exhaustion)
 *   **Problem:** "Debate" and "Rebuttal" steps generate massive text, filling context windows.
 *   **Solution:** Enforce the **Roll Call Limit**.
-*   **Mechanism:** `protocols/STANDUP_PROTOCOL.md` allows selecting "3-5 Agents most relevant".
+*   **Mechanism:** `workflows/standup.md` allows selecting "3-5 Agents most relevant".
 *   **Instruction:** Limit Roll Call to exactly 2 agents (e.g., Bolt and Sentinel) for specific tasks to save tokens while maintaining adversarial quality.
 
 ## 3. The "Complexity" Issue (Getting lost in the roleplay)
 *   **Problem:** Managing a simulated team of 8 is mentally taxing.
-*   **Solution:** Use the **Conductor Protocol**.
-*   **Mechanism:** Invoke `/manage [Complex Goal]` (`protocols/CONDUCTOR_PROTOCOL.md`).
-*   **Instruction:** Brain breaks the goal into phases (e.g., Phase 1: /design, Phase 2: /standup) and creates a "Playlist" in `logs/TEAM_MEMORY.md`. The AI acts in "Manager Mode," driving execution.
+*   **Solution:** Use the **Conductor Workflow**.
+*   **Mechanism:** Invoke `/manage [Complex Goal]` (`workflows/conductor.md`).
+*   **Instruction:** Brain breaks the goal into phases (e.g., Phase 1: /design, Phase 2: /standup) and creates a "Playlist" in `memory/TEAM_MEMORY.md`. The AI acts in "Manager Mode," driving execution.
 
 ## 4. The "Emergency" Bypass (When functionality is broken)
 *   **Problem:** Agents (esp. Sentinel) refuse to write code due to imperfections, blocking critical bug fixes.
-*   **Solution:** Trigger the **War Room (Incident Protocol)**.
-*   **Mechanism:** `/panic` or `protocols/INCIDENT_PROTOCOL.md`.
+*   **Solution:** Trigger the **War Room (Incident Workflow)**.
+*   **Mechanism:** `/panic` or `workflows/incident.md`.
 *   **Instruction:** Activates "Defcon 1". Boom is silenced (no feature creep). Scope and Orbit produce a "Direct fix applied immediately". Use for immediate patches.
 
 ## 5. The "Memory Flush" (Solving Token Limits)
 *   **Problem:** Long conversations hit context limits.
 *   **Solution:** Use the `/reflect` command.
-*   **Mechanism:** `/reflect` triggers Scribe to "force a memory commit" in `logs/TEAM_MEMORY.md`.
-*   **Instruction:** Run `/reflect` at the end of every significant coding session. Start new chats by reading `logs/TEAM_MEMORY.md`.
+*   **Mechanism:** `/reflect` triggers Scribe to "force a memory commit" in `memory/TEAM_MEMORY.md`.
+*   **Instruction:** Run `/reflect` at the end of every significant coding session. Start new chats by reading `memory/TEAM_MEMORY.md`.
 
 ## 6. The "Surgical Strike" (Bypassing Debate)
 *   **Problem:** Asking "How do I fix this?" triggers unnecessary debate.
 *   **Solution:** Use `/heal` and `/refactor`.
 *   **Mechanism:**
-    *   `/heal [Error Log]`: Triggers Medic Protocol. Scope (Triage) -> Brain (Diagnosis) -> Boom (Surgery). Direct bug fix.
-    *   `/refactor [file]`: Triggers Refactor Protocol. Scribe (Readability) + Bolt (Complexity). explicitly forbids changing external behavior.
+    *   `/heal [Error Log]`: Triggers Medic Workflow. Scope (Triage) -> Brain (Diagnosis) -> Boom (Surgery). Direct bug fix.
+    *   `/refactor [file]`: Triggers Refactor Workflow. Scribe (Readability) + Bolt (Complexity). explicitly forbids changing external behavior.
 
 ## 7. The "Scope Check" (Preventing Feature Creep)
 *   **Problem:** AI suggests "cool new ideas" distraction from the goal.
 *   **Solution:** Use `/status`.
-*   **Mechanism:** Brain checks `ROADMAP.md` and reports "Active Feature" vs "Planned".
+*   **Mechanism:** Brain checks `memory/ROADMAP.md` and reports "Active Feature" vs "Planned".
 *   **Instruction:** Acts as a "grounding" command to force agents to stick to the roadmap.
 
 ## 8. The "System Anchor" (Fourth Wall Fix)
 *   **Problem:** The agent structure seems lost or the Fourth Wall is broken.
 *   **Solution:** Use `/reset`.
-*   **Mechanism:** System reloads all definitions from `.jules/` and restarts the session context, retaining only the `logs/TEAM_MEMORY.md`.
+*   **Mechanism:** System reloads all definitions from `.jules/` and restarts the session context, retaining only the `memory/TEAM_MEMORY.md`.
 *   **Instruction:** Invoke this if agents start acting like a generic chatbot.
 
 ## Workflow Cheat Sheet

@@ -1,4 +1,4 @@
-# The Refactor Protocol 🧹
+# The Refactor Workflow 🧹
 
 **Trigger:** User invokes `/refactor [file/dir]`
 

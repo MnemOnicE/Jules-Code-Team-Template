@@ -1,4 +1,4 @@
-# The Audit Protocol
+# The Audit Workflow
 
 When the user runs `/audit`, **Brain** performs a comprehensive review of the repository state.
 
@@ -17,14 +17,14 @@ When the user runs `/audit`, **Brain** performs a comprehensive review of the re
 *   **Output:** A bulleted list of "Cracks" or "Technical Debt" items.
 
 ## STEP 3: STATUS (Timeline Report)
-*   **Brain** checks `ROADMAP.md` and `logs/STANDUP_HISTORY.md`.
+*   **Brain** checks `.jules/memory/ROADMAP.md` and `.jules/memory/history.md`.
 *   Determine the current phase (e.g., "Prototyping", "MVP", "Scaling").
 *   Compare "Planned" vs. "Completed" tasks.
 *   **Output:** A status summary (On Track, Behind, Blocked).
 
 ## STEP 4: REFLECT (Memory Commit)
 *   **Scribe** summarizes the Audit findings.
-*   Update `logs/TEAM_MEMORY.md` with the audit results.
+*   Update `.jules/memory/TEAM_MEMORY.md` with the audit results.
 *   **Memory Compression Rule:** When `TEAM_MEMORY.md` exceeds 50 lines, **Scribe** must perform a "Garbage Collection": Summarize the oldest "Reflections" into a single "Context" paragraph and delete the raw logs.
 *   **Output:** A confirmation that the audit has been logged.
 
@@ -50,5 +50,5 @@ When the user runs `/audit`, **Brain** performs a comprehensive review of the re
 *   **Verdict:** [On Track / Behind / Blocked]
 
 **💾 REFLECTION**
-*   Logged to `logs/TEAM_MEMORY.md`.
+*   Logged to `.jules/memory/TEAM_MEMORY.md`.
 ```
