@@ -52,6 +52,12 @@ This file provides instructions for the Jules Code Team agents to optimize workf
 *   **Mechanism:** System reloads all definitions from `.jules/` and restarts the session context, retaining only the `memory/TEAM_MEMORY.md`.
 *   **Instruction:** Invoke this if agents start acting like a generic chatbot.
 
+## 9. The "Large Payload" Handling (Preventing System Bog)
+*   **Problem:** User provides a massive file (e.g., >1MB or >2000 lines) which slows down processing and risks token limits.
+*   **Solution:** Agents must check file size before reading.
+*   **Instruction:** If a file is >1MB, agents must **default to requesting a summary** or using a script to analyze it, rather than ingesting the whole file.
+*   **Exception:** This limit is not hard and fast. If the user explicitly requests a "Deep Dive" or "Full Analysis", or if the task strictly requires it, the agent may override this rule (potentially with a warning).
+
 ## Workflow Cheat Sheet
 
 | Goal | Command | Why? |
