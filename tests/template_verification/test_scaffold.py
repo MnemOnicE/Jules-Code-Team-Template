@@ -70,3 +70,43 @@ def test_script_execution(scaffold_template):
     # Verify artifacts
     benchmarks_path = os.path.join(temp_root, "tests", "benchmarks", "speed_log.json")
     assert os.path.exists(benchmarks_path), "Mock artifact not generated"
+
+
+def test_template_internal_tests(scaffold_template):
+    """
+    Test that the scaffolded project can run its own tests.
+    """
+    # The template now includes 'tests/test_placeholder.py'
+    # We want to ensure 'pytest' can discover and run it inside the scaffold.
+
+    result = subprocess.run(
+        ["pytest", "tests"],
+        capture_output=True,
+        text=True,
+        cwd=scaffold_template
+    )
+
+    assert result.returncode == 0, f"Internal template tests failed:\n{result.stdout}\n{result.stderr}"
+    assert "passed" in result.stdout
+
+
+def test_template_file_sizes(scaffold_template):
+    """
+    Scan the scaffolded directory to ensure no file exceeds 1MB.
+    This enforces the 'Lightweight Template' rule and prevents bloat.
+    """
+    max_size = 1024 * 1024  # 1MB
+    oversized_files = []
+
+    for root, dirs, files in os.walk(scaffold_template):
+        # Exclude .git if it were there (it isn't in scaffold usually)
+        if ".git" in dirs:
+            dirs.remove(".git")
+
+        for file in files:
+            file_path = os.path.join(root, file)
+            size = os.path.getsize(file_path)
+            if size > max_size:
+                oversized_files.append(f"{file} ({size / 1024:.2f} KB)")
+
+    assert not oversized_files, f"Found files exceeding 1MB limit: {oversized_files}"

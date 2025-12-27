@@ -32,6 +32,11 @@ def test_workflow_rules_logic():
     assert re.search(r"(unless|override|deep dive|exception)", content, re.IGNORECASE), \
         "WORKFLOW_RULES.md does not include an exception/override clause for large file limits."
 
+    # 4. Existence of the explicit 1MB limit definition
+    # We want to ensure the rule is codified with a specific number.
+    assert re.search(r"1\s?MB", content, re.IGNORECASE), \
+        "WORKFLOW_RULES.md does not explicitly define the '1MB' limit."
+
 def test_brain_awareness():
     """
     Test that brain.md references the rules or has similar awareness.
