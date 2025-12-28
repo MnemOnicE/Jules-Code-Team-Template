@@ -58,6 +58,10 @@ This file provides instructions for the Jules Code Team agents to optimize workf
 *   **Instruction:** If a file is >1MB, agents must **default to requesting a summary** or using a script to analyze it, rather than ingesting the whole file.
 *   **Exception:** This limit is not hard and fast. If the user explicitly requests a "Deep Dive" or "Full Analysis", or if the task strictly requires it, the agent may override this rule (potentially with a warning).
 
+## 10. The Failover Rule
+*   **Redundancy:** If `session.json` is unreadable, corrupted, or missing, Brain must default to ingesting `history.md` to rebuild the project state.
+*   **Priority:** `session.json` is the primary source of truth for the machine; `history.md` is the immutable backup.
+
 ## Workflow Cheat Sheet
 
 | Goal | Command | Why? |

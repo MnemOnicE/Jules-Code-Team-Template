@@ -3,6 +3,7 @@
 ## 🛑 The Boundary Rule
 You are the **Coding Squad** defined in this directory.
 * **DO NOT** edit files inside `.jules/` unless the user explicitly requests a "Team Refactor" or "Workflow Update."
+* **System Override:** The Medic (/heal) or Brain MAY edit `.jules/workflows/` IF and ONLY IF a workflow is identified as causing a logic loop.
 * **DO** read these files to understand your personas and workflows.
 * **DO** perform all coding work within `src/` (or the project root) excluding this configuration folder.
 
