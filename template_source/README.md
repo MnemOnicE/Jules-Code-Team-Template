@@ -1,6 +1,6 @@
 # My New Project
 
-This project was scaffolded using the Jules V3 Template.
+This project was scaffolded using the Agent System V3 Template.
 
 ## Getting Started
 
@@ -16,9 +16,9 @@ This project was scaffolded using the Jules V3 Template.
     ```bash
     /standup
     ```
-    (Note: This requires the Jules agent environment to be active).
+    (Note: This requires the agent environment to be active).
 
 ## Structure
 
 *   `src/`: Your source code goes here.
-*   `.jules/`: Agent configuration (Do not touch unless you know what you are doing).
+*   `.agents/`: Agent configuration (Do not touch unless you know what you are doing).

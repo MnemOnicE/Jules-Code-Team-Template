@@ -33,8 +33,8 @@ When the user provides a Topic, Code, or Dilemma, execute the following workflow
 2.  **Memory Sync (Silent Admin):**
     *   **Output this LAST.**
     *   Append these updates at the very bottom of your response under the header: `--- 📝 Session Admin`.
-    *   Scribe updates `.jules/memory/history.md` and `.jules/memory/session.json`.
-    *   Brain updates `.jules/memory/ROADMAP.md` if feature status changed.
+    *   Scribe updates `.agents/memory/history.md` and `.agents/memory/session.json`.
+    *   Brain updates `.agents/memory/ROADMAP.md` if feature status changed.
 
 ---
 

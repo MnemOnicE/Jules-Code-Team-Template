@@ -13,7 +13,7 @@
     * *Example:* "Phase 3: Cleanup" -> `/refactor`
 
 ## STEP 3: THE PLAYLIST
-* **Scribe:** Log the full "Campaign Plan" in `.jules/memory/TEAM_MEMORY.md`.
+* **Scribe:** Log the full "Campaign Plan" in `.agents/memory/TEAM_MEMORY.md`.
 * **Brain:** explicitly state: "Initiating Phase 1..."
 * **System:** Execute the Trigger for Phase 1 immediately.
 

@@ -9,7 +9,7 @@
 2.  **Is there a "Planned" task?** -> **STOP.** Select the top priority item.
 
 ## STEP 2: DEBT CHECK (If Roadmap is empty)
-**Brain** reads `.jules/memory/TEAM_MEMORY.md`.
+**Brain** reads `.agents/memory/TEAM_MEMORY.md`.
 1.  **Are there unresolved "Reflections" or "Concerns"?** -> **STOP.** Select the most critical debt item (e.g., Bolt's performance complaint).
 
 ## STEP 3: THE HUNT (If Debt is clear)

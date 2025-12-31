@@ -1,5 +1,5 @@
-# Jules-Code-Team-Template
-Repository template for use with Jules asynchronous coding agent and predefined personas
+# Agent System Team Template
+Repository template for use with the asynchronous coding agent system and predefined personas
 
 # Workflow Triggers
 

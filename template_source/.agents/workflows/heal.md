@@ -14,4 +14,4 @@
 * **Sentinel:** Ensure the fix doesn't open a security hole.
 
 ## STEP 4: POST-OP
-* **Scribe:** Log the incident resolution in `.jules/memory/TEAM_MEMORY.md`.
+* **Scribe:** Log the incident resolution in `.agents/memory/TEAM_MEMORY.md`.

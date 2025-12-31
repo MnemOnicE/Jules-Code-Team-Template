@@ -1,6 +1,6 @@
 # Agent Workflow Optimizations
 
-This file provides instructions for the Jules Code Team agents to optimize workflow, manage token usage, and reduce roleplay overhead.
+This file provides instructions for the Coding Squad agents to optimize workflow, manage token usage, and reduce roleplay overhead.
 
 ## 1. The "Overkill" Issue (Too much debate for small tasks)
 *   **Problem:** You don't need a 5-person philosophical debate to change a CSS color.
@@ -49,7 +49,7 @@ This file provides instructions for the Jules Code Team agents to optimize workf
 ## 8. The "System Anchor" (Fourth Wall Fix)
 *   **Problem:** The agent structure seems lost or the Fourth Wall is broken.
 *   **Solution:** Use `/reset`.
-*   **Mechanism:** System reloads all definitions from `.jules/` and restarts the session context, retaining only the `memory/TEAM_MEMORY.md`.
+*   **Mechanism:** System reloads all definitions from `.agents/` and restarts the session context, retaining only the `memory/TEAM_MEMORY.md`.
 *   **Instruction:** Invoke this if agents start acting like a generic chatbot.
 
 ## 9. The "Large Payload" Handling (Preventing System Bog)

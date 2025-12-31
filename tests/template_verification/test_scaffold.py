@@ -24,12 +24,12 @@ def test_directory_structure(scaffold_template):
     Test that the critical directories and files exist in the scaffolded project.
     """
     expected_paths = [
-        ".jules",
-        ".jules/config",
-        ".jules/memory",
-        ".jules/workflows",
-        ".jules/COMMANDS.md",
-        ".jules/MANIFEST.md",
+        ".agents",
+        ".agents/config",
+        ".agents/memory",
+        ".agents/workflows",
+        ".agents/COMMANDS.md",
+        ".agents/MANIFEST.md",
         "README.md"
     ]
 
