@@ -7,7 +7,7 @@
 * **Orbit:** audit `package.json` version, ensure `npm run build` (or equivalent) config is sound.
 
 ## STEP 2: DOCUMENTATION
-* **Scribe:** Read `.jules/memory/history.md` and `.jules/memory/TEAM_MEMORY.md`.
+* **Scribe:** Read `.agents/memory/history.md` and `.agents/memory/TEAM_MEMORY.md`.
 * **Scribe:** Draft a `CHANGELOG.md` entry summarizing recent changes.
 
 ## STEP 3: VERDICT

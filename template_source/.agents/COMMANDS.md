@@ -8,9 +8,9 @@ The user may invoke these commands at the start of a prompt to trigger specific 
 | **/judge** `[code]` | `workflows/code_review.md` | **The Code Court.** Triggers Sentinel, Bolt, and Scribe to review input code. |
 | **/test** | `workflows/qa.md` | **Scope's Gauntlet.** Generates 3 edge cases to break the current feature. |
 | **/panic** | `workflows/incident.md` | **The War Room.** Bypasses debate. Fixes critical bugs immediately. |
-| **/reflect** | `.jules/memory/TEAM_MEMORY.md` | **Scribe** forces a memory commit. Summarizes the session into the permanent log. |
+| **/reflect** | `.agents/memory/TEAM_MEMORY.md` | **Scribe** forces a memory commit. Summarizes the session into the permanent log. |
 | **/refresh** | `workflows/refresh.md` | **Brain** manually triggers the ingestion script to update context. |
-| **/status** | `.jules/memory/ROADMAP.md` | **Brain** reports current active task and next planned items. |
+| **/status** | `.agents/memory/ROADMAP.md` | **Brain** reports current active task and next planned items. |
 | **/audit** | `workflows/audit.md` | **Brain** performs a full repository state analysis (Blueprint, Debt, Status, Reflect). |
 | **/auto** | `workflows/autopilot.md` | **The Scout.** Brain scans the Roadmap and Memory to find the next best task automatically. |
 | **/refactor** `[file]` | `workflows/refactor.md` | **The Janitor.** Bolt and Scribe clean up code without changing logic. |

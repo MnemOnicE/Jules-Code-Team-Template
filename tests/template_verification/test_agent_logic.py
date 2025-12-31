@@ -6,7 +6,7 @@ def test_workflow_rules_logic():
     """
     Test that WORKFLOW_RULES.md contains specific instructions for handling large files.
     """
-    rules_path = "template_source/.jules/rules/WORKFLOW_RULES.md"
+    rules_path = "template_source/.agents/rules/WORKFLOW_RULES.md"
     assert os.path.exists(rules_path), "WORKFLOW_RULES.md not found"
 
     with open(rules_path, "r") as f:
@@ -41,7 +41,7 @@ def test_brain_awareness():
     """
     Test that brain.md references the rules or has similar awareness.
     """
-    brain_path = "template_source/.jules/config/brain.md"
+    brain_path = "template_source/.agents/config/brain.md"
     assert os.path.exists(brain_path), "brain.md not found"
 
     with open(brain_path, "r") as f:

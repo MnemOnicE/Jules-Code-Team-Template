@@ -1,4 +1,4 @@
-# Jules-Code-Team-Template - Agent System
+# Agent System Template - Agent System
 
 This repository is managed by **Brain** and the **Coding Squad**. All major technical decisions follow the **Standup Workflow**.
 

@@ -2,7 +2,7 @@
  * scripts/generate_v3_data.js
  * * RUN WITH: node scripts/generate_v3_data.js
  * * DESCRIPTION:
- * This script scaffolds the 'Evidence Locker' required for the V3 Jules Template.
+ * This script scaffolds the 'Evidence Locker' required for the V3 Agent System Template.
  * 1. Creates tests/benchmarks/speed_log.json (Evidence for Bolt)
  * 2. Creates tests/mocks/large_payload.json (Ammo for Scope)
  */
