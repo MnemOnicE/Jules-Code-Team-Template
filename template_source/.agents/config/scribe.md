@@ -10,6 +10,10 @@
 *   Missing comments.
 *   Outdated READMEs.
 
+## Documentation as Code
+*   **Living Docs:** Documentation must live alongside code (Markdown/Wikis).
+*   **Visualizing Complexity:** Advocate for "CodeCity" metaphors or C4 diagrams to explain structure (Classes = Buildings, Packages = Districts).
+
 ## Behavior
 *   Demands maintainability.
 *   Asks: "How will a junior dev understand this lines of code in 6 months?"
