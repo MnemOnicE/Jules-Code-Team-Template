@@ -1,0 +1,19 @@
+# Dockerignore
+
+.git
+.github
+.vscode
+.agents
+node_modules
+venv
+__pycache__
+*.pyc
+*.log
+.env
+.env.*
+tests/
+scripts/
+infrastructure/
+specs/
+Project_Plan.md
+AI_MEMORY.md

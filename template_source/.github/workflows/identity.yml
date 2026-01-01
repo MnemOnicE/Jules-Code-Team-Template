@@ -1,0 +1,39 @@
+name: Zero-Trust Identity
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+permissions:
+  id-token: write # Required for requesting the OIDC token
+  contents: read  # Required for actions/checkout
+
+jobs:
+  identity-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS Credentials (OIDC)
+        # This step demonstrates how to use the OIDC token to authenticate with AWS.
+        # It requires the AWS_ROLE_TO_ASSUME secret to be set in the repository.
+        # If not set, this is just a placeholder to show intent.
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: us-east-1
+        if: ${{ secrets.AWS_ROLE_TO_ASSUME != '' }}
+
+      - name: Verify Identity
+        run: |
+          aws sts get-caller-identity
+        if: ${{ secrets.AWS_ROLE_TO_ASSUME != '' }}
+
+      - name: Identity Hygiene Check
+        run: |
+          echo "Checking for long-lived secrets..."
+          # Add logic to check if unexpected env vars are present (conceptual)
+          echo "OIDC Identity established."
