@@ -1,0 +1,33 @@
+name: Vibe Check
+
+on:
+  schedule:
+    - cron: '0 0 * * 1' # Weekly
+  workflow_dispatch:
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.10'
+
+      - name: Install Dependencies
+        run: |
+          npm install
+          pip install -r tests/verification/requirements.txt
+
+      - name: Architectural Complexity Check
+        run: npm run check:complexity || echo "Warning: Complexity check not fully implemented yet"
+
+      - name: Property-Based Verification
+        run: pytest tests/verification/

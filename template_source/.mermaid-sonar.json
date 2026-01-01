@@ -1,0 +1,7 @@
+{
+  "maxNodes": 50,
+  "maxDepth": 5,
+  "forbiddenImports": [
+    { "from": "ui", "to": "database" }
+  ]
+}

@@ -1,1 +1,4 @@
-_meta/
+node_modules/
+dist/
+coverage/
+.hypothesis/

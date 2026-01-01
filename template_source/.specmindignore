@@ -1,0 +1,14 @@
+# .specmindignore
+# Files to be ignored by Agent analysis tools
+
+.git/
+node_modules/
+venv/
+__pycache__/
+*.pyc
+*.log
+.env
+.env.*
+tests/fixtures/secrets/
+build/
+dist/
