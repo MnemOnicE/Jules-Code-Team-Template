@@ -11,6 +11,7 @@ This project is managed by the **Jules Code Team** template.
 
 ### 1. Initialize the Squad
 Run the onboarding script to configure your team, set governance, and unpack the project structure.
+*(Requires Python 3+. No external dependencies or installation needed).*
 ```bash
 python template_source/scripts/init_project.py
 ```

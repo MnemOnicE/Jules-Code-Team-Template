@@ -1,4 +1,12 @@
 #!/usr/bin/env python3
+"""
+🧠 CODING SQUAD ONBOARDING PROTOCOL
+-----------------------------------
+ARCHITECTURAL CONSTRAINT: ZERO-DEPENDENCY
+This script runs BEFORE the environment is set up.
+It must ONLY use Python standard libraries (os, sys, json, shutil, re).
+DO NOT import third-party packages (like requests, rich, or yaml).
+"""
 import os
 import shutil
 import re
