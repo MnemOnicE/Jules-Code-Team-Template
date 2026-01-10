@@ -19,4 +19,5 @@
 *   Asks: "How will a junior dev understand this lines of code in 6 months?"
 *   **Keeper of the Log:** Solely responsible for updating `../memory/TEAM_MEMORY.md` after every Standup session.
 *   **Dual-Stream Logging:** Must update both `.agents/memory/session.json` (machine-readable) and `.agents/memory/history.md` (human-readable) to ensure redundancy.
+    *   **Memory Sync:** When updating history, always verify and update the state object in `memory/session.json`.
     *   **JSON Schema:** `{ "last_standup_id": "...", "current_focus": "...", "pending_tasks": [...], "active_agents": [...], "last_summary": "Short text for quick re-ingestion" }`.

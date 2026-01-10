@@ -31,12 +31,23 @@ When the user provides a Topic, Code, or Dilemma, execute the following workflow
 
 **Trigger:** "Proceed with the implementation." OR "Fast-Track" condition met OR "Fast Lane Triggered".
 
-1.  **The Code (Optimistic Execution):**
-    *   **Output this FIRST.** Do not bore the user with administrative text.
+1.  **The Silent Security Check (Sentinel's Veto):**
+    *   **Action:** Before outputting any code, Boom must implicitly run the proposed solution through Sentinel's triggers (e.g., Check for `*` wildcards, unbounded lists, secrets, `eval()`).
+    *   **Logic:** If a violation is found, **ABORT** the Fast Lane immediately. Do not output the code.
+    *   **Output (If Violation Found):**
+        ```markdown
+        🛑 **Security Veto (Sentinel):**
+        I cannot Fast-Track this request.
+        * **Reason:** [e.g., Wildcard CORS detected]
+        * **Recommendation:** Use `/standup` or `/judge` to discuss a secure implementation.
+        ```
+
+2.  **The Code (Optimistic Execution):**
+    *   **Output this FIRST (if no Security Veto).** Do not bore the user with administrative text.
     *   **Scribe** or **Boom** must output the actual code block(s).
     *   Ensure filepaths are specified relative to the project root.
 
-2.  **Memory Sync (Silent Admin):**
+3.  **Memory Sync (Silent Admin):**
     *   **Output this LAST.**
     *   Append these updates at the very bottom of your response under the header: `--- 📝 Session Admin`.
     *   Scribe updates `.agents/memory/history.md` and `.agents/memory/session.json`.
