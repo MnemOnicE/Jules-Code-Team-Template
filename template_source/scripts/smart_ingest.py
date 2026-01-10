@@ -2,6 +2,8 @@ import os
 import subprocess
 import glob
 from datetime import datetime
+import shutil
+import sys
 
 INGEST_DIR = "ingests"
 
@@ -51,6 +53,11 @@ def prune_ingests():
             os.remove(f)
 
 def main():
+    # Dependency Check
+    if not shutil.which("gitingest"):
+        print("❌ CRITICAL: `gitingest` not found. Memory updates disabled. Please install via pip.")
+        sys.exit(1)
+
     commit_count = get_commit_count()
 
     # Check if ingest directory is empty
