@@ -8,7 +8,15 @@ This project is managed by the **Jules Code Team** template.
 * **Latest Log:** (See `logs/STANDUP_HISTORY.md`)
 
 ## ⚡ Quick Start
-(Add your project instructions here)
+
+### 1. Initialize the Squad
+Run the onboarding script to configure your team, set governance, and unpack the project structure.
+```bash
+python template_source/scripts/init_project.py
+```
+
+### 2. Start Working
+Once initialized, use the slash commands below to interact with the squad.
 
 ## ⌨️ Quick Reference / Controls
 | Command | Protocol Trigger | Description |
