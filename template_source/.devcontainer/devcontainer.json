@@ -15,5 +15,5 @@
       ]
     }
   },
-  "postCreateCommand": "pip install -r tests/verification/requirements.txt && npm install"
+  "postCreateCommand": "pip install gitingest && pip install -r tests/verification/requirements.txt && npm install"
 }

@@ -62,6 +62,11 @@ This file provides instructions for the Coding Squad agents to optimize workflow
 *   **Redundancy:** If `session.json` is unreadable, corrupted, or missing, Brain must default to ingesting `history.md` to rebuild the project state.
 *   **Priority:** `session.json` is the primary source of truth for the machine; `history.md` is the immutable backup.
 
+## 11. The Automatic Panic Protocol
+*   **Trigger:** Brain must track `consecutive_build_failures` in `session.json`.
+*   **Action:** If this counter reaches 3, Brain must **automatically trigger the War Room (`/panic`) workflow immediately**, bypassing any ongoing debate or roadmap items.
+*   **Reset:** The `consecutive_build_failures` counter must be reset to 0 upon any successful build or test run.
+
 ## Workflow Cheat Sheet
 
 | Goal | Command | Why? |
