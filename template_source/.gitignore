@@ -2,3 +2,4 @@ node_modules/
 dist/
 coverage/
 .hypothesis/
+docs/diagrams/
