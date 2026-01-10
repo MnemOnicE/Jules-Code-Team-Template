@@ -1,0 +1,13 @@
+graph TD
+    subgraph ui
+        A[ComponentA]
+        B[ComponentB]
+    end
+    subgraph database
+        DB1[PrimaryDB]
+        DB2[Replica]
+    end
+
+    A --> DB1
+    B --> C[Intermediate]
+    C --> DB2
