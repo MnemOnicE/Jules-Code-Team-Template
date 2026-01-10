@@ -27,7 +27,7 @@ jobs:
           pip install -r tests/verification/requirements.txt
 
       - name: Architectural Complexity Check
-        run: npm run check:complexity || echo "Warning: Complexity check not fully implemented yet"
+        run: npm run check:complexity
 
       - name: Property-Based Verification
         run: pytest tests/verification/
