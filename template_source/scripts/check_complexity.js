@@ -32,12 +32,7 @@ function parseMermaid(content) {
     const edges = [];
     const nodeSubgraphs = new Map(); // node -> subgraphName
 
-    let currentSubgraph = null;
-
-    // Regex for edges: capture left, connection, right
-    // Matches patterns like: A --> B, A -.-> B, A == B, A -- text --> B, A -->|text| B
-    // We split by connection operators.
-    const edgeRegex = /\s(={1,}|-{1,}|\.{1,})(-|>|\|)\s/;
+    const subgraphStack = [];
 
     lines.forEach(line => {
         line = line.trim();
@@ -46,79 +41,79 @@ function parseMermaid(content) {
         // Subgraph handling
         if (line.startsWith('subgraph ')) {
             const match = line.match(/subgraph\s+([^\s\[]+)/);
-            if (match) currentSubgraph = match[1];
+            const name = match ? match[1] : 'unknown';
+            subgraphStack.push(name);
             return;
         }
         if (line === 'end') {
-            currentSubgraph = null;
+            subgraphStack.pop();
             return;
         }
 
+        const currentSubgraph = subgraphStack.length > 0 ? subgraphStack[subgraphStack.length - 1] : null;
+
         // Edge handling
-        // We look for connection tokens.
-        // Simplified approach: Split by common arrow patterns.
-        // Note: Mermaid arrows can be complex. We'll target standard architecture arrows.
-        // A --> B
-        // A -.-> B
-        // A ==> B
-        // We will try to identify parts.
-
-        // This regex attempts to find the arrow separator.
-        // It looks for a sequence of -, ., or = ending with > or followed by text and >
-        // Case: A --> B (match -->)
-        // Case: A -.-> B (match -.->)
-        // Case: A -- text --> B (Complex)
-
-        // Let's use a simpler heuristic for this template: Split by connection-like strings.
-        // We assume one edge per line for simplicity, or chained A --> B --> C
-
         // Split by generic arrow pattern
+        // Matches A & B --> C & D
         const parts = line.split(/\s*[-=.]{1,4}(?:(?:\|.+?\|)|(?:.+?))?[-=.]{0,3}[>]\s*/);
 
         if (parts.length > 1) {
             for (let i = 0; i < parts.length - 1; i++) {
-                const rawSource = parts[i].trim();
-                const rawTarget = parts[i+1].trim();
+                const rawSourceGroup = parts[i].trim();
+                const rawTargetGroup = parts[i+1].trim();
 
-                if (!rawSource || !rawTarget) continue;
+                if (!rawSourceGroup || !rawTargetGroup) continue;
 
-                const source = cleanNodeId(rawSource);
-                const target = cleanNodeId(rawTarget);
+                const sources = expandNodes(rawSourceGroup);
+                const targets = expandNodes(rawTargetGroup);
 
-                if (source && target) {
-                    nodes.add(source);
-                    nodes.add(target);
-                    edges.push({ from: source, to: target });
+                sources.forEach(source => {
+                    targets.forEach(target => {
+                        if (source && target) {
+                            nodes.add(source);
+                            nodes.add(target);
+                            edges.push({ from: source, to: target });
 
-                    if (currentSubgraph) {
-                        // Assuming nodes are defined/used inside the subgraph block
-                        // Note: Mermaid allows defining nodes outside and using inside.
-                        // But usually in subgraphs, nodes appear there.
-                        // We map node to the LAST subgraph it was seen in or declared.
-                         if (!nodeSubgraphs.has(source) || isDefinition(rawSource)) {
-                             nodeSubgraphs.set(source, currentSubgraph);
-                         }
-                         if (!nodeSubgraphs.has(target) || isDefinition(rawTarget)) {
-                             nodeSubgraphs.set(target, currentSubgraph);
-                         }
-                    }
-                }
+                            if (currentSubgraph) {
+                                if (!nodeSubgraphs.has(source) || isDefinition(rawSourceGroup)) {
+                                    nodeSubgraphs.set(source, currentSubgraph);
+                                }
+                                if (!nodeSubgraphs.has(target) || isDefinition(rawTargetGroup)) {
+                                    nodeSubgraphs.set(target, currentSubgraph);
+                                }
+                            }
+                        }
+                    });
+                });
             }
         } else {
             // Standalone node or subgraph node definition
             // A[Label]
             const rawNode = parts[0].trim();
-            const node = cleanNodeId(rawNode);
-            if (node) {
-                nodes.add(node);
-                if (currentSubgraph) {
-                    nodeSubgraphs.set(node, currentSubgraph);
+            const expanded = expandNodes(rawNode);
+            expanded.forEach(node => {
+                if (node) {
+                    nodes.add(node);
+                    if (currentSubgraph) {
+                        nodeSubgraphs.set(node, currentSubgraph);
+                    }
                 }
-            }
+            });
         }
     });
 
     return { nodes, edges, nodeSubgraphs };
+}
+
+function expandNodes(rawGroup) {
+    // Handle 'A & B' syntax
+    const parts = rawGroup.split('&');
+    const nodes = [];
+    parts.forEach(part => {
+        const node = cleanNodeId(part.trim());
+        if (node) nodes.push(node);
+    });
+    return nodes;
 }
 
 function cleanNodeId(raw) {
@@ -144,25 +139,35 @@ function calculateMaxDepth(nodes, edges) {
 
     const memo = new Map();
     const visiting = new Set();
+    const pathStack = []; // To track the current path for cycle reporting
 
     function dfs(node) {
-        if (visiting.has(node)) return Infinity; // Cycle detected
+        if (visiting.has(node)) {
+            // Cycle detected
+            const cyclePath = [...pathStack, node].join(' -> ');
+            throw new Error(`Cycle detected: ${cyclePath}`);
+        }
         if (memo.has(node)) return memo.get(node);
 
         visiting.add(node);
+        pathStack.push(node);
 
         let maxPath = 0;
         const neighbors = adj.get(node) || [];
 
         for (const neighbor of neighbors) {
-            const depth = dfs(neighbor);
-            if (depth === Infinity) {
-                visiting.delete(node);
-                return Infinity;
+            try {
+                const depth = dfs(neighbor);
+                maxPath = Math.max(maxPath, depth);
+            } catch (e) {
+                if (e.message.startsWith('Cycle detected')) {
+                    throw e;
+                }
+                throw e;
             }
-            maxPath = Math.max(maxPath, depth);
         }
 
+        pathStack.pop();
         visiting.delete(node);
         memo.set(node, 1 + maxPath);
         return 1 + maxPath;
@@ -170,9 +175,14 @@ function calculateMaxDepth(nodes, edges) {
 
     let globalMax = 0;
     for (const node of nodes) {
-        const d = dfs(node);
-        if (d === Infinity) return Infinity; // Cycle
-        globalMax = Math.max(globalMax, d);
+        try {
+            const d = dfs(node);
+            globalMax = Math.max(globalMax, d);
+        } catch (e) {
+            if (e.message.startsWith('Cycle detected')) {
+                throw e; // Propagate cycle error
+            }
+        }
     }
 
     return globalMax;
@@ -198,11 +208,32 @@ function checkComplexity() {
         const content = fs.readFileSync(file, 'utf8');
         const { nodes, edges, nodeSubgraphs } = parseMermaid(content);
         const nodeCount = nodes.size;
-        const depth = calculateMaxDepth(nodes, edges);
 
         console.log(`\n📄 Analyzing: ${path.relative(SOURCE_DIR, file)}`);
-        console.log(`   Nodes: ${nodeCount} (Limit: ${config.maxNodes})`);
-        console.log(`   Depth: ${depth === Infinity ? 'Cycle Detected' : depth} (Limit: ${config.maxDepth})`);
+
+        // Orphan check
+        const connectedNodes = new Set();
+        edges.forEach(e => {
+            connectedNodes.add(e.from);
+            connectedNodes.add(e.to);
+        });
+
+        nodes.forEach(node => {
+            if (!connectedNodes.has(node)) {
+                console.warn(`   ⚠️ WARNING: Orphaned node detected: ${node}`);
+            }
+        });
+
+        let depth = 0;
+        try {
+            depth = calculateMaxDepth(nodes, edges);
+            console.log(`   Nodes: ${nodeCount} (Limit: ${config.maxNodes})`);
+            console.log(`   Depth: ${depth} (Limit: ${config.maxDepth})`);
+        } catch (e) {
+            console.error(`   ❌ VIOLATION: ${e.message}`);
+            hasViolations = true;
+            depth = Infinity; // Mark as infinite for logic
+        }
 
         // Check 1: Max Nodes
         if (nodeCount > config.maxNodes) {
@@ -210,8 +241,8 @@ function checkComplexity() {
             hasViolations = true;
         }
 
-        // Check 2: Max Depth
-        if (depth > config.maxDepth) {
+        // Check 2: Max Depth (if not cycle)
+        if (depth > config.maxDepth && depth !== Infinity) {
             console.error(`   ❌ VIOLATION: Depth ${depth} exceeds limit ${config.maxDepth}`);
             hasViolations = true;
         }
