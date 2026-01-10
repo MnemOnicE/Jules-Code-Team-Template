@@ -4,14 +4,15 @@
 -----------------------------------
 ARCHITECTURAL CONSTRAINT: ZERO-DEPENDENCY
 This script runs BEFORE the environment is set up.
-It must ONLY use Python standard libraries (os, sys, json, shutil, re).
-DO NOT import third-party packages (like requests, rich, or yaml).
+It must ONLY use Python standard libraries (os, sys, json, shutil, re, subprocess).
+DO NOT import third-party packages.
 """
 import os
 import shutil
 import re
 import sys
 import json
+import subprocess
 
 def clear_screen():
     print("\033[H\033[J", end="")
@@ -28,46 +29,56 @@ def get_input(prompt, default=None):
 
 def update_file(filepath, search_pattern, replace_value):
     if not os.path.exists(filepath):
-        print(f"⚠️ Warning: {filepath} not found.")
         return
-
     with open(filepath, 'r') as f:
         content = f.read()
-
     new_content = re.sub(search_pattern, replace_value, content, flags=re.MULTILINE)
-
     with open(filepath, 'w') as f:
         f.write(new_content)
-
-def append_to_file(filepath, content_to_append):
-    if not os.path.exists(filepath):
-        return
-    with open(filepath, 'a') as f:
-        f.write("\n" + content_to_append)
 
 def main():
     clear_screen()
     print_header()
 
+    ROOT = os.getcwd()
+    TEMPLATE_DIR = os.path.join(ROOT, "template_source")
+
+    # 0. Environment Scan (Migration Detection)
+    # We check for files that are NOT part of the template mechanism
+    ignored_items = {'.git', 'template_source', 'README.md', 'LICENSE', 'CONTRIBUTING.md', '.DS_Store'}
+    existing_items = set(os.listdir(ROOT)) - ignored_items
+
+    IS_MIGRATION = len(existing_items) > 0
+
+    if IS_MIGRATION:
+        print(f"Brain: ⚠️  Existing infrastructure detected ({len(existing_items)} items).")
+        print("Brain: Switching to \033[1mINTEGRATION MODE\033[0m. I will join your team, not replace it.")
+    else:
+        print("Brain: ✨ Fresh field detected. Switching to \033[1mGENESIS MODE\033[0m.")
+
+    print("\n---------------------------------------------")
+
     # 1. The Interview
     print("Brain: I am waking up. I need to understand the mission parameters.\n")
 
-    project_name = get_input("Brain: First, what is the Project Name? (e.g., MySuperApp)", "MyNewProject")
-    project_type = get_input("Brain: What are we building? (SaaS, Game, Library, Script?)", "SaaS")
+    if IS_MIGRATION:
+        project_name = get_input("Brain: What is the name of this existing project?", os.path.basename(ROOT))
+        project_context = get_input("Brain: Briefly describe what this code does (for my context)", "Legacy Codebase")
+    else:
+        project_name = get_input("Brain: First, what is the Project Name?", "MyNewProject")
+        project_context = get_input("Brain: What are we building? (SaaS, Game, Library?)", "SaaS")
+
     governance = get_input("Brain: Governance Mode? (Democracy/Dictator)", "Democracy")
     risk = get_input("Brain: Risk Tolerance? (High/Medium/Low)", "Low")
 
     print("\nBrain: Configuring squad parameters...")
 
-    # Paths (relative to root where script is run)
-    ROOT = os.getcwd()
-    TEMPLATE_DIR = os.path.join(ROOT, "template_source")
     AGENTS_DIR = os.path.join(TEMPLATE_DIR, ".agents")
     RULES_DIR = os.path.join(AGENTS_DIR, "rules")
     DOCS_DIR = os.path.join(AGENTS_DIR, "docs")
     CONFIG_DIR = os.path.join(AGENTS_DIR, "config")
 
-    # 2. File Operations - Merge AGENTS.md
+    # 2. File Operations - Merge AGENTS.md (System Context)
     print("Brain: absorbing system context...")
     root_agents_md = os.path.join(ROOT, "AGENTS.md")
     workflow_rules_md = os.path.join(RULES_DIR, "WORKFLOW_RULES.md")
@@ -75,109 +86,129 @@ def main():
     if os.path.exists(root_agents_md) and os.path.exists(workflow_rules_md):
         with open(root_agents_md, 'r') as f:
             agents_content = f.read()
-
-        # Prepare content to prepend/insert
         with open(workflow_rules_md, 'r') as f:
             rules_content = f.read()
 
-        # Prepend after title if possible
-        lines = rules_content.splitlines()
-        if lines and lines[0].startswith("# "):
-            title = lines[0]
-            rest = "\n".join(lines[1:])
-            final_content = f"{title}\n\n## 0. System Context & Ingestion\n{agents_content}\n{rest}"
-        else:
-            final_content = f"## 0. System Context & Ingestion\n{agents_content}\n\n{rules_content}"
-
+        # Prepend context to rules
+        final_content = f"## 0. System Context & Ingestion\n{agents_content}\n\n{rules_content}"
         with open(workflow_rules_md, 'w') as f:
             f.write(final_content)
-
         os.remove(root_agents_md)
 
-    # 3. [Step Removed] Archiving system manual is now done manually before initialization.
-    # We proceed directly to stamping the project.
-
-    # 4. Update Project Manual (template_source/README.md)
-    print("Brain: Stamping new project identity...")
-    project_readme = os.path.join(DOCS_DIR, "USER_MANUAL.md")
-    if os.path.exists(project_readme):
-        # Update Title
-        update_file(project_readme, r"^# \[Project Name\]", f"# {project_name}")
-        # Add Badge
-        badge = "> **Maintained by The Coding Squad. See .agents/docs/USER_MANUAL.md for commands.**\n\n"
-        with open(project_readme, 'r') as f:
-            content = f.read()
-        # Insert after title
-        lines = content.splitlines()
-        if lines and lines[0].startswith("# "):
-            lines.insert(1, "")
-            lines.insert(2, badge)
-        else:
-            lines.insert(0, badge)
-        with open(project_readme, 'w') as f:
-            f.write("\n".join(lines))
-
-    # 5. Update Configurations
-    print("Brain: Tuning agent personas...")
-
-    # Brain - Governance
+    # 3. Update Configurations (Personas)
     brain_config = os.path.join(CONFIG_DIR, "brain.md")
     update_file(brain_config, r"\*\*Current Mode:\*\* Democracy", f"**Current Mode:** {governance}")
 
-    # Sentinel - Risk
     sentinel_config = os.path.join(CONFIG_DIR, "sentinel.md")
-    with open(sentinel_config, 'r') as f:
-        s_content = f.read()
-    if "**Risk Tolerance:**" not in s_content:
-        s_content = s_content.replace("**Role:** Security & Compliance.", f"**Role:** Security & Compliance.\n**Risk Tolerance:** {risk}")
-        with open(sentinel_config, 'w') as f:
-            f.write(s_content)
+    update_file(sentinel_config, r"\*\*Role:\*\* Security & Compliance\.", f"**Role:** Security & Compliance.\n**Risk Tolerance:** {risk}")
 
-    # Boom - Project Context
     boom_config = os.path.join(CONFIG_DIR, "boom.md")
-    with open(boom_config, 'r') as f:
-        b_content = f.read()
-    if "**Project Context:**" not in b_content:
-        b_content = b_content.replace("**Role:** Feature Delivery.", f"**Role:** Feature Delivery.\n**Project Context:** {project_type}")
-        with open(boom_config, 'w') as f:
-            f.write(b_content)
+    update_file(boom_config, r"\*\*Role:\*\* Feature Delivery\.", f"**Role:** Feature Delivery.\n**Project Context:** {project_context}")
 
-    # 6. Unpack Template
+    # 4. Unpack Template (The Smart Part)
     print("Brain: Unpacking project structure...")
 
-    # Move everything from template_source to root
     for item in os.listdir(TEMPLATE_DIR):
         s = os.path.join(TEMPLATE_DIR, item)
         d = os.path.join(ROOT, item)
+
+        # Handle README (The Manual)
+        if item == "README.md":
+            # In Migration Mode, we DON'T overwrite the root README.
+            # We move the template README to .agents/docs/USER_MANUAL.md
+            if IS_MIGRATION:
+                manual_dest = os.path.join(ROOT, ".agents", "docs", "USER_MANUAL.md")
+                # We need to wait until .agents is moved first, so we'll handle this after the loop or ensure dir exists
+                # Actually, simpler: Move it to d (ROOT/README.md) ONLY IF Creation Mode.
+                pass # Handled below
+            else:
+                # Creation Mode: Overwrite Root README
+                if os.path.exists(d): os.remove(d)
+                shutil.move(s, d)
+            continue
+
+        # Handle .gitignore (Append vs Overwrite)
+        if item == ".gitignore" and os.path.exists(d) and IS_MIGRATION:
+            print("Brain: Merging .gitignore...")
+            with open(s, 'r') as fsrc: template_ignore = fsrc.read()
+            with open(d, 'a') as fdst:
+                fdst.write("\n\n# --- JULES CODING SQUAD ---\n")
+                fdst.write(template_ignore)
+            os.remove(s)
+            continue
+
+        # Handle Scripts Folder (Merge)
         if item == "scripts":
-             # Handle scripts folder merging/moving carefully because we are running from it
              if os.path.exists(d):
-                 # Merge contents
                  for subitem in os.listdir(s):
                      shutil.move(os.path.join(s, subitem), os.path.join(d, subitem))
-                 os.rmdir(s) # should be empty now
+                 os.rmdir(s)
              else:
                  shutil.move(s, d)
-        else:
-            if os.path.exists(d):
-                # If destination exists (e.g. .gitignore or docs/), replace it.
-                if os.path.isdir(d):
-                    shutil.rmtree(d)
-                else:
-                    os.remove(d)
-            shutil.move(s, d)
+             continue
 
-    # 7. Cleanup
+        # Default Move (Overwrite if exists in Creation Mode, Skip/Merge in Migration?)
+        # For .agents/ folder, we always want to install it.
+        if item == ".agents":
+            if os.path.exists(d): shutil.rmtree(d) # Re-install agents
+            shutil.move(s, d)
+            continue
+
+        # For src/ or other scaffold files, SKIP in Migration Mode
+        if IS_MIGRATION and item in ['src', 'tests', 'package.json', 'requirements.txt']:
+            print(f"Brain: Skipping scaffolding file '{item}' (preserving existing).")
+            if os.path.isdir(s): shutil.rmtree(s)
+            else: os.remove(s)
+            continue
+
+        # Fallback for anything else
+        if os.path.exists(d):
+            if os.path.isdir(d): shutil.rmtree(d)
+            else: os.remove(d)
+        shutil.move(s, d)
+
+    # Post-Loop Handling for Manual in Migration Mode
+    if IS_MIGRATION:
+        # The template README is still in TEMPLATE_DIR (we skipped it loop) or deleted?
+        # Wait, if we skipped it, it's still in TEMPLATE_DIR.
+        template_readme = os.path.join(TEMPLATE_DIR, "README.md")
+        manual_dest_dir = os.path.join(ROOT, ".agents", "docs")
+        manual_dest = os.path.join(manual_dest_dir, "USER_MANUAL.md")
+
+        if os.path.exists(template_readme):
+            if not os.path.exists(manual_dest_dir): os.makedirs(manual_dest_dir)
+            shutil.move(template_readme, manual_dest)
+
+            # Append Badge to Root README
+            root_readme = os.path.join(ROOT, "README.md")
+            if os.path.exists(root_readme):
+                with open(root_readme, 'a') as f:
+                    f.write("\n\n> 🧠 **This project is now managed by The Coding Squad.**\n> See `.agents/docs/USER_MANUAL.md` for commands.\n")
+
+    # 5. Cleanup
     try:
-        os.rmdir(TEMPLATE_DIR)
+        if os.path.exists(TEMPLATE_DIR): shutil.rmtree(TEMPLATE_DIR)
     except:
-        pass # Might fail if not empty, but we moved everything.
+        pass
+
+    # 6. Trigger Smart Ingest (The Awakening)
+    print("Brain: Initializing memory systems...")
+    ingest_script = os.path.join(ROOT, "scripts", "smart_ingest.py")
+    if os.path.exists(ingest_script):
+        try:
+            # We run it with python executable
+            subprocess.run([sys.executable, ingest_script], check=False)
+        except Exception as e:
+            print(f"⚠️ Warning: Could not auto-run ingestion: {e}")
 
     print("\n---------------------------------------------")
     print(f"✅ Brain: {project_name} initialized.")
-    print(f"✅ Squad Governance: {governance}")
-    print(f"✅ Security Level: {risk}")
-    print("\nRun '/standup' or '/onboard' to begin working with the team.")
+    print(f"✅ Mode: {'INTEGRATION' if IS_MIGRATION else 'GENESIS'}")
+    if IS_MIGRATION:
+        print(f"ℹ️  Manual installed at: .agents/docs/USER_MANUAL.md")
+    else:
+        print(f"ℹ️  See README.md for instructions.")
+    print("\nRun '/standup' to begin.")
 
 if __name__ == "__main__":
     main()
