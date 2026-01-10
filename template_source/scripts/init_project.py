@@ -77,18 +77,10 @@ def main():
             agents_content = f.read()
 
         # Prepare content to prepend/insert
-        # We want to add it as Section 0.
         with open(workflow_rules_md, 'r') as f:
             rules_content = f.read()
 
-        new_rules = "## 0. System Context & Ingestion\n" + agents_content + "\n\n" + rules_content
-        # Remove the top header from original if double header issues, but simple concatenation is safer to avoid data loss
-        # Actually, let's just prepend it after the title if possible, or just at the top.
-        # But wait, agents_content usually has headers.
-        # Let's just append it to the end or prepend. The plan said "Append it... under a header".
-        # But context is usually best at the top.
-        # Let's PREPEND it after the main title.
-
+        # Prepend after title if possible
         lines = rules_content.splitlines()
         if lines and lines[0].startswith("# "):
             title = lines[0]
@@ -102,20 +94,12 @@ def main():
 
         os.remove(root_agents_md)
 
-    # 3. Move Root README to User Manual
-    print("Brain: Archiving system manual...")
-    root_readme = os.path.join(ROOT, "README.md")
-    user_manual = os.path.join(DOCS_DIR, "USER_MANUAL.md")
-
-    if not os.path.exists(DOCS_DIR):
-        os.makedirs(DOCS_DIR)
-
-    if os.path.exists(root_readme):
-        shutil.move(root_readme, user_manual)
+    # 3. [Step Removed] Archiving system manual is now done manually before initialization.
+    # We proceed directly to stamping the project.
 
     # 4. Update Project Manual (template_source/README.md)
     print("Brain: Stamping new project identity...")
-    project_readme = os.path.join(TEMPLATE_DIR, "README.md")
+    project_readme = os.path.join(DOCS_DIR, "USER_MANUAL.md")
     if os.path.exists(project_readme):
         # Update Title
         update_file(project_readme, r"^# \[Project Name\]", f"# {project_name}")
@@ -142,8 +126,6 @@ def main():
 
     # Sentinel - Risk
     sentinel_config = os.path.join(CONFIG_DIR, "sentinel.md")
-    # Append to Role section or Behavior
-    # We'll just look for "**Role:** Security & Compliance." and append line after
     with open(sentinel_config, 'r') as f:
         s_content = f.read()
     if "**Risk Tolerance:**" not in s_content:
@@ -169,8 +151,6 @@ def main():
         d = os.path.join(ROOT, item)
         if item == "scripts":
              # Handle scripts folder merging/moving carefully because we are running from it
-             # But on Unix moving the dir containing the script is usually fine.
-             # If d exists, we merge.
              if os.path.exists(d):
                  # Merge contents
                  for subitem in os.listdir(s):
@@ -180,8 +160,7 @@ def main():
                  shutil.move(s, d)
         else:
             if os.path.exists(d):
-                # If destination exists (e.g. .gitignore), overwrite or skip?
-                # Scaffolding usually overwrites.
+                # If destination exists (e.g. .gitignore or docs/), replace it.
                 if os.path.isdir(d):
                     shutil.rmtree(d)
                 else:
