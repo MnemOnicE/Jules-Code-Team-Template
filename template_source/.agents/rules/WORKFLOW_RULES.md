@@ -67,6 +67,12 @@ This file provides instructions for the Coding Squad agents to optimize workflow
 *   **Action:** If this counter reaches 3, Brain must **automatically trigger the War Room (`/panic`) workflow immediately**, bypassing any ongoing debate or roadmap items.
 *   **Reset:** The `consecutive_build_failures` counter must be reset to 0 upon any successful build or test run.
 
+## 12. The "Sensory Reset" (Dynamic vs. Static Context)
+*   **Problem:** "Context Decay" - reading stale file structures from previous commits.
+*   **Solution:** Agents must force a context refresh when they suspect hallucination.
+*   **Trigger:** ANY `FileNotFoundError`, `ImportError`, or "missing file" hallucination.
+*   **Action:** Stop immediately. Do not apologize. Run `python scripts/smart_ingest.py --force`. Then retry.
+
 ## Workflow Cheat Sheet
 
 | Goal | Command | Why? |

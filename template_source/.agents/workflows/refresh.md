@@ -11,7 +11,7 @@ Manually trigger the code ingestion script to ensure the Agent's context is perf
     *   State: "Updating codebase digest..."
 
 2.  **The Trigger:**
-    *   Run the bash command: `python template_source/scripts/smart_ingest.py`
+    *   Run the bash command: `python scripts/smart_ingest.py --force`
 
 3.  **Confirmation:**
     *   Once the script completes, confirm the new digest has been created in `ingests/`.
