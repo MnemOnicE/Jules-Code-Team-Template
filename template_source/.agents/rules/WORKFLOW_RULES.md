@@ -73,6 +73,9 @@ This file provides instructions for the Coding Squad agents to optimize workflow
 *   **Trigger:** ANY `FileNotFoundError`, `ImportError`, or "missing file" hallucination.
 *   **Action:** Stop immediately. Do not apologize. Run `python scripts/smart_ingest.py --force`. Then retry.
 
+## 13. General Code Generation Rules
+*   **The Constitutional Check:** Before finalizing any code block, cross-reference it against `AI_MEMORY.md`. If your code re-introduces a documented Anti-Pattern, you must self-correct immediately before outputting.
+
 ## Workflow Cheat Sheet
 
 | Goal | Command | Why? |

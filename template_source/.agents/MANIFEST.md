@@ -22,6 +22,10 @@ See the full workflow here: [standup.md](workflows/standup.md)
 The collective memory and reflections of the squad are maintained by **Scribe** in a single log:
 * [Team Memory](memory/TEAM_MEMORY.md)
 
+## 🏛️ Constitutional Memory
+The "Genetic Memory" and immutable laws of the repository are stored here:
+* [AI Constitutional Memory](memory/AI_MEMORY.md)
+
 ## 🔄 Workflows
 In addition to the Standup, specific triggers activate these specialized workflows:
 *   [The Code Court (Quality Control)](workflows/code_review.md)
