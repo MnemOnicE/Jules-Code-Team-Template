@@ -1,6 +1,11 @@
 {
+  "last_standup_id": "",
+  "current_focus": "Project Initialization",
+  "pending_tasks": [],
+  "active_agents": [],
+  "last_summary": "Initial project state.",
+  "incident_counter": 0,
   "active_constraints": [],
-  "tech_stack": [],
-  "pending_decisions": [],
-  "incident_counter": 0
+  "tech_stack": {},
+  "pending_decisions": []
 }

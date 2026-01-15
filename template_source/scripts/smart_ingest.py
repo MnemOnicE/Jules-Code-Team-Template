@@ -67,8 +67,13 @@ def main():
 
     print(f"Commit count: {commit_count}")
 
-    if commit_count % 5 == 0 or is_empty:
-        print("Condition met (every 5th commit or empty). Starting ingest...")
+    force_ingest = "--force" in sys.argv
+
+    if commit_count % 5 == 0 or is_empty or force_ingest:
+        if force_ingest:
+            print("Force flag detected. Starting ingest...")
+        else:
+            print("Condition met (every 5th commit or empty). Starting ingest...")
         run_ingest()
     else:
         print("Skipping ingest (not 5th commit and not empty).")

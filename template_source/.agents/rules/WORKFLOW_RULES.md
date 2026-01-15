@@ -67,6 +67,21 @@ This file provides instructions for the Coding Squad agents to optimize workflow
 *   **Action:** If this counter reaches 3, Brain must **automatically trigger the War Room (`/panic`) workflow immediately**, bypassing any ongoing debate or roadmap items.
 *   **Reset:** The `consecutive_build_failures` counter must be reset to 0 upon any successful build or test run.
 
+## 12. The "Sensory Reset" (Dynamic vs. Static Context)
+*   **Problem:** "Context Decay" - reading stale file structures from previous commits.
+*   **Solution:** Agents must force a context refresh when they suspect hallucination.
+*   **Trigger:** ANY `FileNotFoundError`, `ImportError`, or "missing file" hallucination.
+*   **Action:** Stop immediately. Do not apologize. Run `python scripts/smart_ingest.py --force`. Then retry.
+
+## 13. General Code Generation Rules
+*   **The Constitutional Check:** Before finalizing any code block, cross-reference it against `AI_MEMORY.md`. If your code re-introduces a documented Anti-Pattern, you must self-correct immediately before outputting.
+
+## 14. The Scribe's Paradox (Consistency Check)
+To prevent "Context Decay" where the narrative drifts from the code:
+* **Single Source of Truth:** `.agents/memory/session.json` is the ground truth. `history.md` is merely the commentary.
+* **Mandatory Linking:** Every significant status change logged in `history.md` MUST include a `[StateHash: <8_char_hash>]`.
+* **Validation:** If a `/heal` or `/audit` workflow finds a mismatch between the logged hash and the actual file state of `session.json`, the previous session is marked "Corrupted" and requires a full context refresh.
+
 ## Workflow Cheat Sheet
 
 | Goal | Command | Why? |
