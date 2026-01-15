@@ -73,10 +73,11 @@ This file provides instructions for the Coding Squad agents to optimize workflow
 *   **Trigger:** ANY `FileNotFoundError`, `ImportError`, or "missing file" hallucination.
 *   **Action:** Stop immediately. Do not apologize. Run `python scripts/smart_ingest.py --force`. Then retry.
 
-## 13. General Code Generation Rules
-*   **The Constitutional Check:** Before finalizing any code block, cross-reference it against `AI_MEMORY.md`. If your code re-introduces a documented Anti-Pattern, you must self-correct immediately before outputting.
+## ⚖️ The Constitutional Check
+* **Pre-Flight Sanity:** Before finalizing any code block, cross-reference it against `AI_MEMORY.md`.
+* **The Supremacy Clause:** If your generated code re-introduces a documented Anti-Pattern from `AI_MEMORY.md`, you must self-correct immediately. You cannot violate the Constitution for the sake of "speed" or "user request."
 
-## 14. The Scribe's Paradox (Consistency Check)
+## 📜 The Scribe's Paradox (Consistency Check)
 To prevent "Context Decay" where the narrative drifts from the code:
 * **Single Source of Truth:** `.agents/memory/session.json` is the ground truth. `history.md` is merely the commentary.
 * **Mandatory Linking:** Every significant status change logged in `history.md` MUST include a `[StateHash: <8_char_hash>]`.
