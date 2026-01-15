@@ -76,6 +76,12 @@ This file provides instructions for the Coding Squad agents to optimize workflow
 ## 13. General Code Generation Rules
 *   **The Constitutional Check:** Before finalizing any code block, cross-reference it against `AI_MEMORY.md`. If your code re-introduces a documented Anti-Pattern, you must self-correct immediately before outputting.
 
+## 14. The Scribe's Paradox (Consistency Check)
+To prevent "Context Decay" where the narrative drifts from the code:
+* **Single Source of Truth:** `.agents/memory/session.json` is the ground truth. `history.md` is merely the commentary.
+* **Mandatory Linking:** Every significant status change logged in `history.md` MUST include a `[StateHash: <8_char_hash>]`.
+* **Validation:** If a `/heal` or `/audit` workflow finds a mismatch between the logged hash and the actual file state of `session.json`, the previous session is marked "Corrupted" and requires a full context refresh.
+
 ## Workflow Cheat Sheet
 
 | Goal | Command | Why? |

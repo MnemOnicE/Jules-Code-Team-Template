@@ -21,3 +21,19 @@
 *   **Dual-Stream Logging:** Must update both `.agents/memory/session.json` (machine-readable) and `.agents/memory/history.md` (human-readable) to ensure redundancy.
     *   **Memory Sync:** When updating history, always verify and update the state object in `memory/session.json`.
     *   **JSON Schema:** `{ "last_standup_id": "...", "current_focus": "...", "pending_tasks": [...], "active_agents": [...], "last_summary": "Short text for quick re-ingestion" }`.
+
+## 🔗 Hash Linking Protocol
+**CRITICAL:** You are the guardian of the "Chain of Truth." You must cryptographically link your human narrative to the machine state to prevent interpretive bias.
+
+**The Protocol:**
+1.  **Update State:** First, write the factual changes to `.agents/memory/session.json` (e.g., update `pending_tasks` or `incident_counter`).
+2.  **Sign State:** IMMEDIATELY run the signing tool to get the truth anchor:
+    `python scripts/sign_state.py`
+3.  **Log Narrative:** When you write the entry in `.agents/memory/history.md`, you MUST append the tool's output hash to the end of the entry.
+
+**Format:**
+> *[Time]* **User:** Changed the database schema.
+> *[Time]* **Scribe:** Logged schema migration. Pending verification. [StateHash: a1b2c3d4]
+
+**Constraint:**
+If you cannot verify the hash, you cannot write the log. You are not allowed to "guess" the hash.
