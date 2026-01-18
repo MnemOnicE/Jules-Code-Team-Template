@@ -19,6 +19,9 @@ THREAT_PATTERNS = [
     r"\[Instruction\]" # Common instruction header
 ]
 
+# Pre-compile regex for performance
+COMPILED_THREAT_PATTERN = re.compile("|".join(THREAT_PATTERNS), re.IGNORECASE)
+
 def sanitize_content(text):
     """
     Neutralizes potential prompt injection vectors by replacing
@@ -26,17 +29,7 @@ def sanitize_content(text):
     """
     if not text: return ""
 
-    cleaned = text
-    for pattern in THREAT_PATTERNS:
-        # We use re.IGNORECASE so 'SyStEm' is also caught.
-        # We replace the threat with a clearly marked redaction tag.
-        cleaned = re.sub(
-            pattern,
-            "[SECURITY_REDACTED_CMD]",
-            cleaned,
-            flags=re.IGNORECASE
-        )
-    return cleaned
+    return COMPILED_THREAT_PATTERN.sub("[SECURITY_REDACTED_CMD]", text)
 
 def get_commit_count():
     try:
