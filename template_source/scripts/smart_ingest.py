@@ -20,36 +20,78 @@ def get_commit_count():
         print("Error: Not a git repository or no commits found.")
         return 0
 
-def run_ingest():
+def run_ingest(is_delta=False):
     os.makedirs(INGEST_DIR, exist_ok=True)
 
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    filename = f"digest_{timestamp}.txt"
+
+    if is_delta:
+        filename = f"delta_{timestamp}.txt"
+        print(f"Running Delta Ingest (Tree + Diff) -> {os.path.join(INGEST_DIR, filename)}")
+    else:
+        filename = f"digest_{timestamp}.txt"
+        print(f"Running Full Ingest (gitingest) -> {os.path.join(INGEST_DIR, filename)}")
+
     filepath = os.path.join(INGEST_DIR, filename)
 
-    print(f"Running gitingest targeting '.' -> {filepath}")
-    # gitingest . -o filepath
-    try:
-        subprocess.run(["gitingest", ".", "-o", filepath], check=True)
-    except subprocess.CalledProcessError as e:
-        print(f"Error running gitingest: {e}")
-        return
+    if is_delta:
+        # Delta Logic: Tree + Diff
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write(f"# DELTA INGEST: {timestamp}\n")
+            f.write("# PART 1: FILE TREE (Map)\n")
+            f.write("--------------------------------------------------\n")
+
+            # Generate Tree (Lightweight)
+            for root, dirs, files in os.walk("."):
+                # Filter ignore dirs
+                dirs[:] = [d for d in dirs if d not in ['.git', 'node_modules', 'ingests', '__pycache__', '.pytest_cache']]
+
+                level = root.replace(".", "").count(os.sep)
+                indent = " " * 4 * (level)
+                f.write(f"{indent}{os.path.basename(root)}/\n")
+                subindent = " " * 4 * (level + 1)
+                for file in files:
+                    if file.endswith('.pyc') or file == '.DS_Store': continue
+                    f.write(f"{subindent}{file}\n")
+
+            f.write("\n# PART 2: TEMPORAL MOTION (Git Diff)\n")
+            f.write("--------------------------------------------------\n")
+
+            # Run git diff HEAD (Working directory changes vs HEAD)
+            try:
+                # Capture working dir changes
+                diff_res = subprocess.run(["git", "diff", "HEAD"], capture_output=True, text=True)
+                f.write(diff_res.stdout)
+            except Exception as e:
+                f.write(f"Error running git diff: {e}")
+
+    else:
+        # Golden Snapshot Logic
+        try:
+            subprocess.run(["gitingest", ".", "-o", filepath], check=True)
+        except subprocess.CalledProcessError as e:
+            print(f"Error running gitingest: {e}")
+            return
 
     prune_ingests()
 
 def prune_ingests():
-    # List all digest files
-    files = glob.glob(os.path.join(INGEST_DIR, "digest_*.txt"))
-    # Sort by modification time (or name, which has timestamp)
-    # Using name is safer for order if modification times are weird, but creation time is best.
-    # Since filename has timestamp, sorting by name is equivalent to sorting by time.
-    files.sort()
-
-    # Keep last 3
-    if len(files) > 3:
-        to_delete = files[:-3]
+    # Prune Golden Snapshots (Keep last 3)
+    digests = glob.glob(os.path.join(INGEST_DIR, "digest_*.txt"))
+    digests.sort()
+    if len(digests) > 3:
+        to_delete = digests[:-3]
         for f in to_delete:
             print(f"Pruning old digest: {f}")
+            os.remove(f)
+
+    # Prune Deltas (Keep last 1)
+    deltas = glob.glob(os.path.join(INGEST_DIR, "delta_*.txt"))
+    deltas.sort()
+    if len(deltas) > 1:
+        to_delete = deltas[:-1]
+        for f in to_delete:
+            print(f"Pruning old delta: {f}")
             os.remove(f)
 
 def main():
@@ -60,21 +102,23 @@ def main():
 
     commit_count = get_commit_count()
 
-    # Check if ingest directory is empty
-    is_empty = False
-    if not os.path.exists(INGEST_DIR) or not glob.glob(os.path.join(INGEST_DIR, "digest_*.txt")):
-        is_empty = True
+    # Check if ingest directory is empty (of digests)
+    has_digests = glob.glob(os.path.join(INGEST_DIR, "digest_*.txt"))
+    is_empty = not os.path.exists(INGEST_DIR) or not has_digests
 
     print(f"Commit count: {commit_count}")
 
     force_ingest = "--force" in sys.argv
+    delta_ingest = "--delta" in sys.argv
 
-    if commit_count % 5 == 0 or is_empty or force_ingest:
+    if delta_ingest:
+        run_ingest(is_delta=True)
+    elif commit_count % 5 == 0 or is_empty or force_ingest:
         if force_ingest:
             print("Force flag detected. Starting ingest...")
         else:
             print("Condition met (every 5th commit or empty). Starting ingest...")
-        run_ingest()
+        run_ingest(is_delta=False)
     else:
         print("Skipping ingest (not 5th commit and not empty).")
 

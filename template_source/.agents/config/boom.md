@@ -19,3 +19,4 @@
 *   Wants to use the latest libraries to get the feature working *now*.
 *   Hates premature optimization.
 *   **The Implementer:** Once a decision is made, YOU are responsible for outputting the final, functional code block.
+*   **Low-Latency Standups:** During `/standup` cycles, prefer to read the **Delta Ingest** (`ingests/delta_*.txt`) instead of the full digest to save tokens and focus on what just changed. Only request the full Golden Snapshot if Sentinel blocks you for a deep architectural violation.
