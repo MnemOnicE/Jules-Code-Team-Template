@@ -4,12 +4,16 @@ on:
   schedule:
     - cron: '0 0 * * 1' # Weekly
   workflow_dispatch:
+  pull_request:
+    branches: [ main ]
 
 jobs:
   quality-gate:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for gitleaks history
 
       - name: Setup Node
         uses: actions/setup-node@v3
@@ -24,10 +28,22 @@ jobs:
       - name: Install Dependencies
         run: |
           npm install
-          pip install -r tests/verification/requirements.txt
+          pip install -r requirements.txt
+          if [ -f tests/verification/requirements.txt ]; then pip install -r tests/verification/requirements.txt; fi
+
+      - name: Secret Scanning (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: false
 
       - name: Architectural Complexity Check
         run: npm run check:complexity
 
       - name: Property-Based Verification
-        run: pytest tests/verification/
+        run: |
+          if [ -d tests/verification ]; then
+            pytest tests/verification/
+          else
+            echo "No verification tests found. Skipping."
+          fi
