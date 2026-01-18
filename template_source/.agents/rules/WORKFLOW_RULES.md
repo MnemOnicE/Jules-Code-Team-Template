@@ -82,6 +82,9 @@ To prevent "Context Decay" where the narrative drifts from the code:
 * **Mandatory Linking:** Every significant status change logged in `history.md` MUST include a `[StateHash: <8_char_hash>]`.
 * **Validation:** If a `/heal` or `/audit` workflow finds a mismatch between the logged hash and the actual file state of `session.json`, the previous session is marked "Corrupted" and requires a full context refresh.
 
+## 15. Verification Standards (Truth in Code)
+* **Code is Truth:** Scope must never verbally confirm a fix. It must generate a `repro_issue.py` script that fails first, then passes after the fix. Textual confirmation without code execution is considered a hallucination.
+
 ## Workflow Cheat Sheet
 
 | Goal | Command | Why? |
