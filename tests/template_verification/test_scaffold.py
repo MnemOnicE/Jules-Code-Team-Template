@@ -79,6 +79,11 @@ def test_template_internal_tests(scaffold_template):
     # The template now includes 'tests/test_placeholder.py'
     # We want to ensure 'pytest' can discover and run it inside the scaffold.
 
+    # Simulate init_project.py cleanup (removing verification tests that require extra deps)
+    verification_dir = os.path.join(scaffold_template, "tests", "verification")
+    if os.path.exists(verification_dir):
+        shutil.rmtree(verification_dir)
+
     result = subprocess.run(
         ["pytest", "tests"],
         capture_output=True,

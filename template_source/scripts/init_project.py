@@ -45,7 +45,8 @@ def main():
 
     # 0. Environment Scan (Migration Detection)
     # We check for files that are NOT part of the template mechanism
-    ignored_items = {'.git', 'template_source', 'README.md', 'LICENSE', 'CONTRIBUTING.md', '.DS_Store'}
+    # Added src, tests, etc. to ignored list so fresh clones don't trigger Migration Mode
+    ignored_items = {'.git', 'template_source', 'README.md', 'LICENSE', 'CONTRIBUTING.md', '.DS_Store', 'src', 'tests', 'requirements.txt', 'package.json', 'package-lock.json', '.agents'}
     existing_items = set(os.listdir(ROOT)) - ignored_items
 
     IS_MIGRATION = len(existing_items) > 0
@@ -185,13 +186,44 @@ def main():
                 with open(root_readme, 'a') as f:
                     f.write("\n\n> 🧠 **This project is now managed by The Coding Squad.**\n> See `.agents/docs/USER_MANUAL.md` for commands.\n")
 
-    # 5. Cleanup
+    # 5. The Lift (Runtime Sanitization)
+    print("Brain: Lifting Runtime Engine...")
+
+    # Define sanitization targets
+    cleanup_targets = [
+        os.path.join(ROOT, 'ingests'),
+        os.path.join(ROOT, 'tests', 'verification', 'logs'),
+        os.path.join(ROOT, 'tests', 'verification', '.hypothesis'),
+        os.path.join(ROOT, '.hypothesis'),
+        os.path.join(ROOT, '__pycache__'),
+        os.path.join(ROOT, 'src', '__pycache__'),
+        os.path.join(ROOT, 'src', 'core', '__pycache__')
+    ]
+
+    # Recursive cleaning for __pycache__
+    for root, dirs, files in os.walk(ROOT):
+        if '__pycache__' in dirs:
+            shutil.rmtree(os.path.join(root, '__pycache__'))
+            dirs.remove('__pycache__') # Stop descending
+        if '.hypothesis' in dirs:
+             shutil.rmtree(os.path.join(root, '.hypothesis'))
+             dirs.remove('.hypothesis')
+
+    # Specific targets
+    for target in cleanup_targets:
+        if os.path.exists(target):
+            if os.path.isdir(target):
+                shutil.rmtree(target)
+            else:
+                os.remove(target)
+
+    # 6. Cleanup (Template Source)
     try:
         if os.path.exists(TEMPLATE_DIR): shutil.rmtree(TEMPLATE_DIR)
     except:
         pass
 
-    # 6. Trigger Smart Ingest (The Awakening)
+    # 7. Trigger Smart Ingest (The Awakening)
     print("Brain: Initializing memory systems...")
     ingest_script = os.path.join(ROOT, "scripts", "smart_ingest.py")
     if os.path.exists(ingest_script):
