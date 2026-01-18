@@ -101,20 +101,27 @@ def run_ingest(is_delta=False):
             # 1. Generate the raw digest using the external tool
             subprocess.run(["gitingest", ".", "-o", filepath], check=True)
 
-            # 2. IMMEDIATE INTERCEPTION: Read, Sanitize, Rewrite
+            # 2. IMMEDIATE INTERCEPTION: Read, Sanitize, Rewrite (Streaming)
             # This ensures no raw injection payloads survive in the memory file.
-            with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
-                raw_content = f.read()
+            # Using a temp file to handle large files efficiently
+            temp_filepath = filepath + ".tmp"
 
-            safe_content = sanitize_content(raw_content)
+            with open(filepath, 'r', encoding='utf-8', errors='replace') as f_in, \
+                 open(temp_filepath, 'w', encoding='utf-8') as f_out:
 
-            with open(filepath, 'w', encoding='utf-8') as f:
-                f.write(safe_content)
+                # Process line by line to keep memory usage low
+                for line in f_in:
+                    f_out.write(sanitize_content(line))
+
+            # Replace original with sanitized version
+            shutil.move(temp_filepath, filepath)
 
             print(f"✅ Secured snapshot: {filename} (Sanitization Applied)")
 
         except subprocess.CalledProcessError as e:
             print(f"Error running gitingest: {e}")
+            if os.path.exists(filepath + ".tmp"):
+                os.remove(filepath + ".tmp")
             return
 
     prune_ingests()
