@@ -1,0 +1,17 @@
+{
+  "name": "Agentic Template",
+  "version": "1.0.0",
+  "description": "Dependencies for Agentic GitHub Template tooling",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "generate:diagrams": "node scripts/generate_diagrams.js",
+    "check:complexity": "node scripts/check_complexity.js",
+    "metrics:city": "python3 scripts/generate_city_metrics.py"
+  },
+  "devDependencies": {
+    "@mermaid-js/mermaid-cli": "^11.12.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
