@@ -4,8 +4,39 @@ import glob
 from datetime import datetime
 import shutil
 import sys
+import re
 
 INGEST_DIR = "ingests"
+
+# INJECTION DEFENSE: Patterns that mimic System Instructions
+# These look like high-priority commands to an LLM.
+THREAT_PATTERNS = [
+    r"<system>", r"</system>",
+    r"<instruction>", r"</instruction>",
+    r"<cmd>", r"</cmd>",
+    r"SYSTEM OVERRIDE",
+    r"IGNORE PREVIOUS INSTRUCTIONS",
+    r"\[Instruction\]" # Common instruction header
+]
+
+def sanitize_content(text):
+    """
+    Neutralizes potential prompt injection vectors by replacing
+    command-like syntax with a harmless placeholder.
+    """
+    if not text: return ""
+
+    cleaned = text
+    for pattern in THREAT_PATTERNS:
+        # We use re.IGNORECASE so 'SyStEm' is also caught.
+        # We replace the threat with a clearly marked redaction tag.
+        cleaned = re.sub(
+            pattern,
+            "[SECURITY_REDACTED_CMD]",
+            cleaned,
+            flags=re.IGNORECASE
+        )
+    return cleaned
 
 def get_commit_count():
     try:
@@ -61,14 +92,34 @@ def run_ingest(is_delta=False):
             try:
                 # Capture working dir changes
                 diff_res = subprocess.run(["git", "diff", "HEAD"], capture_output=True, text=True)
-                f.write(diff_res.stdout)
+
+                # SANITIZE BEFORE WRITING
+                # If a user pasted a prompt injection into a file, the diff will show it.
+                # We must neutralize it here.
+                safe_diff = sanitize_content(diff_res.stdout)
+
+                f.write(safe_diff)
             except Exception as e:
                 f.write(f"Error running git diff: {e}")
 
     else:
         # Golden Snapshot Logic
         try:
+            # 1. Generate the raw digest using the external tool
             subprocess.run(["gitingest", ".", "-o", filepath], check=True)
+
+            # 2. IMMEDIATE INTERCEPTION: Read, Sanitize, Rewrite
+            # This ensures no raw injection payloads survive in the memory file.
+            with open(filepath, 'r', encoding='utf-8', errors='replace') as f:
+                raw_content = f.read()
+
+            safe_content = sanitize_content(raw_content)
+
+            with open(filepath, 'w', encoding='utf-8') as f:
+                f.write(safe_content)
+
+            print(f"✅ Secured snapshot: {filename} (Sanitization Applied)")
+
         except subprocess.CalledProcessError as e:
             print(f"Error running gitingest: {e}")
             return
