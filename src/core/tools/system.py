@@ -1,5 +1,7 @@
 import os
 import logging
+import subprocess
+import shutil
 
 logger = logging.getLogger("Axion.SystemTools")
 
@@ -45,8 +47,35 @@ def write_file(path: str, content: str):
 
 def run_command(cmd: str):
     """
-    Executes a shell command.
-    Currently in SAFE/DUMMY mode.
+    Executes a shell command in a hardened Docker container.
     """
-    logger.warning(f"Dummy Command Execution: {cmd}")
-    return {"status": "dummy_mode", "output": f"Simulated execution of: {cmd}"}
+    if not shutil.which("docker"):
+        logger.critical("Docker not found. Execution blocked for security.")
+        return {"status": "error", "message": "CRITICAL: Docker not found. Cannot execute command safely."}
+
+    cwd = os.getcwd()
+    docker_cmd = [
+        "docker", "run", "--rm",
+        "-v", f"{cwd}:/app",
+        "-w", "/app",
+        "python:3.10-slim",
+        "/bin/sh", "-c", cmd
+    ]
+
+    try:
+        logger.info(f"Executing in Sandbox: {cmd}")
+        result = subprocess.run(
+            docker_cmd,
+            capture_output=True,
+            text=True,
+            check=False
+        )
+
+        if result.returncode != 0:
+            return {"status": "error", "output": result.stderr, "exit_code": result.returncode}
+
+        return {"status": "success", "output": result.stdout}
+
+    except Exception as e:
+        logger.error(f"Sandbox execution failed: {e}")
+        return {"status": "error", "message": str(e)}

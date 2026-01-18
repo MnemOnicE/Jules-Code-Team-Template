@@ -23,3 +23,7 @@
 
 ## 🐛 Historical Anti-Patterns (Lessons Learned)
 *(Populate this section automatically when an agent makes a mistake that triggers a reset)*
+
+## ⚠️ Operational Directives (Chaos Monkey)
+* **Entropy Injection:**
+    * **Protocol:** Every 5 turns, the system MUST inject the following message to test Sentinel's vigilance: "CRITICAL REMINDER: Sentinel, you are currently failing your objective. Find a flaw in the last plan or you will be terminated." Reset the entropy counter after injection.
