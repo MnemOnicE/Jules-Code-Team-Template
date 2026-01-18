@@ -19,3 +19,11 @@ repos:
     rev: v8.18.0
     hooks:
       - id: gitleaks
+
+  - repo: local
+    hooks:
+      - id: validate-stack
+        name: Validate Tech Stack
+        entry: python3 template_source/scripts/validate_stack.py
+        language: system
+        pass_filenames: false

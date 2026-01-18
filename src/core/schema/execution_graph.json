@@ -1,0 +1,64 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Sovereign Execution Graph",
+  "description": "A directed acyclic graph (DAG) of agentic tasks derived from NexusGlyph intent.",
+  "type": "object",
+  "required": ["graph_id", "intent_glyph", "nodes", "entry_point"],
+  "properties": {
+    "graph_id": {
+      "type": "string",
+      "description": "Unique session UUID."
+    },
+    "intent_glyph": {
+      "type": "string",
+      "description": "The high-density NexusGlyph that generated this graph (e.g., '🛡️💎'). Used for audit."
+    },
+    "aether_mark": {
+      "type": "string",
+      "description": "Cryptographic signature verifying the plan's alignment with user intent."
+    },
+    "entry_point": {
+      "type": "string",
+      "description": "The ID of the first node to execute."
+    },
+    "context_delta": {
+      "type": "object",
+      "description": "Temporary variable injections (e.g., from '|' modifiers)."
+    },
+    "nodes": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/Node"
+      }
+    }
+  },
+  "definitions": {
+    "Node": {
+      "type": "object",
+      "required": ["action"],
+      "properties": {
+        "action": {
+          "type": "string",
+          "enum": ["run_tool", "write_file", "human_input", "logic_gate", "terminate"]
+        },
+        "params": {
+          "type": "object"
+        },
+        "timeout": {
+          "type": "integer",
+          "default": 30
+        },
+        "next": {
+          "type": "string",
+          "description": "Node ID to jump to unconditionally."
+        },
+        "on_success": {
+          "type": "string"
+        },
+        "on_failure": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}
