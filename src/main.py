@@ -39,7 +39,7 @@ def generate_mock_graph(task_description):
 
     return {
         "graph_id": graph_id,
-        "intent_glyph": "🛡️🤖",
+        "intent_glyph": "🤖",
         "aether_mark": "mock_signature_verified",
         "entry_point": "node_1",
         "context_delta": {},
