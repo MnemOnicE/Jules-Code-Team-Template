@@ -1,6 +1,6 @@
 # Team Memory & Reflections
 ## Current Sprint / Context
-(No context established)
+*   **Security Watchlist:** Monitoring CVE-2025-13465 (lodash-es) in `mermaid-js` dependency. Deferring fix until `mermaid-cli` update.
 
 ## Agent Reflections (Latest)
 *(None)*
