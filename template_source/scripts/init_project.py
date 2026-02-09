@@ -60,6 +60,13 @@ def main():
     ROOT = os.getcwd()
     TEMPLATE_DIR = os.path.join(ROOT, "template_source")
 
+    # --- [START PATCH] SNAPSHOT SAFETY CHECK ---
+    # Stops the script from destroying the repo if re-run after initialization.
+    if not os.path.exists(TEMPLATE_DIR):
+        print("Brain: System already initialized. Skipping onboarding.")
+        return
+    # --- [END PATCH] ---------------------------
+
     # 0. Environment Scan (Migration Detection)
     # We check for files that are NOT part of the template mechanism
     # Added src, tests, etc. to ignored list so fresh clones don't trigger Migration Mode
