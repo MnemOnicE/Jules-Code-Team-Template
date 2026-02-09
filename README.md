@@ -2,7 +2,7 @@
 
 ### A Drop-in Multi-Agent AI Coding Squad
 
-![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg) ![Maintenance: Active](https://img.shields.io/badge/Maintenance-Active-green.svg) ![Agent: System](https://img.shields.io/badge/Agent%20System-V3-blueviolet)
+![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg) ![Maintenance: Active](https://img.shields.io/badge/Maintenance-Active-green.svg) ![Agent: System](https://img.shields.io/badge/Agent%20System-V3-blueviolet)
 
 **Stop coding alone.** This template scaffolds a complete "Coding Squad" architecture into your new project. It turns a standard LLM session into a simulated team of specialized agents who debate, critique, and verify your code before it ships.
 
@@ -87,4 +87,4 @@ We welcome "Vibe Coders" and prompt engineers! Please read [CONTRIBUTING.md](htt
 
 ## 📄 License
 
-This project is licensed under the [MIT License](https://www.google.com/search?q=LICENSE).
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).
