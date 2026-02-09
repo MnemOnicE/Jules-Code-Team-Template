@@ -14,6 +14,9 @@ This document defines the high-level roadmap and the strict boundaries of the pr
 ### Phase 2: Feature Implementation
 - [ ] ...
 
+### Known Issues / Deferred
+- [ ] **Security:** Track CVE-2025-13465 (lodash-es). Medium severity prototype pollution via `mermaid-js`. Fix deferred until `mermaid-cli` patch.
+
 ## 🛑 Definition of Done (DoD)
 1.  All code changes are verified by property-based tests.
 2.  No new secrets introduced.
