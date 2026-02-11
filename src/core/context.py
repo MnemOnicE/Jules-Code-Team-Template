@@ -15,6 +15,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import os
+from functools import lru_cache
 
 class ContextLoader:
     def __init__(self):
@@ -39,6 +40,7 @@ class ContextLoader:
 
         raise FileNotFoundError(f"Could not locate .agents configuration directory. Searched: {prod_path}, {dev_path}")
 
+    @lru_cache(maxsize=128)
     def load_persona(self, agent_name):
         """Reads the corresponding .md file for the agent."""
         # Normalize name
@@ -51,6 +53,7 @@ class ContextLoader:
         with open(filepath, 'r', encoding='utf-8') as f:
             return f.read()
 
+    @lru_cache(maxsize=1)
     def load_tech_stack(self):
         """Reads TECH_STACK.md."""
         filepath = os.path.join(self.agents_dir, 'config', 'TECH_STACK.md')
@@ -74,6 +77,10 @@ class ContextLoader:
         }
 
 # Module-level helper
+_SHARED_LOADER = None
+
 def load_context(agent_name):
-    loader = ContextLoader()
-    return loader.build_system_context(agent_name)
+    global _SHARED_LOADER
+    if _SHARED_LOADER is None:
+        _SHARED_LOADER = ContextLoader()
+    return _SHARED_LOADER.build_system_context(agent_name)
