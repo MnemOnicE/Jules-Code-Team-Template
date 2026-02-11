@@ -73,16 +73,23 @@ class GraphExecutor:
                 if result.get('status') == 'success':
                     current_node_id = node.get("on_success") or node.get("next")
                 else:
-                    current_node_id = node.get("on_failure")
+                    # Capture the failure/repair node from the graph
+                    repair_node = node.get("on_failure")
 
                     # Recursive Logic (Source [2])
                     if context.get("retry_on_fail") and context.get("retry_count", 0) < 3:
                         self.logger.warning("Triggering Self-Correction Loop...")
                         context["retry_count"] = context.get("retry_count", 0) + 1
-                        # In a real graph, this would loop back to a repair node defined in on_failure
-                    elif context.get("retry_on_fail"):
-                         self.logger.error("Max retries exceeded. Aborting.")
-                         break
+
+                        # Implement Repair Loop:
+                        # If a specific on_failure node exists, it's our repair node.
+                        # If not, we "repair" by just retrying the current node.
+                        current_node_id = repair_node if repair_node else current_node_id
+                    else:
+                        current_node_id = repair_node
+                        if context.get("retry_on_fail"):
+                             self.logger.error("Max retries exceeded. Aborting.")
+                             break
 
             except Exception as e:
                 self.logger.critical(f"Graph Crash: {e}")
