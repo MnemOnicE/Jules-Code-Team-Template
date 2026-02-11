@@ -39,7 +39,7 @@
       "properties": {
         "action": {
           "type": "string",
-          "enum": ["run_tool", "write_file", "human_input", "logic_gate", "terminate"]
+          "enum": ["run_tool", "human_input", "logic_gate", "terminate"]
         },
         "params": {
           "type": "object"
