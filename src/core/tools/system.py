@@ -58,7 +58,11 @@ def run_command(cmd: str):
     cwd = os.getcwd()
     docker_cmd = [
         "docker", "run", "--rm",
-        "-v", f"{cwd}:/app",
+        "-v", f"{cwd}:/app:ro",
+        "--tmpfs", "/tmp",
+        "--network", "none",
+        "--cap-drop", "ALL",
+        "--security-opt", "no-new-privileges",
         "-w", "/app",
         "python:3.10-slim",
         "/bin/sh", "-c", cmd
