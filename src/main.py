@@ -58,15 +58,7 @@ def generate_mock_graph(task_description):
                     "tool": "plan_decomposition",
                     "args": {"task": task_description}
                 },
-                "on_success": "node_3"
-            },
-            "node_3": {
-                "action": "write_file",
-                "params": {
-                    "filepath": "plan.txt",
-                    "content": f"Plan for: {task_description}"
-                },
-                "next": "node_4"
+                "on_success": "node_4"
             },
             "node_4": {
                 "action": "terminate",
