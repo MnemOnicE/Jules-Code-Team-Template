@@ -29,25 +29,19 @@ class TestRunCommandSecurity(unittest.TestCase):
         # Verify security flags
 
         # 1. Volume mount should be read-only
-        mount_arg = ""
-        for i, arg in enumerate(docker_cmd):
-            if arg == "-v":
-                mount_arg = docker_cmd[i+1]
-                break
+        try:
+            v_index = docker_cmd.index("-v")
+            mount_arg = docker_cmd[v_index + 1]
+            self.assertTrue(mount_arg.endswith(":ro"), f"Volume mount should be read-only. Got: {mount_arg}")
+        except (ValueError, IndexError):
+            self.fail("'-v' flag for volume mount not found or malformed.")
 
-        self.assertTrue(mount_arg.endswith(":ro"), f"Volume mount should be read-only. Got: {mount_arg}")
-
-        # 2. Network should be disabled
-        self.assertIn("--network", docker_cmd)
-        self.assertIn("none", docker_cmd)
-
-        # 3. Capabilities should be dropped
-        self.assertIn("--cap-drop", docker_cmd)
-        self.assertIn("ALL", docker_cmd)
-
-        # 4. No new privileges
-        self.assertIn("--security-opt", docker_cmd)
-        self.assertIn("no-new-privileges", docker_cmd)
+        # 2. Check other security flags by pairing them up
+        cmd_pairs = list(zip(docker_cmd, docker_cmd[1:]))
+        self.assertIn(("--network", "none"), cmd_pairs, "Network should be disabled")
+        self.assertIn(("--cap-drop", "ALL"), cmd_pairs, "All capabilities should be dropped")
+        self.assertIn(("--security-opt", "no-new-privileges"), cmd_pairs, "No new privileges should be allowed")
+        self.assertIn(("--tmpfs", "/tmp"), cmd_pairs, "A tmpfs for /tmp should be provided")
 
 if __name__ == "__main__":
     unittest.main()
