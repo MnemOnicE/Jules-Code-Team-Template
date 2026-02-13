@@ -3,8 +3,8 @@ import timeit
 import sys
 import os
 
-# Add src to path
-sys.path.append(os.path.join(os.getcwd(), 'src'))
+# Add project's src directory to path for module resolution
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'src')))
 
 from core.context import ContextLoader
 
