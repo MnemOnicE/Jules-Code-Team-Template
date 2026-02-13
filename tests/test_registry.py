@@ -53,7 +53,7 @@ def test_register_happy_path_method(registry):
     registry.register("multiply_by_5", m.multiply)
 
     assert "multiply_by_5" in registry._tools
-    assert registry._tools["multiply_by_5"](2) == 10
+    assert registry.invoke("multiply_by_5", x=2) == 10
 
 def test_register_error_non_callable(registry):
     """Test that registering a non-callable raises ValueError."""
