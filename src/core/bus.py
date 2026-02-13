@@ -30,10 +30,15 @@ class NexusBus:
         with open(schema_path, 'r') as f:
             self.schema = json.load(f)
 
+        # Pre-compile the validator for performance
+        Validator = jsonschema.validators.validator_for(self.schema)
+        Validator.check_schema(self.schema)
+        self.validator = Validator(self.schema)
+
     def validate_graph(self, graph_data):
         """Validates the given graph data against the Sovereign Execution Graph schema."""
         try:
-            jsonschema.validate(instance=graph_data, schema=self.schema)
+            self.validator.validate(instance=graph_data)
             print("[VALIDATION] Graph structure is valid.")
             return True
         except jsonschema.ValidationError as e:
