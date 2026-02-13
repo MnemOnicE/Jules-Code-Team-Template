@@ -33,6 +33,26 @@ python template_source/scripts/init_project.py
 
 ---
 
+## 💻 Usage (Direct Execution)
+
+Once initialized, you can run the agent system directly from the command line:
+
+```bash
+python3 -m src.main --task "Optimize the database query"
+```
+
+Or process a specific file:
+
+```bash
+python3 -m src.main --file path/to/file.py
+```
+
+### Key Arguments:
+- `--task <description>`: Natural language description of the task.
+- `--file <path>`: Path to a file to be processed.
+
+---
+
 ## 👥 Meet The Squad
 
 This template is not just prompts; it's a **System of Adversarial Interoperability**. Agents have conflicting goals to ensure balance.
@@ -52,34 +72,38 @@ This template is not just prompts; it's a **System of Adversarial Interoperabili
 
 ## 🏗️ Architecture
 
-How does it work?
+The system operates via a structured execution graph managed by the **Nexus Bus** and **Graph Executor**.
 
 ```mermaid
 graph TD
     User[User Input] --> Brain[🧠 Brain: Architect]
-    Brain -->|Simulate Standup| Debate[🗣️ Squad Debate]
+    Brain -->|Generate Graph| NexusBus[📡 Nexus Bus]
+    NexusBus -->|Validate| Schema[📜 JSON Schema]
+    NexusBus -->|Dispatch| Executor[🤖 Graph Executor]
 
-    subgraph "The Squad"
-    Debate --> Boom[💥 Features]
-    Debate --> Bolt[⚡ Speed]
-    Debate --> Sentinel[🛡️ Security]
+    subgraph "Execution Loop"
+        Executor -->|Traverse| Node[Graph Node]
+        Node -->|Action| ToolRegistry[🛠️ Tool Registry]
+        ToolRegistry -->|Invoke| Function[Python Function]
+        Function -->|Result| Node
     end
 
-    Debate -->|Consensus| Plan[📝 Implementation Plan]
-    Plan --> Code[💻 Code Generation]
-    Code -->|Verify| Scope[🔬 Scope: Edge Cases]
-    Scope -->|Pass| Scribe[📜 Scribe: Memory Log]
-    Scribe --> Output[Final Output]
-
+    Node -->|Success| NextNode[Next Node]
+    Node -->|Failure| Repair[Repair Loop]
+    Repair -->|Retry| Node
 ```
 
 ## 🚀 Why use this?
 
-1. **Vibe Coding with Seatbelts:** Enjoy the speed of AI coding, but with **Sentinel** and **Scope** ensuring you don't commit security vulnerabilities or logic bugs.
-2. **Context Awareness:** The system uses `smart_ingest.py` to maintain a token-optimized "Memory" of your project, so you don't have to copy-paste files constantly.
-3. **Clean Architecture:** All agent logic is hidden in `.agents/`. Your `src/` folder stays clean.
+1.  **Vibe Coding with Seatbelts:** Enjoy the speed of AI coding, but with **Sentinel** and **Scope** ensuring you don't commit security vulnerabilities or logic bugs.
+2.  **Context Awareness:** The system uses `smart_ingest.py` (available in `template_source/scripts/`) to maintain a token-optimized "Memory" of your project, so you don't have to copy-paste files constantly.
+3.  **Clean Architecture:** All agent logic is hidden in `.agents/`. Your `src/` folder stays clean.
 
 ---
+
+## 🐛 Known Issues
+
+Please see [BUGS.md](BUGS.md) for a list of known issues and audit findings.
 
 ## 🤝 Contributing
 
