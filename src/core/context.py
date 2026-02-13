@@ -22,6 +22,7 @@ class ContextLoader:
         self.root_dir = self._find_root()
         self.agents_dir = self._find_agents_dir()
         self._tech_stack = None
+        self._system_context_cache = {}
 
     def _find_root(self):
         # Assumes src/core/context.py
@@ -68,18 +69,22 @@ class ContextLoader:
             self._tech_stack = f.read()
             return self._tech_stack
 
-    @lru_cache(maxsize=128)
     def build_system_context(self, agent_name):
         """Combines persona and tech stack into a system prompt dictionary."""
+        if agent_name in self._system_context_cache:
+            return self._system_context_cache[agent_name]
+
         persona_content = self.load_persona(agent_name)
         tech_stack_content = self.load_tech_stack()
 
-        return {
+        context = {
             "role": agent_name,
             "persona": persona_content,
             "tech_stack": tech_stack_content,
             "system_prompt": f"{persona_content}\n\n## Technology Stack\n{tech_stack_content}"
         }
+        self._system_context_cache[agent_name] = context
+        return context
 
 # Module-level helper
 _SHARED_LOADER = None
