@@ -17,18 +17,23 @@
 import json
 import os
 import jsonschema
+import functools
+
+@functools.lru_cache(maxsize=1)
+def _load_schema():
+    # Locate the schema file relative to this file
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    schema_path = os.path.join(current_dir, 'schema', 'execution_graph.json')
+
+    if not os.path.exists(schema_path):
+        raise FileNotFoundError(f"Schema file not found at: {schema_path}")
+
+    with open(schema_path, 'r') as f:
+        return json.load(f)
 
 class NexusBus:
     def __init__(self):
-        # Locate the schema file relative to this file
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        schema_path = os.path.join(current_dir, 'schema', 'execution_graph.json')
-
-        if not os.path.exists(schema_path):
-             raise FileNotFoundError(f"Schema file not found at: {schema_path}")
-
-        with open(schema_path, 'r') as f:
-            self.schema = json.load(f)
+        self.schema = _load_schema()
 
     def validate_graph(self, graph_data):
         """Validates the given graph data against the Sovereign Execution Graph schema."""
