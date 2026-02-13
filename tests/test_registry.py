@@ -38,7 +38,7 @@ def test_register_happy_path_lambda(registry):
     """Test registering a lambda function."""
     registry.register("square", lambda x: x ** 2)
     assert "square" in registry._tools
-    assert registry._tools["square"](3) == 9
+    assert registry.invoke("square", x=3) == 9
 
 def test_register_happy_path_method(registry):
     """Test registering a bound method."""
