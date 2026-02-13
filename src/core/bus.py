@@ -15,20 +15,19 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import json
-import os
 import jsonschema
 import functools
+from pathlib import Path
 
 @functools.lru_cache(maxsize=1)
 def _load_schema():
     # Locate the schema file relative to this file
-    current_dir = os.path.dirname(os.path.abspath(__file__))
-    schema_path = os.path.join(current_dir, 'schema', 'execution_graph.json')
+    schema_path = Path(__file__).parent / 'schema' / 'execution_graph.json'
 
-    if not os.path.exists(schema_path):
+    if not schema_path.exists():
         raise FileNotFoundError(f"Schema file not found at: {schema_path}")
 
-    with open(schema_path, 'r') as f:
+    with schema_path.open('r') as f:
         return json.load(f)
 
 class NexusBus:
