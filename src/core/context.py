@@ -21,6 +21,7 @@ class ContextLoader:
     def __init__(self):
         self.root_dir = self._find_root()
         self.agents_dir = self._find_agents_dir()
+        self._tech_stack = None
 
     def _find_root(self):
         # Assumes src/core/context.py
@@ -53,17 +54,21 @@ class ContextLoader:
         with open(filepath, 'r', encoding='utf-8') as f:
             return f.read()
 
-    @lru_cache(maxsize=1)
     def load_tech_stack(self):
         """Reads TECH_STACK.md."""
+        if self._tech_stack is not None:
+            return self._tech_stack
+
         filepath = os.path.join(self.agents_dir, 'config', 'TECH_STACK.md')
 
         if not os.path.exists(filepath):
              raise FileNotFoundError(f"TECH_STACK.md not found at {filepath}")
 
         with open(filepath, 'r', encoding='utf-8') as f:
-            return f.read()
+            self._tech_stack = f.read()
+            return self._tech_stack
 
+    @lru_cache(maxsize=128)
     def build_system_context(self, agent_name):
         """Combines persona and tech stack into a system prompt dictionary."""
         persona_content = self.load_persona(agent_name)
