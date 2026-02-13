@@ -18,7 +18,6 @@
 
 import argparse
 import sys
-import json
 import uuid
 
 # Imports
