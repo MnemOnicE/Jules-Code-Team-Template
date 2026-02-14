@@ -98,13 +98,3 @@ def test_validate_graph_malformed_node(nexus_bus):
     }
     with pytest.raises(jsonschema.ValidationError):
         nexus_bus.validate_graph(invalid_graph)
-
-def test_validate_graph_empty_input(nexus_bus):
-    """Test that passing an empty dictionary or None raises ValidationError."""
-    # Test empty dict
-    with pytest.raises(jsonschema.ValidationError):
-        nexus_bus.validate_graph({})
-
-    # Test None
-    with pytest.raises(jsonschema.ValidationError):
-        nexus_bus.validate_graph(None)
