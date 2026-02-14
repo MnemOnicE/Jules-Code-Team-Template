@@ -1,10 +1,8 @@
 # 🐛 Known Issues & Audit Findings
 
 ## Code Health
-- [ ] **Inconsistent Error Handling**: `src/core/tools/system.py` raises `PermissionError` in `_enforce_sandbox` but returns an error dictionary in `read_file`. This inconsistency should be resolved.
 - [ ] **Hardcoded Logic**: `src/main.py` contains a hardcoded `generate_mock_graph` function which serves as a placeholder. This should ideally be moved to a test utility or mock factory.
 - [ ] **Logging Strategy**: `src/core/bus.py` uses `print()` statements for validation and execution logs. It should use the `logging` module consistent with other parts of the system (e.g., `src/core/tools/registry.py`).
-- [ ] **Missing Tests**: `src/core/tools/system.py` lacks unit tests for `_enforce_sandbox` and `read_file`.
 
 ## Documentation
 - [ ] **README.md Usage**: The `README.md` lacks instructions on how to run the agent system directly via `src/main.py` (e.g., `python -m src.main --task "..."`).
