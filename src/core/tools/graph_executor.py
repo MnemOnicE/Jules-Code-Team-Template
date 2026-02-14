@@ -46,7 +46,7 @@ class GraphExecutor:
         Zero-Trust Check: Does the intent_glyph match the graph actions?
         (In a real impl, this would verify the AetherMark).
         """
-        glyph = graph.get("intent_glyph", "")
+        glyph = graph.get("intent_glyph") or ""
         self.logger.info(f"Validating graph against intent: {glyph}")
         # Enforcement of the "Shield" protocol (Source [2])
         if "🛡️" in glyph and "security_scan" not in str(graph):

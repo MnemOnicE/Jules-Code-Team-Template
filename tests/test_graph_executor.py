@@ -63,3 +63,45 @@ def test_validate_integrity_empty_glyph(graph_executor):
     }
     # Should not raise exception
     graph_executor.validate_integrity(graph)
+
+def test_validate_integrity_missing_glyph_key(graph_executor):
+    """Test validation passes when intent_glyph key is missing (defaults to empty string)."""
+    graph = {
+        "nodes": {"start": {"action": "run_tool"}}
+    }
+    # Should not raise exception
+    graph_executor.validate_integrity(graph)
+
+def test_validate_integrity_none_glyph(graph_executor):
+    """Test validation handles explicit None for intent_glyph gracefully (treats as empty)."""
+    graph = {
+        "intent_glyph": None,
+        "nodes": {"start": {"action": "run_tool"}}
+    }
+    # Should not raise exception (currently crashes, fix required)
+    graph_executor.validate_integrity(graph)
+
+def test_validate_integrity_loose_check(graph_executor):
+    """
+    Test documents the current loose validation behavior:
+    'security_scan' in a value (not action) satisfies the check.
+    """
+    graph = {
+        "intent_glyph": "🛡️",
+        "metadata": "security_scan",  # This triggers the check
+        "nodes": {"start": {"action": "run_tool"}}
+    }
+    # Should not raise exception due to str(graph) check
+    graph_executor.validate_integrity(graph)
+
+def test_validate_integrity_multiple_shields(graph_executor):
+    """Test validation handles multiple shields correctly."""
+    graph = {
+        "intent_glyph": "🛡️🛡️",
+        "nodes": {
+            "scan": {"action": "security_scan"},
+            "start": {"action": "run_tool"}
+        }
+    }
+    # Should not raise exception
+    graph_executor.validate_integrity(graph)
