@@ -244,8 +244,8 @@ def main():
     # 6. Cleanup (Template Source)
     try:
         if os.path.exists(TEMPLATE_DIR): shutil.rmtree(TEMPLATE_DIR)
-    except:
-        pass
+    except Exception as e:
+        print(f"Warning: Failed to cleanup template source: {e}")
 
     # 7. Trigger Smart Ingest (The Awakening)
     print("Brain: Initializing memory systems...")
