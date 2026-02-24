@@ -17,6 +17,7 @@
 import os
 import subprocess
 import glob
+from pathlib import Path
 from datetime import datetime
 import shutil
 import sys
@@ -62,9 +63,10 @@ def run_ingest(is_delta=False):
                 # Filter ignore dirs
                 dirs[:] = [d for d in dirs if d not in ['.git', 'node_modules', 'ingests', '__pycache__', '.pytest_cache']]
 
-                level = root.replace(".", "").count(os.sep)
+                path = Path(root)
+                level = len(path.relative_to(".").parts)
                 indent = " " * 4 * (level)
-                f.write(f"{indent}{os.path.basename(root)}/\n")
+                f.write(f"{indent}{path.name or str(path)}/\n")
                 subindent = " " * 4 * (level + 1)
                 for file in files:
                     if file.endswith('.pyc') or file == '.DS_Store': continue
