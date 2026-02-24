@@ -63,9 +63,9 @@ def test_execute_happy_path(graph_executor):
     assert graph_executor._dispatch_action.call_count == 2
 
     # Verify calls to _dispatch_action were made with correct nodes
-    calls = graph_executor._dispatch_action.call_args_list
-    assert calls[0][0][0] == graph["nodes"]["node1"]
-    assert calls[1][0][0] == graph["nodes"]["node2"]
+    # Verify calls to _dispatch_action were made with correct nodes
+    actual_nodes = [call.args[0] for call in graph_executor._dispatch_action.call_args_list]
+    assert actual_nodes == [graph["nodes"]["node1"], graph["nodes"]["node2"]]
 
 def test_execute_with_context_delta(graph_executor):
     """Test that context_delta is correctly passed to the execution loop."""
