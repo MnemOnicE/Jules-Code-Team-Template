@@ -16,7 +16,7 @@
 
 const fs = require('fs');
 const path = require('path');
-const { execSync } = require('child_process');
+const { execFileSync } = require('child_process');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 const OUT_DIR = path.join(ROOT_DIR, 'docs', 'diagrams');
@@ -87,9 +87,9 @@ files.forEach((file, index) => {
 
   try {
     // Generate PNG
-    execSync(`"${mmdcPath}" -i "${file}" -o "${pngOut}"`, { stdio: 'inherit', cwd: ROOT_DIR });
+    execFileSync(mmdcPath, ['-i', file, '-o', pngOut], { stdio: 'inherit', cwd: ROOT_DIR });
     // Generate SVG
-    execSync(`"${mmdcPath}" -i "${file}" -o "${svgOut}"`, { stdio: 'inherit', cwd: ROOT_DIR });
+    execFileSync(mmdcPath, ['-i', file, '-o', svgOut], { stdio: 'inherit', cwd: ROOT_DIR });
   } catch (err) {
     console.error(`❌ Failed to generate diagrams for ${file}`);
     // We continue processing other diagrams even if one fails
