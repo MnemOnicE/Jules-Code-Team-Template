@@ -1,8 +1,9 @@
 import sys
 from unittest.mock import MagicMock
+import importlib.util
 
-# Mock jsonschema before any imports that might use it
-if "jsonschema" not in sys.modules:
+# Mock jsonschema if it's not installed in the environment
+if importlib.util.find_spec("jsonschema") is None:
     jsonschema_mock = MagicMock()
     class ValidationError(Exception):
         pass
