@@ -172,15 +172,8 @@ function calculateMaxDepth(nodes, edges) {
         const neighbors = adj.get(node) || [];
 
         for (const neighbor of neighbors) {
-            try {
-                const depth = dfs(neighbor);
-                maxPath = Math.max(maxPath, depth);
-            } catch (e) {
-                if (e.message.startsWith('Cycle detected')) {
-                    throw e;
-                }
-                throw e;
-            }
+            const depth = dfs(neighbor);
+            maxPath = Math.max(maxPath, depth);
         }
 
         pathStack.pop();
@@ -191,14 +184,8 @@ function calculateMaxDepth(nodes, edges) {
 
     let globalMax = 0;
     for (const node of nodes) {
-        try {
-            const d = dfs(node);
-            globalMax = Math.max(globalMax, d);
-        } catch (e) {
-            if (e.message.startsWith('Cycle detected')) {
-                throw e; // Propagate cycle error
-            }
-        }
+        const d = dfs(node);
+        globalMax = Math.max(globalMax, d);
     }
 
     return globalMax;
@@ -287,4 +274,16 @@ function checkComplexity() {
     }
 }
 
-checkComplexity();
+if (require.main === module) {
+    checkComplexity();
+}
+
+module.exports = {
+    getAllMermaidFiles,
+    parseMermaid,
+    expandNodes,
+    cleanNodeId,
+    isDefinition,
+    calculateMaxDepth,
+    checkComplexity
+};
