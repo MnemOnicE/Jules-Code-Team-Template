@@ -15,25 +15,36 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import json
-import os
+import threading
+from pathlib import Path
 import jsonschema
 
 class NexusBus:
+    _schema = None
+    _validator = None
+    _lock = threading.Lock()
+
     def __init__(self):
-        # Locate the schema file relative to this file
-        current_dir = os.path.dirname(os.path.abspath(__file__))
-        schema_path = os.path.join(current_dir, 'schema', 'execution_graph.json')
+        # Use class-level caching for schema and validator to improve performance
+        if NexusBus._validator is None:
+            with NexusBus._lock:
+                if NexusBus._validator is None:
+                    # Locate the schema file relative to this file
+                    schema_path = Path(__file__).parent / 'schema' / 'execution_graph.json'
 
-        if not os.path.exists(schema_path):
-             raise FileNotFoundError(f"Schema file not found at: {schema_path}")
+                    if not schema_path.exists():
+                        raise FileNotFoundError(f"Schema file not found at: {schema_path}")
 
-        with open(schema_path, 'r') as f:
-            self.schema = json.load(f)
+                    with schema_path.open('r') as f:
+                        NexusBus._schema = json.load(f)
 
-        # Pre-compile the validator for performance
-        Validator = jsonschema.validators.validator_for(self.schema)
-        Validator.check_schema(self.schema)
-        self.validator = Validator(self.schema)
+                    # Pre-compile the validator for performance
+                    ValidatorClass = jsonschema.validators.validator_for(NexusBus._schema)
+                    ValidatorClass.check_schema(NexusBus._schema)
+                    NexusBus._validator = ValidatorClass(NexusBus._schema)
+
+        self.schema = NexusBus._schema
+        self.validator = NexusBus._validator
 
     def validate_graph(self, graph_data):
         """Validates the given graph data against the Sovereign Execution Graph schema."""
