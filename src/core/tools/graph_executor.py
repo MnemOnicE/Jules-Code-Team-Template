@@ -14,7 +14,6 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import json
 import logging
 # Note: Ensure core.bus is implemented as requested previously
 from src.core.bus import NexusBus
