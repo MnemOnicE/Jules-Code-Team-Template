@@ -160,7 +160,7 @@ def test_validate_integrity_none_glyph(graph_executor):
         "intent_glyph": None,
         "nodes": {"start": {"action": "run_tool"}}
     }
-    # Should not raise exception (currently crashes, fix required)
+    # Should not raise exception
     graph_executor.validate_integrity(graph)
 
 def test_validate_integrity_loose_check(graph_executor):
