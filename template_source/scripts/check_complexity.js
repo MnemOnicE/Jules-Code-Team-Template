@@ -67,8 +67,8 @@ function processEdgeParts(parts, nodes, edges, nodeSubgraphs, currentSubgraph) {
 
         if (!rawSourceGroup || !rawTargetGroup) continue;
 
-        const sources = expandNodes(rawSourceGroup);
-        const targets = expandNodes(rawTargetGroup);
+        const sources = [...new Set(expandNodes(rawSourceGroup))];
+        const targets = [...new Set(expandNodes(rawTargetGroup))];
 
         sources.forEach(source => {
             targets.forEach(target => {
