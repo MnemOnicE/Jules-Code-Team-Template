@@ -62,8 +62,8 @@ function handleSubgraph(line, stack) {
 
 function processEdgeParts(parts, nodes, edges, nodeSubgraphs, currentSubgraph) {
     for (let i = 0; i < parts.length - 1; i++) {
-        const rawSourceGroup = parts[i].trim();
-        const rawTargetGroup = parts[i+1].trim();
+        const rawSourceGroup = parts[i];
+        const rawTargetGroup = parts[i+1];
 
         if (!rawSourceGroup || !rawTargetGroup) continue;
 
