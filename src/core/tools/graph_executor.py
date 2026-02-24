@@ -44,6 +44,10 @@ class GraphExecutor:
             raise SecurityError("Graph deviates from Sentinel Intent! Halting.")
 
     def execute(self, graph: dict):
+        # 1. Structural Validation (The "Smart Worker" approach)
+        self.bus.validate_graph(graph)
+
+        # 2. Security Validation
         self.validate_integrity(graph)
         context = graph.get("context_delta", {})
         current_node_id = graph["entry_point"]
