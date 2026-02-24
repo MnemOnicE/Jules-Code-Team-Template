@@ -17,6 +17,7 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import argparse
+import logging
 import sys
 import uuid
 
@@ -82,6 +83,12 @@ def main():
         sys.exit(0)
 
     task = args.task or f"Process file: {args.file}"
+
+    # Configure centralized logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format='[%(levelname)s] %(name)s: %(message)s'
+    )
 
     print("\n🔮 \033[1mInitializing Agent System V3...\033[0m")
 

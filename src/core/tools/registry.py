@@ -19,7 +19,7 @@ import logging
 class ToolRegistry:
     def __init__(self):
         self._tools = {}
-        self.logger = logging.getLogger("Axion.Registry")
+        self.logger = logging.getLogger(__name__)
 
     def register(self, name, function):
         """Registers a function under a tool name."""
