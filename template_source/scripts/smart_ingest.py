@@ -64,7 +64,7 @@ def run_ingest(is_delta=False):
                 dirs[:] = [d for d in dirs if d not in ['.git', 'node_modules', 'ingests', '__pycache__', '.pytest_cache']]
 
                 path = Path(root)
-                level = len(path.relative_to(".").parts)
+                level = 0 if path == Path('.') else len(path.parts)
                 indent = " " * 4 * (level)
                 f.write(f"{indent}{path.name or str(path)}/\n")
                 subindent = " " * 4 * (level + 1)
