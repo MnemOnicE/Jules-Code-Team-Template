@@ -32,6 +32,88 @@ def test_validate_integrity_no_shield(graph_executor):
     # Should not raise exception
     graph_executor.validate_integrity(graph)
 
+def test_execute_happy_path(graph_executor):
+    """Test the happy path of graph execution with multiple nodes."""
+    graph = {
+        "intent_glyph": "🧪",
+        "entry_point": "node1",
+        "nodes": {
+            "node1": {
+                "action": "run_tool",
+                "params": {"tool": "tool1"},
+                "next": "node2"
+            },
+            "node2": {
+                "action": "run_tool",
+                "params": {"tool": "tool2"},
+                "next": "END"
+            }
+        }
+    }
+
+    # Mock internal methods to isolate control flow
+    graph_executor.validate_integrity = MagicMock()
+    graph_executor._dispatch_action = MagicMock(return_value={"status": "success"})
+
+    # Execute
+    graph_executor.execute(graph)
+
+    # Verify control flow
+    graph_executor.validate_integrity.assert_called_once_with(graph)
+    assert graph_executor._dispatch_action.call_count == 2
+
+    # Verify calls to _dispatch_action were made with correct nodes
+    # Verify calls to _dispatch_action were made with correct nodes
+    actual_nodes = [call.args[0] for call in graph_executor._dispatch_action.call_args_list]
+    assert actual_nodes == [graph["nodes"]["node1"], graph["nodes"]["node2"]]
+
+def test_execute_with_context_delta(graph_executor):
+    """Test that context_delta is correctly passed to the execution loop."""
+    context_delta = {"user_id": "123", "debug": True}
+    graph = {
+        "intent_glyph": "🧪",
+        "entry_point": "node1",
+        "context_delta": context_delta,
+        "nodes": {
+            "node1": {
+                "action": "run_tool",
+                "params": {"tool": "tool1"},
+                "next": "END"
+            }
+        }
+    }
+
+    graph_executor._dispatch_action = MagicMock(return_value={"status": "success"})
+
+    # Execute
+    graph_executor.execute(graph)
+
+    # Verify context_delta was passed to _dispatch_action
+    graph_executor._dispatch_action.assert_called_once_with(
+        graph["nodes"]["node1"],
+        context_delta
+    )
+
+def test_execute_happy_path_logging(graph_executor, caplog):
+    """Test that the execution of nodes is logged correctly."""
+    graph = {
+        "intent_glyph": "🧪",
+        "entry_point": "node1",
+        "nodes": {
+            "node1": {
+                "action": "test_action",
+                "next": "END"
+            }
+        }
+    }
+
+    graph_executor._dispatch_action = MagicMock(return_value={"status": "success"})
+
+    with caplog.at_level("INFO"):
+        graph_executor.execute(graph)
+
+    assert "Executing Node: node1 [test_action]" in caplog.text
+
 def test_validate_integrity_shield_with_scan(graph_executor):
     """Test validation passes when intent_glyph contains shield and security_scan is present."""
     graph = {
