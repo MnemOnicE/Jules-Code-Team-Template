@@ -30,15 +30,7 @@ class GraphExecutor:
     def __init__(self, event_bus: NexusBus):
         self.bus = event_bus
         self.registry = ToolRegistry()
-        self.logger = logging.getLogger("Axion.Executor")
-
-        # Configure logging if not already configured (simple setup for demo)
-        if not self.logger.handlers:
-             handler = logging.StreamHandler()
-             formatter = logging.Formatter('[%(levelname)s] %(name)s: %(message)s')
-             handler.setFormatter(formatter)
-             self.logger.addHandler(handler)
-             self.logger.setLevel(logging.INFO)
+        self.logger = logging.getLogger(__name__)
 
     def validate_integrity(self, graph: dict):
         """
