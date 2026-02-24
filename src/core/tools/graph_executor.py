@@ -89,8 +89,15 @@ class GraphExecutor:
     def _dispatch_action(self, node, context):
         # Maps graph actions to specific tool calls
         if node['action'] == 'run_tool':
-            tool_name = node['params']['tool']
-            args = node['params'].get('args', {})
+            params = node.get('params')
+            if params is None:
+                raise ValueError("Missing parameters for tool execution")
+
+            tool_name = params.get('tool')
+            if not tool_name:
+                raise ValueError("Tool name missing in run_tool action")
+
+            args = params.get('args', {})
             # Inject context if needed (Source [1])
             if context.get("shizuku_active"):
                 args["use_root"] = True
