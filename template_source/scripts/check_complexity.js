@@ -62,13 +62,13 @@ function handleSubgraph(line, stack) {
 
 function processEdgeParts(parts, nodes, edges, nodeSubgraphs, currentSubgraph) {
     for (let i = 0; i < parts.length - 1; i++) {
-        const rawSourceGroup = parts[i];
-        const rawTargetGroup = parts[i+1];
+        const rawSourceGroup = parts[i].trim();
+        const rawTargetGroup = parts[i+1].trim();
 
         if (!rawSourceGroup || !rawTargetGroup) continue;
 
-        const sources = [...new Set(expandNodes(rawSourceGroup))];
-        const targets = [...new Set(expandNodes(rawTargetGroup))];
+        const sources = expandNodes(rawSourceGroup);
+        const targets = expandNodes(rawTargetGroup);
 
         sources.forEach(source => {
             targets.forEach(target => {
@@ -94,7 +94,7 @@ function processEdgeParts(parts, nodes, edges, nodeSubgraphs, currentSubgraph) {
 function processNodeLine(line, nodes, nodeSubgraphs, currentSubgraph) {
     // Standalone node or subgraph node definition
     // A[Label]
-    const rawNode = line;
+    const rawNode = line.trim();
     const expanded = expandNodes(rawNode);
     expanded.forEach(node => {
         if (node) {

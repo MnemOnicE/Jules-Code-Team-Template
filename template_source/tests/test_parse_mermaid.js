@@ -3,6 +3,8 @@ const { parseMermaid } = require('../scripts/check_complexity');
 
 console.log('🧪 Running tests for parseMermaid...');
 
+let testsFailed = false;
+
 function assertSetEqual(actual, expected, message) {
     const actualArr = Array.from(actual).sort();
     const expectedArr = Array.from(expected).sort();
@@ -28,6 +30,7 @@ function runTest(name, fn) {
         fn();
         console.log('   ✅ PASS');
     } catch (e) {
+        testsFailed = true;
         console.log('   ❌ FAIL');
         console.error(e.message);
         if (e.expected) console.error('Expected:', e.expected);
@@ -192,4 +195,9 @@ runTest('Test 8: Node Definitions in Subgraph', () => {
     assert.strictEqual(res2.nodeSubgraphs.get('A'), 'Two', 'Should update on redefinition');
 });
 
-console.log('\n✨ All tests passed!');
+if (testsFailed) {
+    console.error('\n❌ Some tests failed!');
+    process.exit(1);
+} else {
+    console.log('\n✨ All tests passed!');
+}
