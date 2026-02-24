@@ -94,7 +94,7 @@ function processEdgeParts(parts, nodes, edges, nodeSubgraphs, currentSubgraph) {
 function processNodeLine(line, nodes, nodeSubgraphs, currentSubgraph) {
     // Standalone node or subgraph node definition
     // A[Label]
-    const rawNode = line.trim();
+    const rawNode = line;
     const expanded = expandNodes(rawNode);
     expanded.forEach(node => {
         if (node) {
