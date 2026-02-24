@@ -25,7 +25,7 @@ def nexus_bus():
     if hasattr(bus.validator, "reset_mock"):
         bus.validator.reset_mock()
         if hasattr(bus.validator.validate, "side_effect"):
-             bus.validator.validate.side_effect = None
+            bus.validator.validate.side_effect = None
     return bus
 
 def _mock_validation_failure(nexus_bus):
