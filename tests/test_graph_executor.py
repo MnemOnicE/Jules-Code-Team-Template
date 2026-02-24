@@ -32,6 +32,41 @@ def test_validate_integrity_no_shield(graph_executor):
     # Should not raise exception
     graph_executor.validate_integrity(graph)
 
+
+def test_execute_exception_handling(graph_executor, caplog):
+    """Test that exceptions during node execution are caught and logged critically."""
+    graph = {
+        "intent_glyph": "🧪",
+        "entry_point": "node1",
+        "nodes": {
+            "node1": {
+                "action": "run_tool",
+                "next": "node2"
+            },
+            "node2": {
+                "action": "run_tool",
+                "next": "END"
+            }
+        }
+    }
+
+    # Mock _dispatch_action to raise an exception
+    graph_executor._dispatch_action = MagicMock(side_effect=RuntimeError("Simulated Crash"))
+
+    # Mock validate_integrity to avoid unnecessary checks
+    graph_executor.validate_integrity = MagicMock()
+
+    # Execute
+    graph_executor.execute(graph)
+
+    # Verify execution stopped after the first node (break)
+    assert graph_executor._dispatch_action.call_count == 1
+
+    # Verify the exception was logged as CRITICAL
+    critical_logs = [record for record in caplog.records if record.levelname == "CRITICAL"]
+    assert len(critical_logs) == 1
+    assert "Graph Crash: Simulated Crash" in critical_logs[0].message
+
 def test_execute_happy_path(graph_executor):
     """Test the happy path of graph execution with multiple nodes."""
     graph = {
