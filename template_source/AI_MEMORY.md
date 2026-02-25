@@ -9,10 +9,10 @@ This file serves as a **mutable knowledge base** for all agents working on this 
 *   **Solution**: Replaced `execSync` with `execFileSync` and passed arguments as an array. This avoids shell interpretation and prevents injection.
 *   **Anti-Pattern**: Using `execSync` (or other shell-invoking functions) with unsanitized user-controllable input or filenames.
 
-### [YYYY-MM-DD] Pattern: <Title>
-*   **Context**: What was the problem?
-*   **Solution**: How was it solved?
-*   **Anti-Pattern**: What should be avoided?
+### [2026-05-22] Security: Overly Permissive OIDC Subject Claim
+*   **Context**: GitHub Actions OIDC trust policies for AWS were using a wildcard (`:*`) in the `sub` claim, allowing any branch or environment in the repository to assume the role.
+*   **Solution**: Restricted the `sub` claim using `StringEquals` and a specific branch reference (`repo:ORG/REPO:ref:refs/heads/BRANCH`). Also added an explicit `aud` claim check.
+*   **Anti-Pattern**: Using wildcards in OIDC subject claims, which violates the principle of least privilege and allows unauthorized branches/refs to assume privileged roles.
 
 ## 🐛 Bug Workarounds
 
