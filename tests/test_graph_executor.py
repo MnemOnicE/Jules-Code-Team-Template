@@ -33,6 +33,88 @@ def test_validate_integrity_no_shield(graph_executor):
     # Should not raise exception
     graph_executor.validate_integrity(graph)
 
+def test_dispatch_action_shizuku_active_injects_use_root(graph_executor):
+    """Test that use_root=True is injected when shizuku_active is True in context."""
+    node = {
+        "action": "run_tool",
+        "params": {
+            "tool": "test_tool",
+            "args": {"arg1": "val1"}
+        }
+    }
+    context = {"shizuku_active": True}
+
+    graph_executor.registry.invoke = MagicMock(return_value={"status": "success"})
+
+    graph_executor._dispatch_action(node, context)
+
+    graph_executor.registry.invoke.assert_called_once_with(
+        "test_tool",
+        arg1="val1",
+        use_root=True
+    )
+
+def test_dispatch_action_shizuku_inactive_no_injection(graph_executor):
+    """Test that use_root is NOT injected when shizuku_active is False or missing."""
+    node = {
+        "action": "run_tool",
+        "params": {
+            "tool": "test_tool",
+            "args": {"arg1": "val1"}
+        }
+    }
+
+    graph_executor.registry.invoke = MagicMock(return_value={"status": "success"})
+
+    # Case: False
+    graph_executor._dispatch_action(node, {"shizuku_active": False})
+    graph_executor.registry.invoke.assert_called_with("test_tool", arg1="val1")
+
+    # Case: Missing
+    graph_executor.registry.invoke.reset_mock()
+    graph_executor._dispatch_action(node, {})
+    graph_executor.registry.invoke.assert_called_with("test_tool", arg1="val1")
+
+def test_dispatch_action_preserves_existing_args(graph_executor):
+    """Test that existing arguments are preserved when shizuku_active is True."""
+    node = {
+        "action": "run_tool",
+        "params": {
+            "tool": "test_tool",
+            "args": {"other": "value"}
+        }
+    }
+    context = {"shizuku_active": True}
+    graph_executor.registry.invoke = MagicMock(return_value={"status": "success"})
+
+    graph_executor._dispatch_action(node, context)
+
+    graph_executor.registry.invoke.assert_called_once_with(
+        "test_tool",
+        other="value",
+        use_root=True
+    )
+
+def test_dispatch_action_shizuku_injection_side_effect_check(graph_executor):
+    """
+    Test documents that _dispatch_action currently modifies the input node's args.
+    If this behavior is unintended, it should be refactored to use a copy.
+    """
+    node = {
+        "action": "run_tool",
+        "params": {
+            "tool": "test_tool",
+            "args": {"arg1": "val1"}
+        }
+    }
+    context = {"shizuku_active": True}
+    graph_executor.registry.invoke = MagicMock(return_value={"status": "success"})
+
+    graph_executor._dispatch_action(node, context)
+
+    # Verify that the original node was modified
+    assert node["params"]["args"]["use_root"] is True
+
 
 def test_execute_exception_handling(graph_executor, caplog):
     """Test that exceptions during node execution are caught and logged critically."""
