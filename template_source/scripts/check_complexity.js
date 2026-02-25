@@ -42,6 +42,70 @@ function getAllMermaidFiles(dir, fileList = []) {
     return fileList;
 }
 
+function shouldSkipLine(line) {
+    return !line || line.startsWith('%%') || line.startsWith('graph ') || line.startsWith('flowchart ');
+}
+
+function handleSubgraph(line, stack) {
+    if (line.startsWith('subgraph ')) {
+        const match = line.match(/subgraph\s+([^\s\[]+)/);
+        const name = match ? match[1] : 'unknown';
+        stack.push(name);
+        return true;
+    }
+    if (line === 'end') {
+        stack.pop();
+        return true;
+    }
+    return false;
+}
+
+function processEdgeParts(parts, nodes, edges, nodeSubgraphs, currentSubgraph) {
+    for (let i = 0; i < parts.length - 1; i++) {
+        const rawSourceGroup = parts[i].trim();
+        const rawTargetGroup = parts[i+1].trim();
+
+        if (!rawSourceGroup || !rawTargetGroup) continue;
+
+        const sources = expandNodes(rawSourceGroup);
+        const targets = expandNodes(rawTargetGroup);
+
+        sources.forEach(source => {
+            targets.forEach(target => {
+                if (source && target) {
+                    nodes.add(source);
+                    nodes.add(target);
+                    edges.push({ from: source, to: target });
+
+                    if (currentSubgraph) {
+                        if (!nodeSubgraphs.has(source) || isDefinition(rawSourceGroup)) {
+                            nodeSubgraphs.set(source, currentSubgraph);
+                        }
+                        if (!nodeSubgraphs.has(target) || isDefinition(rawTargetGroup)) {
+                            nodeSubgraphs.set(target, currentSubgraph);
+                        }
+                    }
+                }
+            });
+        });
+    }
+}
+
+function processNodeLine(line, nodes, nodeSubgraphs, currentSubgraph) {
+    // Standalone node or subgraph node definition
+    // A[Label]
+    const rawNode = line.trim();
+    const expanded = expandNodes(rawNode);
+    expanded.forEach(node => {
+        if (node) {
+            nodes.add(node);
+            if (currentSubgraph) {
+                nodeSubgraphs.set(node, currentSubgraph);
+            }
+        }
+    });
+}
+
 function parseMermaid(content) {
     const lines = content.split('\n');
     const nodes = new Set();
@@ -52,19 +116,9 @@ function parseMermaid(content) {
 
     lines.forEach(line => {
         line = line.trim();
-        if (!line || line.startsWith('%%') || line.startsWith('graph ') || line.startsWith('flowchart ')) return;
+        if (shouldSkipLine(line)) return;
 
-        // Subgraph handling
-        if (line.startsWith('subgraph ')) {
-            const match = line.match(/subgraph\s+([^\s\[]+)/);
-            const name = match ? match[1] : 'unknown';
-            subgraphStack.push(name);
-            return;
-        }
-        if (line === 'end') {
-            subgraphStack.pop();
-            return;
-        }
+        if (handleSubgraph(line, subgraphStack)) return;
 
         const currentSubgraph = subgraphStack.length > 0 ? subgraphStack[subgraphStack.length - 1] : null;
 
@@ -74,47 +128,10 @@ function parseMermaid(content) {
         const parts = line.split(/\s*[-=.]{1,4}(?:(?:\|.+?\|)|(?:.+?))?[-=.]{0,3}[>]\s*/);
 
         if (parts.length > 1) {
-            for (let i = 0; i < parts.length - 1; i++) {
-                const rawSourceGroup = parts[i].trim();
-                const rawTargetGroup = parts[i+1].trim();
-
-                if (!rawSourceGroup || !rawTargetGroup) continue;
-
-                const sources = expandNodes(rawSourceGroup);
-                const targets = expandNodes(rawTargetGroup);
-
-                sources.forEach(source => {
-                    targets.forEach(target => {
-                        if (source && target) {
-                            nodes.add(source);
-                            nodes.add(target);
-                            edges.push({ from: source, to: target });
-
-                            if (currentSubgraph) {
-                                if (!nodeSubgraphs.has(source) || isDefinition(rawSourceGroup)) {
-                                    nodeSubgraphs.set(source, currentSubgraph);
-                                }
-                                if (!nodeSubgraphs.has(target) || isDefinition(rawTargetGroup)) {
-                                    nodeSubgraphs.set(target, currentSubgraph);
-                                }
-                            }
-                        }
-                    });
-                });
-            }
+            processEdgeParts(parts, nodes, edges, nodeSubgraphs, currentSubgraph);
         } else {
             // Standalone node or subgraph node definition
-            // A[Label]
-            const rawNode = parts[0].trim();
-            const expanded = expandNodes(rawNode);
-            expanded.forEach(node => {
-                if (node) {
-                    nodes.add(node);
-                    if (currentSubgraph) {
-                        nodeSubgraphs.set(node, currentSubgraph);
-                    }
-                }
-            });
+            processNodeLine(parts[0], nodes, nodeSubgraphs, currentSubgraph);
         }
     });
 
