@@ -66,24 +66,25 @@ def test_find_agents_dir_production_layout(mock_fs):
         assert loader.agents_dir == os.path.join(mock_root, '.agents')
         mock_exists.assert_called_once_with(os.path.join(mock_root, '.agents'))
 
-def test_find_agents_dir_development_layout():
+def test_find_agents_dir_development_layout(mock_fs):
     """Test finding .agents in template_source (Development)."""
     mock_root = "/mock/root"
+    mock_exists = mock_fs["exists"]
+    from unittest.mock import call
 
-    with patch.object(ContextLoader, '_find_root', return_value=mock_root), \
-         patch("os.path.exists") as mock_exists:
-
+    with patch.object(ContextLoader, '_find_root', return_value=mock_root):
         # Setup: root/.agents missing, template_source/.agents exists
-        def side_effect_exists(path):
-            if path == os.path.join(mock_root, '.agents'):
-                return False
-            if path == os.path.join(mock_root, 'template_source', '.agents'):
-                return True
-            return False
-        mock_exists.side_effect = side_effect_exists
+        mock_exists.side_effect = [False, True]
 
         loader = ContextLoader()
         assert loader.agents_dir == os.path.join(mock_root, 'template_source', '.agents')
+
+        expected_calls = [
+            call(os.path.join(mock_root, '.agents')),
+            call(os.path.join(mock_root, 'template_source', '.agents'))
+        ]
+        mock_exists.assert_has_calls(expected_calls)
+        assert mock_exists.call_count == 2
 
 def test_find_agents_dir_missing(mock_fs):
     """Test FileNotFoundError when .agents directory is missing in both locations."""
