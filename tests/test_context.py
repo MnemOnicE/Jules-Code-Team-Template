@@ -85,15 +85,24 @@ def test_find_agents_dir_development_layout():
         loader = ContextLoader()
         assert loader.agents_dir == os.path.join(mock_root, 'template_source', '.agents')
 
-def test_find_agents_dir_missing():
+def test_find_agents_dir_missing(mock_fs):
     """Test FileNotFoundError when .agents directory is missing in both locations."""
     mock_root = "/mock/root"
+    mock_exists = mock_fs["exists"]
+    from unittest.mock import call
 
-    with patch.object(ContextLoader, '_find_root', return_value=mock_root), \
-         patch("os.path.exists", return_value=False):
+    with patch.object(ContextLoader, '_find_root', return_value=mock_root):
+        mock_exists.return_value = False
 
         with pytest.raises(FileNotFoundError, match="Could not locate .agents configuration directory"):
             ContextLoader()
+
+        expected_calls = [
+            call(os.path.join(mock_root, '.agents')),
+            call(os.path.join(mock_root, 'template_source', '.agents'))
+        ]
+        mock_exists.assert_has_calls(expected_calls)
+        assert mock_exists.call_count == 2
 
 # --- Tests for load_persona ---
 
