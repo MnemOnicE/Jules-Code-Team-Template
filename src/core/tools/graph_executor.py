@@ -54,8 +54,9 @@ class GraphExecutor:
         while current_node_id and current_node_id != "END":
             step_count += 1
             if step_count > self.MAX_STEPS:
-                self.logger.error(f"Max steps ({self.MAX_STEPS}) exceeded. Potential infinite loop.")
-                break
+                msg = f"Max steps ({self.MAX_STEPS}) exceeded. Potential infinite loop."
+                self.logger.error(msg)
+                raise MaxStepsExceededError(msg)
 
             node = graph["nodes"].get(current_node_id)
             if not node:
