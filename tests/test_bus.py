@@ -151,7 +151,7 @@ def test_execute_happy_path(nexus_bus, capsys):
 def test_execute_validation_failure(nexus_bus):
     """Test that execute fails if validation fails."""
     # Force validation failure to test error handling
-    if hasattr(nexus_bus.validator.validate, "side_effect"):
+    if isinstance(nexus_bus.validator, MagicMock):
         nexus_bus.validator.validate.side_effect = jsonschema.ValidationError("mock error")
 
     with pytest.raises(jsonschema.ValidationError):
