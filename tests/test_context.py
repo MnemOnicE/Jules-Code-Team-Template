@@ -53,22 +53,18 @@ def test_find_root_logic():
 
 # --- Tests for _find_agents_dir ---
 
-def test_find_agents_dir_production_layout():
+def test_find_agents_dir_production_layout(mock_fs):
     """Test finding .agents in the root directory (Production)."""
     mock_root = "/mock/root"
+    mock_exists = mock_fs["exists"]
 
-    with patch.object(ContextLoader, '_find_root', return_value=mock_root), \
-         patch("os.path.exists") as mock_exists:
-
+    with patch.object(ContextLoader, '_find_root', return_value=mock_root):
         # Setup: root/.agents exists
-        def side_effect_exists(path):
-            if path == os.path.join(mock_root, '.agents'):
-                return True
-            return False
-        mock_exists.side_effect = side_effect_exists
+        mock_exists.side_effect = lambda path: path == os.path.join(mock_root, '.agents')
 
         loader = ContextLoader()
         assert loader.agents_dir == os.path.join(mock_root, '.agents')
+        mock_exists.assert_called_once_with(os.path.join(mock_root, '.agents'))
 
 def test_find_agents_dir_development_layout():
     """Test finding .agents in template_source (Development)."""
