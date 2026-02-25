@@ -288,4 +288,4 @@ def test_load_context_singleton():
         # Second call: should reuse loader
         context2 = load_context(agent_name)
         assert context2 == expected_context
-        assert MockLoaderClass.call_count == 1 # Still 1
+        assert MockLoaderClass.call_count == 1
