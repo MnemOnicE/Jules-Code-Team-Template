@@ -222,3 +222,41 @@ def test_validate_integrity_multiple_shields(graph_executor):
     }
     # Should not raise exception
     graph_executor.validate_integrity(graph)
+
+def test_execute_max_steps_exceeded(graph_executor, caplog):
+    """Test that cyclic graphs are terminated when MAX_STEPS is exceeded."""
+    graph = {
+        "intent_glyph": "🧪",
+        "entry_point": "node1",
+        "nodes": {
+            "node1": {
+                "action": "test_action",
+                "next": "node2"
+            },
+            "node2": {
+                "action": "test_action",
+                "next": "node1"
+            }
+        }
+    }
+
+    # Temporarily set a small MAX_STEPS for the test
+    original_max = graph_executor.MAX_STEPS
+    graph_executor.MAX_STEPS = 5
+
+    graph_executor.validate_integrity = MagicMock()
+    graph_executor._dispatch_action = MagicMock(return_value={"status": "success"})
+
+    try:
+        graph_executor.execute(graph)
+    finally:
+        graph_executor.MAX_STEPS = original_max
+
+    # Verify it stopped at 5 + 1 steps (the check is step_count > MAX_STEPS)
+    # Actually it will execute node1, node2, node1, node2, node1.
+    # step_count will be 1, 2, 3, 4, 5.
+    # When step_count becomes 6, it hits the limit.
+    assert graph_executor._dispatch_action.call_count == 5
+
+    # Verify error was logged
+    assert f"Max steps (5) exceeded. Potential infinite loop." in caplog.text
