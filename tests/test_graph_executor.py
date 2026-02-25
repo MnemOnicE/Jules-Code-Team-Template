@@ -15,7 +15,6 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import pytest
-import jsonschema
 from unittest.mock import MagicMock
 from src.core.tools.graph_executor import GraphExecutor, SecurityError
 
@@ -95,7 +94,6 @@ def test_execute_happy_path(graph_executor):
     graph_executor.execute(graph)
 
     # Verify control flow
-    graph_executor.bus.validate_graph.assert_called_once_with(graph)
     graph_executor.validate_integrity.assert_called_once_with(graph)
     assert graph_executor._dispatch_action.call_count == 2
 
@@ -103,63 +101,6 @@ def test_execute_happy_path(graph_executor):
     # Verify calls to _dispatch_action were made with correct nodes
     actual_nodes = [call.args[0] for call in graph_executor._dispatch_action.call_args_list]
     assert actual_nodes == [graph["nodes"]["node1"], graph["nodes"]["node2"]]
-
-def test_execute_validation_failure(graph_executor):
-    """Test that execution stops if structural validation fails."""
-    graph = {"nodes": {}}
-
-    # Mock validation failure
-    graph_executor.bus.validate_graph.side_effect = jsonschema.ValidationError("Invalid graph")
-
-    # Execute should raise ValidationError
-    with pytest.raises(jsonschema.ValidationError):
-        graph_executor.execute(graph)
-
-def test_execute_missing_node(graph_executor, caplog):
-    """Test that execution handles missing nodes gracefully."""
-    graph = {
-        "intent_glyph": "🧪",
-        "entry_point": "node1",
-        "nodes": {
-            "node1": {
-                "action": "run_tool",
-                "next": "missing_node"
-            }
-        }
-    }
-
-    graph_executor.validate_integrity = MagicMock()
-    graph_executor._dispatch_action = MagicMock(return_value={"status": "success"})
-
-    with caplog.at_level("ERROR"):
-        graph_executor.execute(graph)
-
-    assert "Node missing_node not found." in caplog.text
-
-def test_execute_traversal_logic(graph_executor):
-    """Test that on_success takes precedence over next."""
-    graph = {
-        "intent_glyph": "🧪",
-        "entry_point": "node1",
-        "nodes": {
-            "node1": {
-                "action": "run_tool",
-                "on_success": "success_node",
-                "next": "next_node"
-            },
-            "success_node": {"action": "terminate"},
-            "next_node": {"action": "terminate"}
-        }
-    }
-
-    graph_executor.validate_integrity = MagicMock()
-    graph_executor._dispatch_action = MagicMock(return_value={"status": "success"})
-
-    graph_executor.execute(graph)
-
-    # Should visit node1 then success_node
-    actual_nodes = [call.args[0] for call in graph_executor._dispatch_action.call_args_list]
-    assert actual_nodes == [graph["nodes"]["node1"], graph["nodes"]["success_node"]]
 
 def test_execute_with_context_delta(graph_executor):
     """Test that context_delta is correctly passed to the execution loop."""

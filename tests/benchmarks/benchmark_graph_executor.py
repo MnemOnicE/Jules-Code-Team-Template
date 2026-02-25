@@ -81,8 +81,10 @@ def benchmark_cyclic_graph():
     }
 
     # No timeout needed if it works correctly, but good for safety
-    signal.signal(signal.SIGALRM, timeout_handler)
-    signal.alarm(2)
+    has_alarm = hasattr(signal, "SIGALRM")
+    if has_alarm:
+        signal.signal(signal.SIGALRM, timeout_handler)
+        signal.alarm(2)
 
     print("Benchmarking cyclic graph (should terminate via step limit)...")
     start_time = timeit.default_timer()
@@ -93,7 +95,8 @@ def benchmark_cyclic_graph():
     except TimeoutException:
         print(f"Cyclic graph STILL timed out! Optimization failed.")
     finally:
-        signal.alarm(0)
+        if has_alarm:
+            signal.alarm(0)
 
 if __name__ == "__main__":
     print("--- GraphExecutor Performance Results ---")

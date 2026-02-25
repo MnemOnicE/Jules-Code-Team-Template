@@ -46,10 +46,6 @@ class GraphExecutor:
             raise SecurityError("Graph deviates from Sentinel Intent! Halting.")
 
     def execute(self, graph: dict):
-        # 1. Structural Validation (The "Smart Worker" approach)
-        self.bus.validate_graph(graph)
-
-        # 2. Security Validation
         self.validate_integrity(graph)
         context = graph.get("context_delta", {})
         current_node_id = graph["entry_point"]
@@ -58,9 +54,8 @@ class GraphExecutor:
         while current_node_id and current_node_id != "END":
             step_count += 1
             if step_count > self.MAX_STEPS:
-                msg = f"Max steps ({self.MAX_STEPS}) exceeded. Potential infinite loop."
-                self.logger.error(msg)
-                raise MaxStepsExceededError(msg)
+                self.logger.error(f"Max steps ({self.MAX_STEPS}) exceeded. Potential infinite loop.")
+                break
 
             node = graph["nodes"].get(current_node_id)
             if not node:

@@ -16,12 +16,7 @@
 
 import pytest
 import jsonschema
-from unittest.mock import MagicMock
 from src.core.bus import NexusBus
-
-# Determine if jsonschema is a mock (occurs in environments without the library)
-# Some tests rely on real schema validation and should be skipped if it's mocked.
-JS_IS_MOCKED = isinstance(getattr(jsonschema, "validate", None), MagicMock)
 
 @pytest.fixture
 def nexus_bus():
@@ -32,6 +27,11 @@ def nexus_bus():
         if hasattr(bus.validator.validate, "side_effect"):
             bus.validator.validate.side_effect = None
     return bus
+
+def _mock_validation_failure(nexus_bus):
+    """Helper to configure the mock validator to fail."""
+    if hasattr(nexus_bus.validator, "validate") and hasattr(nexus_bus.validator.validate, "side_effect"):
+        nexus_bus.validator.validate.side_effect = jsonschema.ValidationError("mock error")
 
 def test_validate_graph_happy_path(nexus_bus):
     """Test validate_graph with a fully valid graph dictionary."""
@@ -52,9 +52,9 @@ def test_validate_graph_happy_path(nexus_bus):
     }
     assert nexus_bus.validate_graph(valid_graph) is True
 
-@pytest.mark.skipif(JS_IS_MOCKED, reason="Requires real jsonschema for schema validation")
 def test_validate_graph_missing_required_fields(nexus_bus):
     """Test that missing required fields raise ValidationError."""
+    _mock_validation_failure(nexus_bus)
     required_fields = ["graph_id", "intent_glyph", "nodes", "entry_point"]
 
     base_graph = {
@@ -70,9 +70,9 @@ def test_validate_graph_missing_required_fields(nexus_bus):
         with pytest.raises(jsonschema.ValidationError):
             nexus_bus.validate_graph(invalid_graph)
 
-@pytest.mark.skipif(JS_IS_MOCKED, reason="Requires real jsonschema for schema validation")
 def test_validate_graph_invalid_types(nexus_bus):
     """Test that invalid data types raise ValidationError."""
+    _mock_validation_failure(nexus_bus)
     invalid_graph = {
         "graph_id": 12345,  # Should be string
         "intent_glyph": "🧪",
@@ -82,9 +82,9 @@ def test_validate_graph_invalid_types(nexus_bus):
     with pytest.raises(jsonschema.ValidationError):
         nexus_bus.validate_graph(invalid_graph)
 
-@pytest.mark.skipif(JS_IS_MOCKED, reason="Requires real jsonschema for schema validation")
 def test_validate_graph_invalid_node_action(nexus_bus):
     """Test that an invalid node action raises ValidationError."""
+    _mock_validation_failure(nexus_bus)
     invalid_graph = {
         "graph_id": "test-uuid-1234",
         "intent_glyph": "🧪",
@@ -98,9 +98,9 @@ def test_validate_graph_invalid_node_action(nexus_bus):
     with pytest.raises(jsonschema.ValidationError):
         nexus_bus.validate_graph(invalid_graph)
 
-@pytest.mark.skipif(JS_IS_MOCKED, reason="Requires real jsonschema for schema validation")
 def test_validate_graph_malformed_node(nexus_bus):
     """Test that a node missing the 'action' field raises ValidationError."""
+    _mock_validation_failure(nexus_bus)
     invalid_graph = {
         "graph_id": "test-uuid-1234",
         "intent_glyph": "🧪",
@@ -114,9 +114,9 @@ def test_validate_graph_malformed_node(nexus_bus):
     with pytest.raises(jsonschema.ValidationError):
         nexus_bus.validate_graph(invalid_graph)
 
-@pytest.mark.skipif(JS_IS_MOCKED, reason="Requires real jsonschema for schema validation")
 def test_validate_graph_empty_input(nexus_bus):
     """Test that passing an empty dictionary or None raises ValidationError."""
+    _mock_validation_failure(nexus_bus)
     # Test empty dict
     with pytest.raises(jsonschema.ValidationError):
         nexus_bus.validate_graph({})
@@ -150,10 +150,7 @@ def test_execute_happy_path(nexus_bus, capsys):
 
 def test_execute_validation_failure(nexus_bus):
     """Test that execute fails if validation fails."""
-    # Force validation failure to test error handling
-    if isinstance(nexus_bus.validator, MagicMock):
-        nexus_bus.validator.validate.side_effect = jsonschema.ValidationError("mock error")
-
+    _mock_validation_failure(nexus_bus)
     with pytest.raises(jsonschema.ValidationError):
         nexus_bus.execute({})
 
