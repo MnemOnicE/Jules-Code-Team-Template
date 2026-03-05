@@ -17,7 +17,7 @@
 import pytest
 import jsonschema
 from unittest.mock import MagicMock
-from src.core.tools.graph_executor import GraphExecutor, SecurityError
+from src.core.tools.graph_executor import GraphExecutor, SecurityError, MaxStepsExceededError
 
 @pytest.fixture
 def graph_executor():
@@ -239,9 +239,10 @@ def test_execute_traversal_logic(graph_executor):
 
     graph_executor.execute(graph)
 
-    # Should visit node1 then success_node
+    # Should visit node1 then success_node.
+    # Note: terminate nodes don't call _dispatch_action in the new implementation.
     actual_nodes = [call.args[0] for call in graph_executor._dispatch_action.call_args_list]
-    assert actual_nodes == [graph["nodes"]["node1"], graph["nodes"]["success_node"]]
+    assert actual_nodes == [graph["nodes"]["node1"]]
 
 def test_execute_with_context_delta(graph_executor):
     """Test that context_delta is correctly passed to the execution loop."""
@@ -389,7 +390,8 @@ def test_execute_max_steps_exceeded(graph_executor, caplog):
     graph_executor._dispatch_action = MagicMock(return_value={"status": "success"})
 
     try:
-        graph_executor.execute(graph)
+        with pytest.raises(MaxStepsExceededError):
+            graph_executor.execute(graph)
     finally:
         graph_executor.MAX_STEPS = original_max
 

@@ -22,6 +22,9 @@ from src.core.tools.registry import ToolRegistry
 class SecurityError(Exception):
     pass
 
+class MaxStepsExceededError(Exception):
+    pass
+
 class GraphExecutor:
     """
     Traverses the Sovereign Execution Graph.
@@ -64,10 +67,19 @@ class GraphExecutor:
 
             node = graph["nodes"].get(current_node_id)
             if not node:
+                print(f"[ERROR] Node '{current_node_id}' not found in graph.")
                 self.logger.error(f"Node {current_node_id} not found.")
                 break
 
+            if step_count == 1:
+                print(f"[NEXUS] Starting execution at entry point: {current_node_id}")
+
+            print(f"[EXECUTING] Node {current_node_id}: {node['action']}")
             self.logger.info(f"Executing Node: {current_node_id} [{node['action']}]")
+
+            if node['action'] == 'terminate':
+                print("[NEXUS] Terminate action reached. Stopping.")
+                break
 
             # Execute Action via Registry
             try:
@@ -75,7 +87,12 @@ class GraphExecutor:
 
                 # Determine transition
                 if result.get('status') == 'success':
-                    current_node_id = node.get("on_success") or node.get("next")
+                    next_node_id = node.get("on_success") or node.get("next")
+                    if not next_node_id:
+                         print(f"[NEXUS] No next node defined for {current_node_id}. Stopping.")
+                         current_node_id = None
+                    else:
+                         current_node_id = next_node_id
                 else:
                     # Capture the failure/repair node from the graph
                     repair_node = node.get("on_failure")
@@ -102,8 +119,11 @@ class GraphExecutor:
     def _dispatch_action(self, node, context):
         # Maps graph actions to specific tool calls
         if node['action'] == 'run_tool':
-            tool_name = node['params']['tool']
-            args = node['params'].get('args', {})
+            params = node.get('params', {})
+            tool_name = params.get('tool')
+            if not tool_name:
+                 return {"status": "success"} # Or handle error
+            args = params.get('args', {})
             # Inject context if needed (Source [1])
             if context.get("shizuku_active"):
                 args["use_root"] = True

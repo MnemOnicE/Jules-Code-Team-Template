@@ -56,3 +56,11 @@ class NexusBus:
             print(f"[VALIDATION ERROR] {e.message}")
             raise e
 
+    def execute(self, graph):
+        """
+        Legacy execution method.
+        Delegates to GraphExecutor for structural and security validation.
+        """
+        from src.core.tools.graph_executor import GraphExecutor
+        executor = GraphExecutor(self)
+        return executor.execute(graph)
