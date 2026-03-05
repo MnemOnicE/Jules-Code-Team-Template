@@ -78,7 +78,7 @@ def run_ingest(is_delta=False):
             # Run git diff HEAD (Working directory changes vs HEAD)
             try:
                 # Capture working dir changes
-                diff_res = subprocess.run(["git", "diff", "HEAD"], capture_output=True, text=True)
+                diff_res = subprocess.run(["git", "diff", "HEAD"], capture_output=True, text=True, check=True)
                 f.write(diff_res.stdout)
             except Exception as e:
                 f.write(f"Error running git diff: {e}")
