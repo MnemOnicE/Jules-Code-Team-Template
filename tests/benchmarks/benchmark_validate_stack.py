@@ -25,10 +25,10 @@ def benchmark():
     try:
         iterations = 1000
 
-        start = time.time()
+        start = time.perf_counter()
         for _ in range(iterations):
             validate_stack.get_imports_from_file(py_path)
-        py_duration = time.time() - start
+        py_duration = time.perf_counter() - start
 
         start = time.time()
         for _ in range(iterations):
