@@ -17,7 +17,7 @@
 import pytest
 import jsonschema
 from unittest.mock import MagicMock
-from src.core.tools.graph_executor import GraphExecutor, SecurityError
+from core.tools.graph_executor import GraphExecutor, SecurityError, MaxStepsExceededError
 
 @pytest.fixture
 def graph_executor():
@@ -388,8 +388,11 @@ def test_execute_max_steps_exceeded(graph_executor, caplog):
     graph_executor.validate_integrity = MagicMock()
     graph_executor._dispatch_action = MagicMock(return_value={"status": "success"})
 
+
+    import pytest
     try:
-        graph_executor.execute(graph)
+        with pytest.raises(MaxStepsExceededError):
+            graph_executor.execute(graph)
     finally:
         graph_executor.MAX_STEPS = original_max
 

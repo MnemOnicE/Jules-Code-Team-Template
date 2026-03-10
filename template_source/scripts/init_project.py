@@ -180,7 +180,7 @@ def main():
             continue
 
         # For src/ or other scaffold files, SKIP in Migration Mode
-        if IS_MIGRATION and item in ['src', 'tests', 'package.json', 'requirements.txt']:
+        if IS_MIGRATION and item in ['tests', 'package.json', 'requirements.txt']:
             print(f"Brain: Skipping scaffolding file '{item}' (preserving existing).")
             if os.path.isdir(s): shutil.rmtree(s)
             else: os.remove(s)
@@ -209,6 +209,21 @@ def main():
             if os.path.exists(root_readme):
                 with open(root_readme, 'a') as f:
                     f.write("\n\n> 🧠 **This project is now managed by The Coding Squad.**\n> See `.agents/docs/USER_MANUAL.md` for commands.\n")
+
+
+
+    # 5. Generate Cross-Platform Wrappers (The Entrypoints)
+    print("Brain: Generating squad entrypoints...")
+    squad_unix = os.path.join(ROOT, "squad")
+    with open(squad_unix, "w") as f:
+        f.write("#!/usr/bin/env bash\n")
+        f.write('python3 .agents/engine/main.py "$@"\n')
+    os.chmod(squad_unix, 0o755)
+
+    squad_windows = os.path.join(ROOT, "squad.bat")
+    with open(squad_windows, "w") as f:
+        f.write("@echo off\n")
+        f.write("python .agents/engine/main.py %*\n")
 
     # 5. The Lift (Runtime Sanitization)
     print("Brain: Lifting Runtime Engine...")

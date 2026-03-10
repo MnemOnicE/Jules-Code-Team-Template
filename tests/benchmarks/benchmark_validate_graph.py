@@ -1,3 +1,13 @@
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'template_source', '.agents', 'engine')))
+
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'template_source', '.agents', 'engine')))
+
 import timeit
 import sys
 import os
@@ -6,7 +16,7 @@ import contextlib
 # Add src to path if run from root
 sys.path.append(os.getcwd())
 
-from src.core.bus import NexusBus
+from core.bus import NexusBus
 
 @contextlib.contextmanager
 def suppress_stdout():
