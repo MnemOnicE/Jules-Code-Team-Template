@@ -1,10 +1,4 @@
 import sys
-import os
-
-# Add the new engine location to sys.path
-engine_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "template_source", ".agents", "engine"))
-sys.path.insert(0, engine_path)
-
 from unittest.mock import MagicMock
 import importlib.util
 

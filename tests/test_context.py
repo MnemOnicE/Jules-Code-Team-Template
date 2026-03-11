@@ -4,16 +4,16 @@ import os
 import sys
 
 # Import the module to test
-from core.context import ContextLoader, load_context
+from src.core.context import ContextLoader, load_context
 
 # Fixture to reset the global singleton
 @pytest.fixture(autouse=True)
 def reset_global_loader():
     """Resets the global _SHARED_LOADER before and after each test."""
-    import core.context
-    core.context._SHARED_LOADER = None
+    import src.core.context
+    src.core.context._SHARED_LOADER = None
     yield
-    core.context._SHARED_LOADER = None
+    src.core.context._SHARED_LOADER = None
 
 @pytest.fixture
 def mock_fs():
@@ -35,7 +35,7 @@ def test_find_root_logic():
     # We mock __file__ in the module where ContextLoader is defined
     mock_file_path = "/usr/local/src/project/src/core/context.py"
 
-    with patch("core.context.__file__", mock_file_path):
+    with patch("src.core.context.__file__", mock_file_path):
         # We also need to mock os.path.abspath and os.path.dirname because the real ones rely on actual FS
         # But wait, os.path functions (except abspath depending on cwd) are pure logic usually.
         # However, verifying exactly how it climbs is safer with mocks if we want to be OS-agnostic
@@ -286,7 +286,7 @@ def test_load_context_singleton():
     expected_context = {"role": agent_name}
 
     # We patch ContextLoader to return a mock instance
-    with patch("core.context.ContextLoader") as MockLoaderClass:
+    with patch("src.core.context.ContextLoader") as MockLoaderClass:
         mock_instance = MockLoaderClass.return_value
         mock_instance.build_system_context.return_value = expected_context
 

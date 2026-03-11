@@ -16,19 +16,16 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
 import argparse
 import logging
+import sys
 import uuid
 
 # Imports
 try:
-    from core.bus import NexusBus
-    from core.context import load_context
-    from core.tools.graph_executor import GraphExecutor
+    from src.core.bus import NexusBus
+    from src.core.context import load_context
+    from src.core.tools.graph_executor import GraphExecutor
 except ImportError as e:
     print(f"Error importing modules: {e}")
     sys.exit(1)
