@@ -61,7 +61,7 @@ def run_ingest(is_delta=False):
             # Generate Tree (Lightweight)
             for root, dirs, files in os.walk("."):
                 # Filter ignore dirs
-                dirs[:] = [d for d in dirs if d not in ['.git', 'node_modules', 'ingests', '__pycache__', '.pytest_cache']]
+                dirs[:] = [d for d in dirs if d not in {'.git', 'node_modules', INGEST_DIR, '__pycache__', '.pytest_cache'}]
 
                 path = Path(root)
                 level = 0 if path == Path('.') else len(path.parts)
