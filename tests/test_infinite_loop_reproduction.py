@@ -1,7 +1,7 @@
 
 import signal
 from unittest.mock import MagicMock
-from core.tools.graph_executor import GraphExecutor
+from src.core.tools.graph_executor import GraphExecutor
 
 class TimeoutException(Exception):
     pass
