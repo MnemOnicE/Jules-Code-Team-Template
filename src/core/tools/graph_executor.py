@@ -16,13 +16,10 @@
 
 import logging
 # Note: Ensure core.bus is implemented as requested previously
-from core.bus import NexusBus
-from core.tools.registry import ToolRegistry
+from src.core.bus import NexusBus
+from src.core.tools.registry import ToolRegistry
 
 class SecurityError(Exception):
-    pass
-
-class MaxStepsExceededError(Exception):
     pass
 
 class GraphExecutor:
