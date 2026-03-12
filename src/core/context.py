@@ -47,7 +47,19 @@ class ContextLoader:
         """Reads the corresponding .md file for the agent."""
         # Normalize name
         agent_name = agent_name.lower()
-        filepath = os.path.join(self.agents_dir, 'config', 'defaults', f'{agent_name}.md')
+
+        # Prevent Path Traversal
+        base_dir = os.path.abspath(os.path.join(self.agents_dir, 'config', 'defaults'))
+        filepath = os.path.abspath(os.path.join(base_dir, f'{agent_name}.md'))
+
+        try:
+            if os.path.commonpath([base_dir, filepath]) != base_dir:
+                raise ValueError(f"Path traversal detected: {agent_name}")
+        except ValueError as e:
+            if "Paths don't have the same drive" in str(e):
+                raise ValueError(f"Path traversal detected: {agent_name}")
+            else:
+                raise
 
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Persona file not found: {filepath}")
