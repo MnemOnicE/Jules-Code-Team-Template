@@ -20,10 +20,11 @@ def test_update_file_success(tmp_path):
 
     assert f.read_text() == "Hello Jules\nThis is a test."
 
-def test_update_file_no_file():
+def test_update_file_no_file(tmp_path):
     """Test that the function handles non-existent files gracefully."""
+    non_existent_file = tmp_path / "non_existent_file.txt"
     # Should not raise an exception
-    update_file("non_existent_file.txt", r"foo", "bar")
+    update_file(str(non_existent_file), r"foo", "bar")
 
 def test_update_file_no_match(tmp_path):
     """Test that file content remains unchanged if no match is found."""
