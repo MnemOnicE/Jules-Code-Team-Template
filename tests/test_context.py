@@ -313,12 +313,13 @@ def test_load_persona_path_traversal_prevention(mock_fs):
 
         loader = ContextLoader()
 
-        # Mock exists to False so we can verify the path it TRIED to open
-        mock_fs['exists'].return_value = False
+        # Mock exists to return False so we can check which path it was called with.
+        mock_exists = mock_fs['exists']
+        mock_exists.return_value = False
 
-        with pytest.raises(FileNotFoundError) as excinfo:
+        with pytest.raises(FileNotFoundError):
             loader.load_persona(traversal_name)
 
-        # Verify that it tried to open the sanitized path (secret.md), not the traversal path
-        assert "secret.md" in str(excinfo.value)
-        assert traversal_name not in str(excinfo.value)
+        # Verify that os.path.exists was called with the sanitized path,
+        # proving that the traversal attempt was neutralized.
+        mock_exists.assert_called_once_with(expected_sanitized_path)
