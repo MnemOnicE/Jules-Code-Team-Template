@@ -174,6 +174,25 @@ def test_load_persona_caching(mock_fs):
         # Verify open was called only once
         assert mock_fs['open'].call_count == 1
 
+def test_load_persona_path_traversal_prevention(mock_fs):
+    """Test that path traversal attempts in agent_name are sanitized."""
+    mock_agents_dir = "/mock/agents"
+    traversal_name = "../../etc/passwd"
+    expected_sanitized_name = "passwd"
+
+    with patch.object(ContextLoader, '_find_root', return_value="/mock/root"), \
+         patch.object(ContextLoader, '_find_agents_dir', return_value=mock_agents_dir):
+
+        loader = ContextLoader()
+        mock_fs['exists'].return_value = True
+        mock_fs['open'].return_value.__enter__.return_value.read.return_value = "content"
+
+        loader.load_persona(traversal_name)
+
+        # Path should be sanitized to passwd.md within the correct directory
+        expected_path = os.path.join(mock_agents_dir, 'config', 'defaults', f'{expected_sanitized_name}.md')
+        mock_fs['open'].assert_called_with(expected_path, 'r', encoding='utf-8')
+
 # --- Tests for load_tech_stack ---
 
 def test_load_tech_stack_success(mock_fs):
@@ -299,3 +318,35 @@ def test_load_context_singleton():
         context2 = load_context(agent_name)
         assert context2 == expected_context
         assert MockLoaderClass.call_count == 1
+
+def test_load_persona_path_traversal(mock_fs):
+    """Test that load_persona prevents path traversal attacks."""
+    mock_agents_dir = "/mock/agents"
+
+    with patch.object(ContextLoader, '_find_root', return_value="/mock/root"), \
+         patch.object(ContextLoader, '_find_agents_dir', return_value=mock_agents_dir):
+
+        loader = ContextLoader()
+
+        # Payload trying to escape the config/defaults directory
+        payload = "../../../etc/passwd"
+
+        with pytest.raises(ValueError, match="Path traversal detected"):
+            loader.load_persona(payload)
+
+def test_load_persona_path_traversal_absolute(mock_fs):
+    """Test that load_persona prevents absolute path traversal attacks."""
+    mock_agents_dir = "/mock/agents"
+
+    with patch.object(ContextLoader, '_find_root', return_value="/mock/root"), \
+         patch.object(ContextLoader, '_find_agents_dir', return_value=mock_agents_dir):
+
+        loader = ContextLoader()
+
+        # Payload using absolute path
+        payload = "/etc/passwd"
+
+        # Depending on how os.path.join handles absolute paths in the second argument,
+        # it might replace the whole path or just append. Let's make sure it's caught.
+        with pytest.raises(ValueError, match="Path traversal detected"):
+            loader.load_persona(payload)
