@@ -1,12 +1,5 @@
-import sys
 import os
 import pytest
-
-# Add the scripts directory to sys.path to import the module
-scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "template_source", "scripts"))
-if scripts_path not in sys.path:
-    sys.path.insert(0, scripts_path)
-
 from init_project import update_file
 
 def test_update_file_success(tmp_path):
@@ -20,11 +13,10 @@ def test_update_file_success(tmp_path):
 
     assert f.read_text() == "Hello Jules\nThis is a test."
 
-def test_update_file_no_file(tmp_path):
+def test_update_file_no_file():
     """Test that the function handles non-existent files gracefully."""
-    non_existent_file = tmp_path / "non_existent_file.txt"
     # Should not raise an exception
-    update_file(str(non_existent_file), r"foo", "bar")
+    update_file("non_existent_file.txt", r"foo", "bar")
 
 def test_update_file_no_match(tmp_path):
     """Test that file content remains unchanged if no match is found."""

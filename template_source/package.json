@@ -9,6 +9,9 @@
     "check:complexity": "node scripts/check_complexity.js",
     "metrics:city": "python3 scripts/generate_city_metrics.py"
   },
+  "overrides": {
+    "lodash-es": "^4.17.23"
+  },
   "devDependencies": {
     "@mermaid-js/mermaid-cli": "^11.12.0"
   },
