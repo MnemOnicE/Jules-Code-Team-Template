@@ -174,6 +174,43 @@ def test_load_persona_caching(mock_fs):
         # Verify open was called only once
         assert mock_fs['open'].call_count == 1
 
+@pytest.mark.parametrize(
+    "traversal_name, raises_error, expected_sanitized_name",
+    [
+        # The original test case
+        ("../../etc/passwd", False, "passwd"),
+        # Edge cases for basename
+        ("..", True, None),
+        (".", True, None),
+        ("", True, None),
+        # Other vectors
+        ("/etc/passwd", False, "passwd"),
+        ("safe_name", False, "safe_name"),
+    ]
+)
+def test_load_persona_path_traversal_prevention(
+    mock_fs, traversal_name, raises_error, expected_sanitized_name
+):
+    """Test that path traversal attempts in agent_name are sanitized or rejected."""
+    mock_agents_dir = "/mock/agents"
+
+    with patch.object(ContextLoader, '_find_root', return_value="/mock/root"), \
+         patch.object(ContextLoader, '_find_agents_dir', return_value=mock_agents_dir):
+
+        loader = ContextLoader()
+
+        if raises_error:
+            with pytest.raises(ValueError, match="Invalid agent name"):
+                loader.load_persona(traversal_name)
+        else:
+            mock_fs['exists'].return_value = True
+            mock_fs['open'].return_value.__enter__.return_value.read.return_value = "content"
+            loader.load_persona(traversal_name)
+            expected_path = os.path.join(
+                mock_agents_dir, 'config', 'defaults', f'{expected_sanitized_name}.md'
+            )
+            mock_fs['open'].assert_called_with(expected_path, 'r', encoding='utf-8')
+
 # --- Tests for load_tech_stack ---
 
 def test_load_tech_stack_success(mock_fs):
