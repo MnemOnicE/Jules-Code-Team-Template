@@ -186,6 +186,8 @@ def test_load_persona_caching(mock_fs):
         # Other vectors
         ("/etc/passwd", False, "passwd"),
         ("safe_name", False, "safe_name"),
+        # Test case insensitivity and path stripping
+        ("Some/Path/MixedCase", False, "mixedcase"),
     ]
 )
 def test_load_persona_path_traversal_prevention(
