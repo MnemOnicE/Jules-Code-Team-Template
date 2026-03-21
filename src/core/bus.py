@@ -16,6 +16,7 @@
 
 import json
 import threading
+import logging
 from pathlib import Path
 import jsonschema
 
@@ -25,6 +26,7 @@ class NexusBus:
     _lock = threading.Lock()
 
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
         # Use class-level caching for schema and validator to improve performance
         if NexusBus._validator is None:
             with NexusBus._lock:
@@ -50,9 +52,9 @@ class NexusBus:
         """Validates the given graph data against the Sovereign Execution Graph schema."""
         try:
             self.validator.validate(instance=graph_data)
-            print("[VALIDATION] Graph structure is valid.")
+            self.logger.info("[VALIDATION] Graph structure is valid.")
             return True
         except jsonschema.ValidationError as e:
-            print(f"[VALIDATION ERROR] {e.message}")
+            self.logger.error(f"[VALIDATION ERROR] {e.message}", exc_info=True)
             raise e
 
