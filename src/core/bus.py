@@ -55,6 +55,6 @@ class NexusBus:
             self.logger.info("[VALIDATION] Graph structure is valid.")
             return True
         except jsonschema.ValidationError as e:
-            self.logger.error(f"[VALIDATION ERROR] {e.message}", exc_info=True)
+            self.logger.error("[VALIDATION ERROR] Graph validation failed", exc_info=True)
             raise e
 
