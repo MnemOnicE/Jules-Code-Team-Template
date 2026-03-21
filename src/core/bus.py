@@ -15,9 +15,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import json
-import threading
 import logging
 from pathlib import Path
+import threading
 import jsonschema
 
 class NexusBus:
