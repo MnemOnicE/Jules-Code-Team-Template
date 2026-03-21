@@ -182,6 +182,7 @@ def test_execute_happy_path(graph_executor):
     assert graph_executor._dispatch_action.call_count == 2
 
     # Verify calls to _dispatch_action were made with correct nodes
+    # Verify calls to _dispatch_action were made with correct nodes
     actual_nodes = [call.args[0] for call in graph_executor._dispatch_action.call_args_list]
     assert actual_nodes == [graph["nodes"]["node1"], graph["nodes"]["node2"]]
 
@@ -388,7 +389,8 @@ def test_execute_max_steps_exceeded(graph_executor, caplog):
     graph_executor._dispatch_action = MagicMock(return_value={"status": "success"})
 
     try:
-        graph_executor.execute(graph)
+        with pytest.raises(Exception):
+            graph_executor.execute(graph)
     finally:
         graph_executor.MAX_STEPS = original_max
 
