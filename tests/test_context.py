@@ -318,3 +318,35 @@ def test_load_context_singleton():
         context2 = load_context(agent_name)
         assert context2 == expected_context
         assert MockLoaderClass.call_count == 1
+
+def test_load_persona_path_traversal(mock_fs):
+    """Test that load_persona prevents path traversal attacks."""
+    mock_agents_dir = "/mock/agents"
+
+    with patch.object(ContextLoader, '_find_root', return_value="/mock/root"), \
+         patch.object(ContextLoader, '_find_agents_dir', return_value=mock_agents_dir):
+
+        loader = ContextLoader()
+
+        # Payload trying to escape the config/defaults directory
+        payload = "../../../etc/passwd"
+
+        with pytest.raises(ValueError, match="Path traversal detected"):
+            loader.load_persona(payload)
+
+def test_load_persona_path_traversal_absolute(mock_fs):
+    """Test that load_persona prevents absolute path traversal attacks."""
+    mock_agents_dir = "/mock/agents"
+
+    with patch.object(ContextLoader, '_find_root', return_value="/mock/root"), \
+         patch.object(ContextLoader, '_find_agents_dir', return_value=mock_agents_dir):
+
+        loader = ContextLoader()
+
+        # Payload using absolute path
+        payload = "/etc/passwd"
+
+        # Depending on how os.path.join handles absolute paths in the second argument,
+        # it might replace the whole path or just append. Let's make sure it's caught.
+        with pytest.raises(ValueError, match="Path traversal detected"):
+            loader.load_persona(payload)
