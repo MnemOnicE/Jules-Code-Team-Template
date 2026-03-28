@@ -18,6 +18,17 @@ const fs = require('fs');
 const path = require('path');
 const { execFileSync } = require('child_process');
 
+/**
+ * Sanitizes a filename to prevent it from being interpreted as a command-line flag.
+ * Strips any leading hyphens.
+ *
+ * @param {string} name - The filename to sanitize.
+ * @returns {string} The sanitized filename.
+ */
+function sanitizeFilename(name) {
+  return name.replace(/^-+/, '');
+}
+
 const ROOT_DIR = path.resolve(__dirname, '..');
 const OUT_DIR = path.join(ROOT_DIR, 'docs', 'diagrams');
 
@@ -56,44 +67,57 @@ function getAllMermaidFiles(dir, fileList = []) {
   return fileList;
 }
 
-const files = getAllMermaidFiles(ROOT_DIR);
-console.log(`📊 Generating Architecture Diagrams for ${files.length} files...`);
+function run() {
+  const files = getAllMermaidFiles(ROOT_DIR);
+  console.log(`📊 Generating Architecture Diagrams for ${files.length} files...`);
 
-// Using local node_modules binary.
-// Note: On Windows, this might require appending '.cmd' or using 'npx'.
-// Assuming *nix environment for this template generator.
-const mmdcPath = path.join(ROOT_DIR, 'node_modules', '.bin', 'mmdc');
+  // Using local node_modules binary.
+  // Note: On Windows, this might require appending '.cmd' or using 'npx'.
+  // Assuming *nix environment for this template generator.
+  const mmdcPath = path.join(ROOT_DIR, 'node_modules', '.bin', 'mmdc');
 
-// Track generated filenames to detect collisions
-const usedNames = new Map(); // filename -> originalPath
+  // Track generated filenames to detect collisions
+  const usedNames = new Map(); // filename -> originalPath
 
-files.forEach((file, index) => {
-  const baseName = path.basename(file, '.mmd');
-  let finalName = baseName;
+  files.forEach((file, index) => {
+    const baseName = path.basename(file, '.mmd');
+    let finalName = sanitizeFilename(baseName);
 
-  // Collision handling: append parent dir name if collision occurs
-  if (usedNames.has(finalName)) {
-    const parentDir = path.basename(path.dirname(file));
-    finalName = `${parentDir}_${baseName}`;
-    console.warn(`⚠️  Naming collision for '${baseName}'. Renaming to '${finalName}' to avoid overwriting.`);
-  }
+    // Collision handling: append parent dir name if collision occurs
+    if (usedNames.has(finalName)) {
+      const parentDir = path.basename(path.dirname(file));
+      finalName = sanitizeFilename(`${parentDir}_${baseName}`);
+      console.warn(`⚠️  Naming collision for '${baseName}'. Renaming to '${finalName}' to avoid overwriting.`);
+    }
 
-  usedNames.set(finalName, file);
+    usedNames.set(finalName, file);
 
-  const pngOut = path.join(OUT_DIR, `${finalName}.png`);
-  const svgOut = path.join(OUT_DIR, `${finalName}.svg`);
+    const pngOut = path.join(OUT_DIR, `${finalName}.png`);
+    const svgOut = path.join(OUT_DIR, `${finalName}.svg`);
 
-  console.log(`[${index + 1}/${files.length}] Processing ${baseName} -> ${finalName}...`);
+    console.log(`[${index + 1}/${files.length}] Processing ${baseName} -> ${finalName}...`);
 
-  try {
-    // Generate PNG
-    execFileSync(mmdcPath, ['-i', file, '-o', pngOut], { stdio: 'inherit', cwd: ROOT_DIR });
-    // Generate SVG
-    execFileSync(mmdcPath, ['-i', file, '-o', svgOut], { stdio: 'inherit', cwd: ROOT_DIR });
-  } catch (err) {
-    console.error(`❌ Failed to generate diagrams for ${file}`);
-    // We continue processing other diagrams even if one fails
-  }
-});
+    try {
+      // Generate PNG
+      // Using path.resolve to ensure paths are absolute, preventing argument injection.
+      execFileSync(path.resolve(mmdcPath), ['-i', path.resolve(file), '-o', path.resolve(pngOut)], { stdio: 'inherit', cwd: ROOT_DIR });
+      // Generate SVG
+      execFileSync(path.resolve(mmdcPath), ['-i', path.resolve(file), '-o', path.resolve(svgOut)], { stdio: 'inherit', cwd: ROOT_DIR });
+    } catch (err) {
+      console.error(`❌ Failed to generate diagrams for ${file}`);
+      // We continue processing other diagrams even if one fails
+    }
+  });
 
-console.log(`✅ Diagrams generated in ${OUT_DIR}`);
+  console.log(`✅ Diagrams generated in ${OUT_DIR}`);
+}
+
+if (require.main === module) {
+  run();
+}
+
+module.exports = {
+  sanitizeFilename,
+  getAllMermaidFiles,
+  run
+};
