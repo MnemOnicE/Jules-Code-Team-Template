@@ -98,11 +98,11 @@ function run() {
     console.log(`[${index + 1}/${files.length}] Processing ${baseName} -> ${finalName}...`);
 
     try {
-      // Generate PNG
+      // Generate PNG and SVG diagrams
       // Using path.resolve to ensure paths are absolute, preventing argument injection.
-      execFileSync(path.resolve(mmdcPath), ['-i', path.resolve(file), '-o', path.resolve(pngOut)], { stdio: 'inherit', cwd: ROOT_DIR });
-      // Generate SVG
-      execFileSync(path.resolve(mmdcPath), ['-i', path.resolve(file), '-o', path.resolve(svgOut)], { stdio: 'inherit', cwd: ROOT_DIR });
+      [pngOut, svgOut].forEach(outFile => {
+        execFileSync(path.resolve(mmdcPath), ['-i', path.resolve(file), '-o', path.resolve(outFile)], { stdio: 'inherit', cwd: ROOT_DIR });
+      });
     } catch (err) {
       console.error(`❌ Failed to generate diagrams for ${file}`);
       // We continue processing other diagrams even if one fails
