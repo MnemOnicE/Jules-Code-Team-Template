@@ -125,7 +125,7 @@ def test_validate_graph_empty_input(nexus_bus):
     with pytest.raises(jsonschema.ValidationError):
         nexus_bus.validate_graph(None)
 
-def test_execute_happy_path(nexus_bus, capsys):
+def test_execute_happy_path(nexus_bus, caplog):
     """Test full traversal of a valid graph."""
     graph = {
         "graph_id": "test-uuid",
@@ -141,12 +141,13 @@ def test_execute_happy_path(nexus_bus, capsys):
             }
         }
     }
-    nexus_bus.execute(graph)
-    captured = capsys.readouterr()
-    assert "[NEXUS] Starting execution at entry point: start" in captured.out
-    assert "[EXECUTING] Node start: run_tool" in captured.out
-    assert "[EXECUTING] Node end: terminate" in captured.out
-    assert "[NEXUS] Terminate action reached. Stopping." in captured.out
+    with caplog.at_level("INFO"):
+        nexus_bus.execute(graph)
+
+    assert "[NEXUS] Starting execution at entry point: start" in caplog.text
+    assert "[EXECUTING] Node start: run_tool" in caplog.text
+    assert "[EXECUTING] Node end: terminate" in caplog.text
+    assert "[NEXUS] Terminate action reached. Stopping." in caplog.text
 
 def test_execute_validation_failure(nexus_bus):
     """Test that execute fails if validation fails."""
@@ -157,7 +158,7 @@ def test_execute_validation_failure(nexus_bus):
     with pytest.raises(jsonschema.ValidationError):
         nexus_bus.execute({})
 
-def test_execute_missing_node(nexus_bus, capsys):
+def test_execute_missing_node(nexus_bus, caplog):
     """Test handling of a missing node ID."""
     graph = {
         "graph_id": "test-uuid",
@@ -170,12 +171,13 @@ def test_execute_missing_node(nexus_bus, capsys):
             }
         }
     }
-    nexus_bus.execute(graph)
-    captured = capsys.readouterr()
-    assert "[EXECUTING] Node start: run_tool" in captured.out
-    assert "[ERROR] Node 'missing_node' not found in graph." in captured.out
+    with caplog.at_level("INFO"):
+        nexus_bus.execute(graph)
 
-def test_execute_no_next_node(nexus_bus, capsys):
+    assert "[EXECUTING] Node start: run_tool" in caplog.text
+    assert "[ERROR] Node 'missing_node' not found in graph." in caplog.text
+
+def test_execute_no_next_node(nexus_bus, caplog):
     """Test stopping when no next node is defined."""
     graph = {
         "graph_id": "test-uuid",
@@ -187,11 +189,12 @@ def test_execute_no_next_node(nexus_bus, capsys):
             }
         }
     }
-    nexus_bus.execute(graph)
-    captured = capsys.readouterr()
-    assert "[NEXUS] No next node defined for start. Stopping." in captured.out
+    with caplog.at_level("INFO"):
+        nexus_bus.execute(graph)
 
-def test_execute_on_success_fallback(nexus_bus, capsys):
+    assert "[NEXUS] No next node defined for start. Stopping." in caplog.text
+
+def test_execute_on_success_fallback(nexus_bus, caplog):
     """Test that on_success is used if next is not present."""
     graph = {
         "graph_id": "test-uuid",
@@ -205,6 +208,7 @@ def test_execute_on_success_fallback(nexus_bus, capsys):
             "end": {"action": "terminate"}
         }
     }
-    nexus_bus.execute(graph)
-    captured = capsys.readouterr()
-    assert "[EXECUTING] Node end: terminate" in captured.out
+    with caplog.at_level("INFO"):
+        nexus_bus.execute(graph)
+
+    assert "[EXECUTING] Node end: terminate" in caplog.text
