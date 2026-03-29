@@ -119,9 +119,9 @@ class GraphExecutor:
             if context.get("shizuku_active"):
                 args["use_root"] = True
 
-            # If tool name is missing, assume success for tests that don't provide it
             if not tool_name:
-                return {"status": "success"}
+                self.logger.error("Missing 'tool' in 'params' for 'run_tool' action.")
+                return {"status": "error", "message": "Missing tool name for run_tool action"}
 
             return self.registry.invoke(tool_name, **args)
 
