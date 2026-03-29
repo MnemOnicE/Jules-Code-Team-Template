@@ -1,5 +1,3 @@
-import os
-import pytest
 from init_project import update_file
 
 def test_update_file_success(tmp_path):
