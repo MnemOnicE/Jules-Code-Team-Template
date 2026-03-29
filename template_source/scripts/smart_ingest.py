@@ -94,8 +94,21 @@ def run_ingest(is_delta=False):
     prune_ingests()
 
 def prune_ingests():
+    digests = []
+    deltas = []
+    try:
+        with os.scandir(INGEST_DIR) as it:
+            for entry in it:
+                if entry.is_file():
+                    name = entry.name
+                    if name.startswith(DIGEST_PREFIX) and name.endswith(INGEST_FILE_SUFFIX):
+                        digests.append(entry.path)
+                    elif name.startswith(DELTA_PREFIX) and name.endswith(INGEST_FILE_SUFFIX):
+                        deltas.append(entry.path)
+    except FileNotFoundError:
+        return
+
     # Prune Golden Snapshots (Keep last 3)
-    digests = glob.glob(os.path.join(INGEST_DIR, "digest_*.txt"))
     digests.sort()
     if len(digests) > 3:
         to_delete = digests[:-3]
@@ -104,7 +117,6 @@ def prune_ingests():
             os.remove(f)
 
     # Prune Deltas (Keep last 1)
-    deltas = glob.glob(os.path.join(INGEST_DIR, "delta_*.txt"))
     deltas.sort()
     if len(deltas) > 1:
         to_delete = deltas[:-1]
