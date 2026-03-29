@@ -511,13 +511,6 @@ def test_execute_failure_without_retry(graph_executor, caplog):
 
     graph_executor.execute(graph)
 
-    # node1 fails, then fail_node (even if it also fails, it will just try to move to next/on_failure)
-    # Wait, the code says:
-    # else:
-    #     current_node_id = repair_node
-    #     if context.get("retry_on_fail"):
-    #          self.logger.error("Max retries exceeded. Aborting.")
-    #          break
-    # If retry_on_fail is False, it just sets current_node_id = repair_node and continues.
+    # Verify that node1 fails, then fail_node is executed immediately without retry
     assert graph_executor._dispatch_action.call_count == 2
     assert "Triggering Self-Correction Loop..." not in caplog.text
