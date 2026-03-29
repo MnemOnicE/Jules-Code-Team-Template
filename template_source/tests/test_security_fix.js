@@ -23,4 +23,23 @@ console.log('✅ Pass: Middle hyphen preserved');
 assert.strictEqual(sanitizeFilename(''), '');
 console.log('✅ Pass: Empty string handled');
 
-console.log('🎉 All Security Fix Tests Passed!');
+console.log('\n🧪 Running Collision Robustness Simulation...');
+// Simulating the collision logic in a testable way
+function resolveCollision(baseName, parentDir, usedNames) {
+  let finalName = sanitizeFilename(baseName);
+  if (usedNames.has(finalName)) {
+    finalName = sanitizeFilename(`${parentDir}_${baseName}`);
+    let counter = 1;
+    const collisionBase = finalName;
+    while (usedNames.has(finalName)) {
+      finalName = `${collisionBase}_${counter++}`;
+    }
+  }
+  return finalName;
+}
+
+const used = new Set(['arch', 'docs_arch', 'docs_arch_1']);
+assert.strictEqual(resolveCollision('arch', 'docs', used), 'docs_arch_2');
+console.log('✅ Pass: Robust collision resolution handled multiple collisions');
+
+console.log('🎉 All Tests Passed!');

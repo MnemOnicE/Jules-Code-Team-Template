@@ -83,10 +83,16 @@ function run() {
     const baseName = path.basename(file, '.mmd');
     let finalName = sanitizeFilename(baseName);
 
-    // Collision handling: append parent dir name if collision occurs
+    // Collision handling: append parent dir name if collision occurs, then append counter if needed
     if (usedNames.has(finalName)) {
       const parentDir = path.basename(path.dirname(file));
       finalName = sanitizeFilename(`${parentDir}_${baseName}`);
+
+      let counter = 1;
+      const collisionBase = finalName;
+      while (usedNames.has(finalName)) {
+        finalName = `${collisionBase}_${counter++}`;
+      }
       console.warn(`⚠️  Naming collision for '${baseName}'. Renaming to '${finalName}' to avoid overwriting.`);
     }
 
@@ -98,11 +104,11 @@ function run() {
     console.log(`[${index + 1}/${files.length}] Processing ${baseName} -> ${finalName}...`);
 
     try {
-      // Generate PNG and SVG diagrams
+      // Generate PNG
       // Using path.resolve to ensure paths are absolute, preventing argument injection.
-      [pngOut, svgOut].forEach(outFile => {
-        execFileSync(path.resolve(mmdcPath), ['-i', path.resolve(file), '-o', path.resolve(outFile)], { stdio: 'inherit', cwd: ROOT_DIR });
-      });
+      execFileSync(path.resolve(mmdcPath), ['-i', path.resolve(file), '-o', path.resolve(pngOut)], { stdio: 'inherit', cwd: ROOT_DIR });
+      // Generate SVG
+      execFileSync(path.resolve(mmdcPath), ['-i', path.resolve(file), '-o', path.resolve(svgOut)], { stdio: 'inherit', cwd: ROOT_DIR });
     } catch (err) {
       console.error(`❌ Failed to generate diagrams for ${file}`);
       // We continue processing other diagrams even if one fails
