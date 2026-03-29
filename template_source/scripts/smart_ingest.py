@@ -101,9 +101,9 @@ def prune_ingests():
             for entry in it:
                 if entry.is_file():
                     name = entry.name
-                    if name.startswith("digest_") and name.endswith(".txt"):
+                    if name.startswith(DIGEST_PREFIX) and name.endswith(INGEST_FILE_SUFFIX):
                         digests.append(entry.path)
-                    elif name.startswith("delta_") and name.endswith(".txt"):
+                    elif name.startswith(DELTA_PREFIX) and name.endswith(INGEST_FILE_SUFFIX):
                         deltas.append(entry.path)
     except FileNotFoundError:
         return
