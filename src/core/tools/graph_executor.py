@@ -114,7 +114,7 @@ class GraphExecutor:
         if action == 'run_tool':
             params = node.get('params', {})
             tool_name = params.get('tool')
-            args = params.get('args', {})
+            args = params.get('args', {}).copy()
             # Inject context if needed (Source [1])
             if context.get("shizuku_active"):
                 args["use_root"] = True
