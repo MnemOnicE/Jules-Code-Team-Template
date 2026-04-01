@@ -95,10 +95,10 @@ def test_dispatch_action_preserves_existing_args(graph_executor):
         use_root=True
     )
 
-def test_dispatch_action_shizuku_injection_side_effect_check(graph_executor):
+def test_dispatch_action_shizuku_injection_no_side_effect(graph_executor):
     """
-    Test documents that _dispatch_action currently modifies the input node's args.
-    If this behavior is unintended, it should be refactored to use a copy.
+    Test that _dispatch_action does NOT modify the input node's args.
+    It should use a copy for injection.
     """
     node = {
         "action": "run_tool",
@@ -112,8 +112,8 @@ def test_dispatch_action_shizuku_injection_side_effect_check(graph_executor):
 
     graph_executor._dispatch_action(node, context)
 
-    # Verify that the original node was modified
-    assert node["params"]["args"]["use_root"] is True
+    # Verify that the original node was NOT modified
+    assert "use_root" not in node["params"]["args"]
 
 
 def test_execute_exception_handling(graph_executor, caplog):
