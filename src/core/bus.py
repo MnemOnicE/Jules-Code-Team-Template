@@ -58,12 +58,3 @@ class NexusBus:
             self.logger.error("[VALIDATION ERROR] Graph validation failed", exc_info=True)
             raise e
 
-    def execute(self, graph):
-        """
-        Legacy execution method for NexusBus.
-        Delegates to GraphExecutor for traversal.
-        Used by existing tests in tests/test_bus.py.
-        """
-        from src.core.tools.graph_executor import GraphExecutor
-        executor = GraphExecutor(self)
-        executor.execute(graph)
