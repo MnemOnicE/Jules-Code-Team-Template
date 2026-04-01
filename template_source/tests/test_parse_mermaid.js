@@ -58,17 +58,13 @@ runTest('Test 2: Chained Edge', () => {
     `;
     const { nodes, edges } = parseMermaid(content);
 
-    // NOTE: Current implementation has a bug where chained edges with simple arrows
-    // cause the middle node to be consumed by the regex.
-    // Preserving this behavior for now to ensure safe refactoring.
+    // NOTE: Bug where chained edges with simple arrows caused the middle node
+    // to be consumed by the regex has been fixed.
     // Expected behavior: A -> B -> C
-    // Actual behavior: A -> C
 
-    // assertSetEqual(nodes, ['A', 'B', 'C'], 'Nodes should match');
-    assertSetEqual(nodes, ['A', 'C'], 'Nodes match current (buggy) behavior');
+    assertSetEqual(nodes, ['A', 'B', 'C'], 'Nodes should match');
 
-    // assertEdgesEqual(edges, [{ from: 'A', to: 'B' }, { from: 'B', to: 'C' }], 'Edges should match');
-    assertEdgesEqual(edges, [{ from: 'A', to: 'C' }], 'Edges match current (buggy) behavior');
+    assertEdgesEqual(edges, [{ from: 'A', to: 'B' }, { from: 'B', to: 'C' }], 'Edges should match');
 });
 
 // Test 3: Complex Edge Label
