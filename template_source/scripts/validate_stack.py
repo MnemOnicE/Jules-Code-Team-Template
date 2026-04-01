@@ -49,6 +49,14 @@ except AttributeError:
         "sqlite3", "pickle", "shelve", "dbm", "tempfile", "glob", "fnmatch", "shlex"
     }
 
+# Pre-compiled regular expressions for performance
+VERSION_CLEANUP_RE = re.compile(r'\s+\d+(\.\d+)*.*$')
+NORMALIZE_RE = re.compile(r'[^a-z0-9_]')
+NOTE_CLEANUP_RE = re.compile(r'\s*\(.*?\)')
+PY_IMPORT_RE = re.compile(r'^(?:from|import)\s+([a-zA-Z0-9_]+)', re.MULTILINE)
+JS_ES6_IMPORT_RE = re.compile(r'import\s+.*?from\s+[\'\"]([@a-zA-Z0-9_/-]+)[\'\"]')
+JS_CJS_IMPORT_RE = re.compile(r'require\s*\(\s*[\'\"]([@a-zA-Z0-9_/-]+)[\'\"]\s*\)')
+
 def normalize_name(name):
     """
     Normalizes a tech stack item name to a potential package name.
@@ -56,7 +64,7 @@ def normalize_name(name):
              'FastAPI' -> 'fastapi'
     """
     # Remove version numbers if present (simple heuristic)
-    name = re.sub(r'\s+\d+(\.\d+)*.*$', '', name)
+    name = VERSION_CLEANUP_RE.sub('', name)
     # Lowercase
     name = name.lower()
     # Check mapping first
@@ -65,7 +73,7 @@ def normalize_name(name):
 
     # Strip special chars for default normalization
     # We keep underscores as they are common in python packages
-    normalized = re.sub(r'[^a-z0-9_]', '', name)
+    normalized = NORMALIZE_RE.sub('', name)
     return normalized
 
 def parse_tech_stack(filepath):
@@ -83,7 +91,7 @@ def parse_tech_stack(filepath):
                 # Strip marker
                 content = line[3:].strip()
                 # Remove parenthetical notes e.g. "(Backend)"
-                content = re.sub(r'\s*\(.*?\)', '', content).strip()
+                content = NOTE_CLEANUP_RE.sub('', content).strip()
 
                 if content:
                     # Handle multiple items? Usually one per line.
@@ -106,7 +114,7 @@ def get_imports_from_file(filepath):
     if ext == '.py':
         # Regex for 'import X' or 'from X import Y'
         # Captures the top-level package name
-        import_matches = re.findall(r'^(?:from|import)\s+([a-zA-Z0-9_]+)', content, re.MULTILINE)
+        import_matches = PY_IMPORT_RE.findall(content)
         imports.update(import_matches)
 
     elif ext in ['.js', '.ts', '.vue']:
