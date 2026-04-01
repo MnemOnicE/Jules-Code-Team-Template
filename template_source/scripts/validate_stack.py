@@ -23,6 +23,7 @@ import sys
 # Configuration
 TECH_STACK_PATH = "template_source/.agents/config/TECH_STACK.md"
 SRC_DIR = "src"
+EXCLUDED_DIRS = {'__pycache__', 'node_modules', '.git', '.pytest_cache'}
 
 # Hardcoded mapping for discrepancies between Human Name and Package Name
 # This decouples documentation from implementation details.
@@ -49,14 +50,6 @@ except AttributeError:
         "sqlite3", "pickle", "shelve", "dbm", "tempfile", "glob", "fnmatch", "shlex"
     }
 
-# Pre-compiled regular expressions for performance
-VERSION_CLEANUP_RE = re.compile(r'\s+\d+(\.\d+)*.*$')
-NORMALIZE_RE = re.compile(r'[^a-z0-9_]')
-NOTE_CLEANUP_RE = re.compile(r'\s*\(.*?\)')
-PY_IMPORT_RE = re.compile(r'^\s*(?:from|import)\s+([a-zA-Z0-9_]+)', re.MULTILINE)
-JS_ES6_IMPORT_RE = re.compile(r"import\s+.*?from\s+['\"]([@a-zA-Z0-9_/-]+)['\"]")
-JS_CJS_IMPORT_RE = re.compile(r"require\s*\(\s*['\"]([@a-zA-Z0-9_/-]+)['\"]\s*\)")
-
 def normalize_name(name):
     """
     Normalizes a tech stack item name to a potential package name.
@@ -64,7 +57,7 @@ def normalize_name(name):
              'FastAPI' -> 'fastapi'
     """
     # Remove version numbers if present (simple heuristic)
-    name = VERSION_CLEANUP_RE.sub('', name)
+    name = re.sub(r'\s+\d+(\.\d+)*.*$', '', name)
     # Lowercase
     name = name.lower()
     # Check mapping first
@@ -73,7 +66,7 @@ def normalize_name(name):
 
     # Strip special chars for default normalization
     # We keep underscores as they are common in python packages
-    normalized = NORMALIZE_RE.sub('', name)
+    normalized = re.sub(r'[^a-z0-9_]', '', name)
     return normalized
 
 def parse_tech_stack(filepath):
@@ -91,7 +84,7 @@ def parse_tech_stack(filepath):
                 # Strip marker
                 content = line[3:].strip()
                 # Remove parenthetical notes e.g. "(Backend)"
-                content = NOTE_CLEANUP_RE.sub('', content).strip()
+                content = re.sub(r'\s*\(.*?\)', '', content).strip()
 
                 if content:
                     # Handle multiple items? Usually one per line.
@@ -114,7 +107,7 @@ def get_imports_from_file(filepath):
     if ext == '.py':
         # Regex for 'import X' or 'from X import Y'
         # Captures the top-level package name
-        import_matches = PY_IMPORT_RE.findall(content)
+        import_matches = re.findall(r'^(?:from|import)\s+([a-zA-Z0-9_]+)', content, re.MULTILINE)
         imports.update(import_matches)
 
     elif ext in ['.js', '.ts', '.vue']:
@@ -155,7 +148,7 @@ def main():
 
     for root, dirs, files in os.walk(SRC_DIR):
         # Prune directories in-place to avoid traversing into non-source folders
-        dirs[:] = [d for d in dirs if d not in {'__pycache__', 'node_modules', '.git', '.pytest_cache'}]
+        dirs[:] = [d for d in dirs if d not in EXCLUDED_DIRS]
 
         for file in files:
             if file.endswith(('.py', '.js', '.ts', '.vue')):
