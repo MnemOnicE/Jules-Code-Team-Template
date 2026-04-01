@@ -134,6 +134,7 @@ def test_execute_happy_path(nexus_bus, caplog):
         "nodes": {
             "start": {
                 "action": "run_tool",
+                "params": {"tool": "test_tool"},
                 "next": "end"
             },
             "end": {
@@ -142,7 +143,9 @@ def test_execute_happy_path(nexus_bus, caplog):
         }
     }
     with caplog.at_level("INFO"):
-        nexus_bus.execute(graph)
+        registry = MagicMock()
+        registry.invoke.return_value = {"status": "success"}
+        nexus_bus.execute(graph, registry=registry)
 
     assert "[NEXUS] Starting execution at entry point: start" in caplog.text
     assert "[EXECUTING] Node start: run_tool" in caplog.text
@@ -167,12 +170,15 @@ def test_execute_missing_node(nexus_bus, caplog):
         "nodes": {
             "start": {
                 "action": "run_tool",
+                "params": {"tool": "test_tool"},
                 "next": "missing_node"
             }
         }
     }
     with caplog.at_level("INFO"):
-        nexus_bus.execute(graph)
+        registry = MagicMock()
+        registry.invoke.return_value = {"status": "success"}
+        nexus_bus.execute(graph, registry=registry)
 
     assert "[EXECUTING] Node start: run_tool" in caplog.text
     assert "[ERROR] Node 'missing_node' not found in graph." in caplog.text
@@ -185,12 +191,15 @@ def test_execute_no_next_node(nexus_bus, caplog):
         "entry_point": "start",
         "nodes": {
             "start": {
-                "action": "run_tool"
+                "action": "run_tool",
+                "params": {"tool": "test_tool"}
             }
         }
     }
     with caplog.at_level("INFO"):
-        nexus_bus.execute(graph)
+        registry = MagicMock()
+        registry.invoke.return_value = {"status": "success"}
+        nexus_bus.execute(graph, registry=registry)
 
     assert "[NEXUS] No next node defined for start. Stopping." in caplog.text
 
@@ -203,12 +212,15 @@ def test_execute_on_success_fallback(nexus_bus, caplog):
         "nodes": {
             "start": {
                 "action": "run_tool",
+                "params": {"tool": "test_tool"},
                 "on_success": "end"
             },
             "end": {"action": "terminate"}
         }
     }
     with caplog.at_level("INFO"):
-        nexus_bus.execute(graph)
+        registry = MagicMock()
+        registry.invoke.return_value = {"status": "success"}
+        nexus_bus.execute(graph, registry=registry)
 
     assert "[EXECUTING] Node end: terminate" in caplog.text
