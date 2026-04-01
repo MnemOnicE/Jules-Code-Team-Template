@@ -125,7 +125,7 @@ function parseMermaid(content) {
         // Edge handling
         // Split by generic arrow pattern
         // Matches A & B --> C & D
-        const parts = line.split(/\s*[-=.]{1,4}(?:(?:\|.+?\|)|(?:.+?))?[-=.]{0,3}[>]\s*/);
+        const parts = line.split(/\s*[-=.]{1,4}(?:(?:\|.+?\|)|(?:[^>]+?))?[-=.]{0,3}[>]\s*/);
 
         if (parts.length > 1) {
             processEdgeParts(parts, nodes, edges, nodeSubgraphs, currentSubgraph);
