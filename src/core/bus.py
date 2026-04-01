@@ -63,7 +63,18 @@ class NexusBus:
         Legacy execution method for NexusBus.
         Delegates to GraphExecutor for traversal.
         Used by existing tests in tests/test_bus.py.
+
+        Args:
+            graph (dict): The execution graph to process.
+            registry (ToolRegistry, optional): A custom tool registry to use for execution.
+        """
+        """
+        Legacy execution method for NexusBus.
+        Delegates to GraphExecutor for traversal.
+        Used by existing tests in tests/test_bus.py.
         """
         from src.core.tools.graph_executor import GraphExecutor
-        executor = GraphExecutor(self, registry=registry)
+        executor = GraphExecutor(self)
+        if registry:
+            executor.registry = registry
         executor.execute(graph)
