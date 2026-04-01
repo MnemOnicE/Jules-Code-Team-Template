@@ -50,10 +50,11 @@ def benchmark():
             # We wrap the main logic or the specific loop to benchmark
             # Since main() has prints and sys.exit, let's benchmark a function that does the walk
 
+            allowed_stack = validate_stack.parse_tech_stack(validate_stack.TECH_STACK_PATH)
+
             def run_validation():
                 # Mimic the loop in main()
                 violations = []
-                allowed_stack = validate_stack.parse_tech_stack(validate_stack.TECH_STACK_PATH)
                 for root, dirs, files in os.walk(validate_stack.SRC_DIR):
                     # Prune directories in-place to avoid traversing into non-source folders
                     dirs[:] = [d for d in dirs if d not in {'__pycache__', 'node_modules', '.git', '.pytest_cache'}]
