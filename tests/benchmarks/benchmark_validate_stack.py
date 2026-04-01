@@ -1,75 +1,75 @@
-import timeit
 import sys
 import os
-import shutil
+import timeit
 import tempfile
-from pathlib import Path
 
-# Add scripts to path
-scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", "template_source", "scripts"))
-if scripts_path not in sys.path:
-    sys.path.insert(0, scripts_path)
+# Ensure we can import from template_source/scripts
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '../../template_source/scripts')))
 
-import validate_stack
+from validate_stack import normalize_name, get_imports_from_file
 
-def setup_dummy_src(target_dir):
-    """Creates a large dummy directory structure."""
-    src_path = Path(target_dir) / "src"
-    src_path.mkdir(parents=True, exist_ok=True)
+def benchmark_normalize_name():
+    names = [
+        "Vue.js 3.0",
+        "React 18.2.0",
+        "FastAPI",
+        "scikit-learn 1.2.0",
+        "beautifulsoup4",
+        "Pillow 9.5.0",
+        "Express 4.18.2",
+        "Next.js 13.4.1",
+        "Mongoose 7.0.3",
+        "PyTorch 2.0.1",
+    ]
 
-    for i in range(10):
-        subdir = src_path / f"pkg_{i}"
-        subdir.mkdir()
-        for j in range(10):
-            (subdir / f"module_{j}.py").write_text("import os\nimport sys\n")
+    def run():
+        for name in names:
+            normalize_name(name)
 
-        # Add __pycache__ with many files
-        pycache = subdir / "__pycache__"
-        pycache.mkdir()
-        for j in range(50):
-            (pycache / f"module_{j}.cpython-310.pyc").write_text("dummy bytecode")
+    times = timeit.repeat(run, number=10000, repeat=5)
+    min_time = min(times)
+    avg_time = sum(times)/len(times)
+    print(f"normalize_name: min {min_time:.4f}s, avg {avg_time:.4f}s")
+    return min_time
 
-def benchmark():
-    with tempfile.TemporaryDirectory() as tmpdir:
-        original_cwd = os.getcwd()
-        os.chdir(tmpdir)
-        try:
-            setup_dummy_src(tmpdir)
+def benchmark_get_imports():
+    py_content = """
+import os
+import sys
+from collections import defaultdict
+from foo.bar import baz
+import xyzzy
+"""
+    js_content = """
+import { something } from 'react';
+import express from 'express';
+const path = require('path');
+const lodash = require('lodash');
+"""
 
-            # Mock TECH_STACK_PATH for validate_stack
-            os.makedirs("template_source/.agents/config", exist_ok=True)
-            with open("template_source/.agents/config/TECH_STACK.md", "w") as f:
-                f.write("# - python\n# - os\n# - sys\n")
+    fd_py, temp_py = tempfile.mkstemp(suffix='.py')
+    fd_js, temp_js = tempfile.mkstemp(suffix='.js')
 
-            # Use the SRC_DIR from the module
-            validate_stack.SRC_DIR = "src"
-            validate_stack.TECH_STACK_PATH = "template_source/.agents/config/TECH_STACK.md"
+    try:
+        with os.fdopen(fd_py, 'w') as f:
+            f.write(py_content)
+        with os.fdopen(fd_js, 'w') as f:
+            f.write(js_content)
 
-            number = 100
+        def run():
+            get_imports_from_file(temp_py)
+            get_imports_from_file(temp_js)
 
-            # We wrap the main logic or the specific loop to benchmark
-            # Since main() has prints and sys.exit, let's benchmark a function that does the walk
-
-            allowed_stack = validate_stack.parse_tech_stack(validate_stack.TECH_STACK_PATH)
-
-            def run_validation():
-                # Mimic the loop in main()
-                violations = []
-                for root, dirs, files in os.walk(validate_stack.SRC_DIR):
-                    # Prune directories in-place to avoid traversing into non-source folders
-                    dirs[:] = [d for d in dirs if d not in {'__pycache__', 'node_modules', '.git', '.pytest_cache'}]
-                    for file in files:
-                        if file.endswith(('.py', '.js', '.ts', '.vue')):
-                            filepath = os.path.join(root, file)
-                            file_imports = validate_stack.get_imports_from_file(filepath)
-                            # ... rest of logic not strictly needed for walk performance
-                return violations
-
-            execution_time = timeit.timeit(run_validation, number=number)
-            print(f"Validation walk ({number} iterations): {execution_time:.6f} seconds")
-
-        finally:
-            os.chdir(original_cwd)
+        times = timeit.repeat(run, number=5000, repeat=5)
+        min_time = min(times)
+        avg_time = sum(times)/len(times)
+        print(f"get_imports_from_file: min {min_time:.4f}s, avg {avg_time:.4f}s")
+        return min_time
+    finally:
+        os.remove(temp_py)
+        os.remove(temp_js)
 
 if __name__ == "__main__":
-    benchmark()
+    print("Benchmarking validate_stack.py")
+    benchmark_normalize_name()
+    benchmark_get_imports()
