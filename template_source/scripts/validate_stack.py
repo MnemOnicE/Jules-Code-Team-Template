@@ -146,6 +146,9 @@ def main():
         return 0
 
     for root, dirs, files in os.walk(SRC_DIR):
+        # Prune directories in-place to avoid traversing into non-source folders
+        dirs[:] = [d for d in dirs if d not in {'__pycache__', 'node_modules', '.git', '.pytest_cache'}]
+
         for file in files:
             if file.endswith(('.py', '.js', '.ts', '.vue')):
                 filepath = os.path.join(root, file)
