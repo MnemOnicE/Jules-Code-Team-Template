@@ -32,9 +32,9 @@ class GraphExecutor:
     """
     MAX_STEPS = 1000
 
-    def __init__(self, event_bus: NexusBus):
+    def __init__(self, event_bus: NexusBus, registry=None):
         self.bus = event_bus
-        self.registry = ToolRegistry()
+        self.registry = registry if registry is not None else ToolRegistry()
         self.logger = logging.getLogger(__name__)
 
     def validate_integrity(self, graph: dict):

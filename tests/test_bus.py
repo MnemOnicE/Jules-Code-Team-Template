@@ -220,7 +220,9 @@ def test_execute_no_next_node(nexus_bus, caplog):
         }
     }
     with caplog.at_level("INFO"):
-        nexus_bus.execute(graph)
+        registry = MagicMock()
+        registry.invoke.return_value = {"status": "success"}
+        nexus_bus.execute(graph, registry=registry)
 
     assert "[NEXUS] No next node defined for start. Stopping." in caplog.text
 
