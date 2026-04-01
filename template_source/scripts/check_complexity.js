@@ -17,6 +17,10 @@
 const fs = require('fs');
 const path = require('path');
 
+// Constants
+// Matches Mermaid arrow patterns: A --> B, A -- Label --> B, A -.-> B, A ==F==> G
+const MERMAID_EDGE_RE = /\s*[-=.]{1,4}(?:(?:\|.+?\|)|(?:[^>]+?))?[-=.]{0,3}[>]\s*/;
+
 // Configuration
 const CONFIG_FILE = path.join(__dirname, '../.mermaid-sonar.json');
 const SOURCE_DIR = path.join(__dirname, '../');
@@ -125,7 +129,7 @@ function parseMermaid(content) {
         // Edge handling
         // Split by generic arrow pattern
         // Matches A & B --> C & D
-        const parts = line.split(/\s*[-=.]{1,4}(?:(?:\|.+?\|)|(?:[^>]+?))?[-=.]{0,3}[>]\s*/);
+        const parts = line.split(MERMAID_EDGE_RE);
 
         if (parts.length > 1) {
             processEdgeParts(parts, nodes, edges, nodeSubgraphs, currentSubgraph);
