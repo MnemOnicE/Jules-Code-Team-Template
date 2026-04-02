@@ -9,10 +9,11 @@ def config_mgr(tmp_path):
     return LLMConfigManager(root_dir=str(tmp_path))
 
 def test_init_default_root():
-    mgr = LLMConfigManager()
-    assert os.path.isabs(mgr.root_dir)
-    assert mgr.env_path == os.path.join(mgr.root_dir, '.env')
-    assert mgr.config_path == os.path.join(mgr.root_dir, 'llm_config.yaml')
+    with patch("src.core.llm_config.load_dotenv"):
+        mgr = LLMConfigManager()
+        assert os.path.isabs(mgr.root_dir)
+        assert mgr.env_path == os.path.join(mgr.root_dir, '.env')
+        assert mgr.config_path == os.path.join(mgr.root_dir, 'llm_config.yaml')
 
 def test_init_custom_root(tmp_path):
     custom_root = str(tmp_path)
