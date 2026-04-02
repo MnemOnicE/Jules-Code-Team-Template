@@ -1,3 +1,4 @@
+from unittest.mock import patch, MagicMock
 from init_project import update_file
 
 def test_update_file_success(tmp_path):

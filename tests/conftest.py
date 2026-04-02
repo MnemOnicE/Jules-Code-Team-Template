@@ -1,4 +1,12 @@
+
 import sys
+from unittest.mock import MagicMock
+# Patch modules for isolated test environments where dependencies might not be installed
+if 'yaml' not in sys.modules:
+    sys.modules['yaml'] = MagicMock()
+if 'dotenv' not in sys.modules:
+    sys.modules['dotenv'] = MagicMock()
+
 from unittest.mock import MagicMock
 import importlib.util
 

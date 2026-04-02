@@ -20,15 +20,19 @@ import argparse
 import logging
 import sys
 import uuid
+import os
 
 # Imports
 try:
     from src.core.bus import NexusBus
     from src.core.context import load_context
     from src.core.tools.graph_executor import GraphExecutor
+    from src.core.llm_provider import get_llm_provider
+    from src.core.llm_config import LLMConfigManager
 except ImportError as e:
     print(f"Error importing modules: {e}")
     sys.exit(1)
+
 
 def generate_mock_graph(task_description):
     """
@@ -75,8 +79,32 @@ def main():
     parser = argparse.ArgumentParser(description="Agent System V3 Command Interface")
     parser.add_argument("--task", type=str, help="The natural language task to perform")
     parser.add_argument("--file", type=str, help="A file to process")
+    parser.add_argument("-c", "--config-llm", action="store_true", help="Run the interactive LLM configuration wizard")
+    parser.add_argument("--llm", type=str, help="Override active LLM provider (openai, gemini, jules, ollama, llamacpp)")
+    parser.add_argument("--model-path", type=str, help="Override model path or name (for local models)")
+    parser.add_argument("-rs", "--raw-send", action="store_true", help="Output raw JSON payload sent to the LLM")
+    parser.add_argument("-rr", "--raw-return", action="store_true", help="Output raw JSON response from the LLM")
 
     args = parser.parse_args()
+
+    if args.config_llm:
+        from src.core.llm_config import configure_llm_providers
+        configure_llm_providers()
+        sys.exit(0)
+
+    # Initialize Config
+    config_mgr = LLMConfigManager()
+
+    # Check if we have an active provider, if not prompt
+    if not config_mgr.get_active_provider() and not args.llm:
+        print("⚠️ No LLM configuration found.")
+        from src.core.llm_config import configure_llm_providers
+        configure_llm_providers()
+
+    # Process Overrides
+    if args.model_path:
+        os.environ['OLLAMA_MODEL'] = args.model_path
+        os.environ['LLAMACPP_MODEL_PATH'] = args.model_path
 
     if not args.task and not args.file:
         parser.print_help()
@@ -91,6 +119,17 @@ def main():
     )
 
     print("\n🔮 \033[1mInitializing Agent System V3...\033[0m")
+    # Test LLM connection
+    try:
+        provider = get_llm_provider(
+            provider_name=args.llm,
+            raw_send=args.raw_send,
+            raw_return=args.raw_return
+        )
+        print(f"✅ LLM Provider Ready: {type(provider).__name__}")
+    except Exception as e:
+        print(f"❌ Failed to initialize LLM Provider: {e}")
+        sys.exit(1)
 
     # 1. Initialize Bus (Nervous System)
     try:

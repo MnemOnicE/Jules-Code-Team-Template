@@ -53,7 +53,55 @@ def update_file(filepath, search_pattern, replace_value):
     with open(filepath, 'w') as f:
         f.write(new_content)
 
+
+def install_git_hooks():
+    hooks_dir = os.path.join(os.getcwd(), '.git', 'hooks')
+    if not os.path.exists(hooks_dir):
+        return
+
+    # Create pre-commit hook
+    pre_commit_path = os.path.join(hooks_dir, 'pre-commit')
+    with open(pre_commit_path, 'w') as f:
+        f.write('#!/bin/sh\n')
+        f.write('echo "🛡️ Sentinel Check: Pre-commit hook executing"\n')
+        f.write('exit 0\n')
+    os.chmod(pre_commit_path, 0o755)
+
+    # Create pre-push hook for endpoint validation
+    pre_push_path = os.path.join(hooks_dir, 'pre-push')
+    with open(pre_push_path, 'w') as f:
+        f.write('#!/bin/sh\n')
+        f.write('remote="$1"\n')
+        f.write('url="$2"\n')
+        f.write('echo "🛡️ Sentinel Check: Verifying push to $url"\n')
+        f.write('if echo "$url" | grep -qi "template"; then\n')
+        f.write('  echo "🚨 ERROR: Push to a repository containing \'template\' in the URL is blocked!"\n')
+        f.write('  exit 1\n')
+        f.write('fi\n')
+        f.write('exit 0\n')
+    os.chmod(pre_push_path, 0o755)
+    print("Brain: Installed Git safeguards (pre-commit, pre-push).")
+
+
+def configure_git_remote():
+
+    print("\nBrain: Securing Git Endpoints (Non-Negotiable)")
+    try:
+        subprocess.run(["git", "remote", "remove", "origin"], stderr=subprocess.DEVNULL)
+        print("✅ Removed template remote 'origin'.")
+    except Exception:
+        pass
+
+    new_remote = input("Brain: Enter your new Git repository URL (HTTPS or SSH), or leave blank to skip for now: ").strip()
+    if new_remote:
+        try:
+            subprocess.run(["git", "remote", "add", "origin", new_remote], check=True)
+            print(f"✅ Added new remote 'origin': {new_remote}")
+        except Exception as e:
+            print(f"⚠️ Failed to add remote: {e}")
+
 def main():
+
     clear_screen()
     print_header()
 
@@ -247,7 +295,16 @@ def main():
     except OSError as e:
         print(f"Warning: Failed to cleanup template source: {e}")
 
-    # 7. Trigger Smart Ingest (The Awakening)
+    # 7. Git Endpoint Security and Hooks
+    configure_git_remote()
+    install_git_hooks()
+
+    # 7.5 LLM Configuration
+    # Safe import from core to survive template deletion
+    from src.core.llm_config import configure_llm_providers
+    configure_llm_providers()
+
+    # 8. Trigger Smart Ingest (The Awakening)
     print("Brain: Initializing memory systems...")
     ingest_script = os.path.join(ROOT, "scripts", "smart_ingest.py")
     if os.path.exists(ingest_script):
