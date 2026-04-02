@@ -1,7 +1,14 @@
 import os
 import pytest
-from unittest.mock import patch, MagicMock, mock_open
+from unittest.mock import patch, MagicMock
 from src.core.llm_config import LLMConfigManager
+
+# We use the real yaml if available, otherwise mock it for CI environments without it.
+# However, for real file tests, it's better if it's available.
+try:
+    import yaml
+except ImportError:
+    yaml = MagicMock()
 
 @pytest.fixture
 def config_mgr(tmp_path):
@@ -9,7 +16,8 @@ def config_mgr(tmp_path):
     return LLMConfigManager(root_dir=str(tmp_path))
 
 def test_init_default_root():
-    with patch("src.core.llm_config.load_dotenv"):
+    # Mock load_dotenv to prevent interaction with the real project root's .env
+    with patch("src.core.llm_config.load_dotenv") as mock_load_dotenv:
         mgr = LLMConfigManager()
         assert os.path.isabs(mgr.root_dir)
         assert mgr.env_path == os.path.join(mgr.root_dir, '.env')
@@ -26,7 +34,6 @@ def test_init_loads_dotenv(tmp_path):
     env_file = tmp_path / ".env"
     env_file.write_text("TEST_VAR=test_value")
 
-    # Patch load_dotenv within the module it's used in
     with patch("src.core.llm_config.load_dotenv") as mock_load_dotenv:
         LLMConfigManager(root_dir=str(tmp_path))
         mock_load_dotenv.assert_called_once_with(str(env_file))
@@ -47,38 +54,50 @@ def test_set_api_key(config_mgr):
             assert os.path.exists(config_mgr.env_path)
 
 def test_load_config_missing(config_mgr):
-    # No file created in tmp_path, should return empty dict
     assert config_mgr.load_config() == {}
 
 def test_load_config_valid(config_mgr):
     data = {"active_provider": "openai", "providers": {"openai": {"model": "gpt-4"}}}
 
-    # Mocking yaml within src.core.llm_config to handle environments without PyYAML
-    with patch("src.core.llm_config.yaml.safe_load", return_value=data):
-        with patch("builtins.open", mock_open(read_data="dummy")):
-            # We must also mock os.path.exists for the config_path
-            with patch("os.path.exists", side_effect=lambda p: p == config_mgr.config_path or os.path.exists(p)):
-                assert config_mgr.load_config() == data
+    # If yaml is mocked, we still need to patch it in src.core.llm_config
+    if isinstance(yaml, MagicMock):
+        with patch("src.core.llm_config.yaml.safe_load", return_value=data):
+            # We need the file to exist for load_config to proceed
+            with open(config_mgr.config_path, "w", encoding="utf-8") as f:
+                f.write("dummy content")
+            assert config_mgr.load_config() == data
+    else:
+        with open(config_mgr.config_path, "w", encoding="utf-8") as f:
+            yaml.dump(data, f)
+        assert config_mgr.load_config() == data
 
 def test_load_config_malformed(config_mgr):
-    # Define a mock exception that behaves like yaml.YAMLError
-    class MockYAMLError(Exception):
-        pass
+    # Write invalid content to the config path
+    with open(config_mgr.config_path, "w", encoding="utf-8") as f:
+        f.write("invalid: yaml: :")
 
-    with patch("src.core.llm_config.yaml.YAMLError", MockYAMLError):
-        with patch("src.core.llm_config.yaml.safe_load", side_effect=MockYAMLError("YAML error")):
-            with patch("builtins.open", mock_open(read_data="dummy")):
-                with patch("os.path.exists", side_effect=lambda p: p == config_mgr.config_path or os.path.exists(p)):
-                    assert config_mgr.load_config() == {}
+    # If yaml is a MagicMock, we must mock safe_load and YAMLError
+    if isinstance(yaml, MagicMock):
+        class MockYAMLError(Exception):
+            pass
+        with patch("src.core.llm_config.yaml.YAMLError", MockYAMLError):
+            with patch("src.core.llm_config.yaml.safe_load", side_effect=MockYAMLError("YAML error")):
+                assert config_mgr.load_config() == {}
+    else:
+        assert config_mgr.load_config() == {}
 
 def test_save_config(config_mgr):
     data = {"test": "data"}
 
-    with patch("src.core.llm_config.yaml.dump") as mock_dump:
-        with patch("builtins.open", mock_open()) as mocked_file:
+    if isinstance(yaml, MagicMock):
+        with patch("src.core.llm_config.yaml.dump") as mock_dump:
             config_mgr.save_config(data)
             mock_dump.assert_called_once()
             assert mock_dump.call_args[0][0] == data
+    else:
+        config_mgr.save_config(data)
+        with open(config_mgr.config_path, "r", encoding="utf-8") as f:
+            assert yaml.safe_load(f) == data
 
 def test_get_provider_config(config_mgr):
     data = {"providers": {"openai": {"model": "gpt-4"}}}
