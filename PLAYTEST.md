@@ -37,7 +37,7 @@ The template presents an impressive conceptual framework (dialectic simulation, 
 **Action:** Tested individual utility scripts located in `scripts/`.
 
 ### Findings:
-- ❌ **Memory Ingestion (`smart_ingest.py`):** Failed with `NameError: name 'DIGEST_PREFIX' is not defined`. The script crashed while attempting to prune old digest files.
+- ❌ **Memory Ingestion (`smart_ingest.py`):** Failed with `NameError` because `DIGEST_PREFIX`, `DELTA_PREFIX`, and `INGEST_FILE_SUFFIX` are not defined. The script crashed while attempting to prune old digest files.
 - ❌ **Stack Validation (`validate_stack.py`):** Failed to run properly because it hardcodes the path `template_source/.agents/config/TECH_STACK.md`. Since `template_source` is deleted during initialization, the semantic firewall is permanently broken post-init.
 - ✅ **Complexity Checks (`check_complexity.js`):** Ran successfully but found 0 `.mmd` files to evaluate.
 
