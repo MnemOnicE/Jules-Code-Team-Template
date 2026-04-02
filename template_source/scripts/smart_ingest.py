@@ -22,7 +22,12 @@ from datetime import datetime
 import shutil
 import sys
 
+
 INGEST_DIR = "ingests"
+DIGEST_PREFIX = "digest_"
+DELTA_PREFIX = "delta_"
+INGEST_FILE_SUFFIX = ".txt"
+
 
 def get_commit_count():
     try:
