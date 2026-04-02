@@ -90,6 +90,7 @@ def configure_llm_providers():
             subprocess.run([sys.executable, "-m", "pip", "install", "openai"], check=True)
         except subprocess.CalledProcessError:
             print("❌ Failed to install openai sdk. Please install it manually.")
+            providers.remove('openai')
 
     if get_input("Use Gemini?", "n").lower() == 'y':
         providers.append('gemini')
@@ -103,6 +104,7 @@ def configure_llm_providers():
             subprocess.run([sys.executable, "-m", "pip", "install", "google-genai"], check=True)
         except subprocess.CalledProcessError:
             print("❌ Failed to install google-genai sdk. Please install it manually.")
+            providers.remove('gemini')
 
     if get_input("Use Jules API?", "n").lower() == 'y':
         providers.append('jules')
@@ -122,6 +124,7 @@ def configure_llm_providers():
             subprocess.run([sys.executable, "-m", "pip", "install", "ollama"], check=True)
         except subprocess.CalledProcessError:
             print("❌ Failed to install ollama sdk. Please install it manually.")
+            providers.remove('ollama')
 
     if get_input("Use Llama.cpp (Local)?", "n").lower() == 'y':
         providers.append('llamacpp')
@@ -133,6 +136,7 @@ def configure_llm_providers():
             subprocess.run([sys.executable, "-m", "pip", "install", "llama-cpp-python"], check=True)
         except subprocess.CalledProcessError:
             print("❌ Failed to install llama-cpp-python sdk. Please install it manually.")
+            providers.remove('llamacpp')
 
     if providers:
         print(f"\nBrain: Generating llm_config.yaml for active provider...")
