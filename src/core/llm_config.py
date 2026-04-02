@@ -83,8 +83,8 @@ def configure_llm_providers():
         api_key = get_input("OpenAI API Key (leave blank to set later)", "")
         if api_key:
             os.environ['OPENAI_API_KEY'] = api_key
-            with open('.env', 'a') as f:
-                f.write(f"OPENAI_API_KEY={api_key}\n")
+            mgr = LLMConfigManager()
+            mgr.set_api_key('OPENAI_API_KEY', api_key)
         print("Installing openai sdk...")
         subprocess.run([sys.executable, "-m", "pip", "install", "openai"], check=False)
 
@@ -93,8 +93,8 @@ def configure_llm_providers():
         api_key = get_input("Gemini API Key (leave blank to set later)", "")
         if api_key:
             os.environ['GEMINI_API_KEY'] = api_key
-            with open('.env', 'a') as f:
-                f.write(f"GEMINI_API_KEY={api_key}\n")
+            mgr = LLMConfigManager()
+            mgr.set_api_key('GEMINI_API_KEY', api_key)
         print("Installing google-genai sdk...")
         subprocess.run([sys.executable, "-m", "pip", "install", "google-genai"], check=False)
 
@@ -103,22 +103,22 @@ def configure_llm_providers():
         api_key = get_input("Jules API Key (leave blank to set later)", "")
         if api_key:
             os.environ['JULES_API_KEY'] = api_key
-            with open('.env', 'a') as f:
-                f.write(f"JULES_API_KEY={api_key}\n")
+            mgr = LLMConfigManager()
+            mgr.set_api_key('JULES_API_KEY', api_key)
 
     if get_input("Use Ollama (Local)?", "n").lower() == 'y':
         providers.append('ollama')
         model = get_input("Ollama Default Model", "llama3")
-        with open('.env', 'a') as f:
-            f.write(f"OLLAMA_MODEL={model}\n")
+        mgr = LLMConfigManager()
+        mgr.set_api_key('OLLAMA_MODEL', model)
         print("Installing ollama sdk...")
         subprocess.run([sys.executable, "-m", "pip", "install", "ollama"], check=False)
 
     if get_input("Use Llama.cpp (Local)?", "n").lower() == 'y':
         providers.append('llamacpp')
         model_path = get_input("Llama.cpp Model Path", "./models/model.gguf")
-        with open('.env', 'a') as f:
-            f.write(f"LLAMACPP_MODEL_PATH={model_path}\n")
+        mgr = LLMConfigManager()
+        mgr.set_api_key('LLAMACPP_MODEL_PATH', model_path)
         print("Installing llama-cpp-python sdk...")
         subprocess.run([sys.executable, "-m", "pip", "install", "llama-cpp-python"], check=False)
 
