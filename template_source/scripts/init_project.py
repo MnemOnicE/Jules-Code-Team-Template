@@ -59,27 +59,18 @@ def install_git_hooks():
     if not os.path.exists(hooks_dir):
         return
 
-    # Create pre-commit hook
-    pre_commit_path = os.path.join(hooks_dir, 'pre-commit')
-    with open(pre_commit_path, 'w') as f:
-        f.write('#!/bin/sh\n')
-        f.write('echo "🛡️ Sentinel Check: Pre-commit hook executing"\n')
-        f.write('exit 0\n')
-    os.chmod(pre_commit_path, 0o755)
+    template_hooks_dir = os.path.join(os.path.dirname(__file__), 'hooks_templates')
+    if not os.path.exists(template_hooks_dir):
+        # Fallback for when templates aren't available yet or are missing
+        return
 
-    # Create pre-push hook for endpoint validation
-    pre_push_path = os.path.join(hooks_dir, 'pre-push')
-    with open(pre_push_path, 'w') as f:
-        f.write('#!/bin/sh\n')
-        f.write('remote="$1"\n')
-        f.write('url="$2"\n')
-        f.write('echo "🛡️ Sentinel Check: Verifying push to $url"\n')
-        f.write('if echo "$url" | grep -qi "template"; then\n')
-        f.write('  echo "🚨 ERROR: Push to a repository containing \'template\' in the URL is blocked!"\n')
-        f.write('  exit 1\n')
-        f.write('fi\n')
-        f.write('exit 0\n')
-    os.chmod(pre_push_path, 0o755)
+    for hook_name in ['pre-commit', 'pre-push']:
+        src_path = os.path.join(template_hooks_dir, hook_name)
+        dst_path = os.path.join(hooks_dir, hook_name)
+        if os.path.exists(src_path):
+            shutil.copy2(src_path, dst_path)
+            os.chmod(dst_path, 0o755)
+
     print("Brain: Installed Git safeguards (pre-commit, pre-push).")
 
 

@@ -1,0 +1,9 @@
+#!/bin/sh
+remote="$1"
+url="$2"
+echo "🛡️ Sentinel Check: Verifying push to $url"
+if echo "$url" | grep -qi "template"; then
+  echo "🚨 ERROR: Push to a repository containing 'template' in the URL is blocked!"
+  exit 1
+fi
+exit 0

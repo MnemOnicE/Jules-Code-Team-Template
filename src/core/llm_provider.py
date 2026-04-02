@@ -17,8 +17,8 @@ class LLMProvider(ABC):
 
     def _log_raw_send(self, payload):
         if self.raw_send:
-        if self.raw_send:
             logger.info(f"[RAW SEND]: {json.dumps(payload, indent=2, default=str)}")
+            print(f"[RAW SEND]: {json.dumps(payload, indent=2, default=str)}")
 
     def _log_raw_return(self, response):
         if self.raw_return:
@@ -26,6 +26,16 @@ class LLMProvider(ABC):
             if not isinstance(response, str):
                 response = json.dumps(response, indent=2, default=str)
             logger.info(f"[RAW RETURN]: {response}")
+            print(f"[RAW RETURN]: {response}")
+
+    def _handle_raw_return(self, response):
+        if self.raw_return:
+            if hasattr(response, 'model_dump'):
+                self._log_raw_return(response.model_dump())
+            elif isinstance(response, dict) or isinstance(response, list):
+                self._log_raw_return(response)
+            else:
+                self._log_raw_return(str(response))
 
 class OpenAIProvider(LLMProvider):
     def __init__(self, **kwargs):
@@ -53,11 +63,8 @@ class OpenAIProvider(LLMProvider):
 
         response = self.client.chat.completions.create(**payload)
 
-        # We try to get the raw model_dump if raw_return is on
-        if self.raw_return and hasattr(response, 'model_dump'):
-            self._log_raw_return(response.model_dump())
-        else:
-             self._log_raw_return(str(response))
+        # Delegate logging to a helper method
+        self._handle_raw_return(response)
 
         return response.choices[0].message.content
 
@@ -92,7 +99,7 @@ class GeminiProvider(LLMProvider):
 
         response = self.client.models.generate_content(**payload)
 
-        self._log_raw_return(str(response))
+        self._handle_raw_return(response)
         return response.text
 
 
@@ -126,7 +133,7 @@ class JulesProvider(LLMProvider):
         self._log_raw_send(payload)
 
         response = self.client.chat.completions.create(**payload)
-        self._log_raw_return(str(response))
+        self._handle_raw_return(response)
         return response.choices[0].message.content
 
 
@@ -152,7 +159,7 @@ class OllamaProvider(LLMProvider):
         self._log_raw_send(payload)
 
         response = self.client.chat(model=self.model, messages=messages)
-        self._log_raw_return(response)
+        self._handle_raw_return(response)
 
         return response['message']['content']
 
@@ -184,7 +191,7 @@ class LlamaCppProvider(LLMProvider):
         self._log_raw_send(payload)
 
         response = self.llm(prompt, max_tokens=1024)
-        self._log_raw_return(response)
+        self._handle_raw_return(response)
 
         return response['choices'][0]['text']
 
