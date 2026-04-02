@@ -17,8 +17,8 @@ class LLMProvider(ABC):
 
     def _log_raw_send(self, payload):
         if self.raw_send:
+        if self.raw_send:
             logger.info(f"[RAW SEND]: {json.dumps(payload, indent=2, default=str)}")
-            print(f"[RAW SEND]: {json.dumps(payload, indent=2, default=str)}")
 
     def _log_raw_return(self, response):
         if self.raw_return:
