@@ -15,7 +15,7 @@ The template presents an impressive conceptual framework (dialectic simulation, 
 ### Findings:
 - ✅ **Persona Configuration:** Successfully wrote dynamic configuration to `.agents/config/` (e.g., setting Governance Mode to Democracy).
 - ✅ **Cleanup:** Cleanly removed `template_source` to prevent clutter.
-- ❌ **Git Hook Configuration:** The script threw an exception during the final steps: `ModuleNotFoundError: No module named 'src'`. This occurs because it attempts to import from `src.core.llm_config` before `src` is properly path-resolved or because `src` wasn't created in integration mode (as intended by the architectural flaw).
+- ❌ **LLM Configuration Failure:** The script threw an exception during the final steps: `ModuleNotFoundError: No module named 'src'`. This occurs because it attempts to import from `src.core.llm_config` (line 295) after `template_source` is deleted and if `src` wasn't created/preserved in integration mode.
 - ❌ **The "Trojan Horse" Paradox:** As documented in `_meta/ARCHITECTURE_CRISIS.md`, Integration Mode explicitly skips unpacking `src/`. Because all execution logic lives in `src/`, the initialized project is left with configuration files but **no execution engine**.
 
 ---
