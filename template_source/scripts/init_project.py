@@ -53,7 +53,46 @@ def update_file(filepath, search_pattern, replace_value):
     with open(filepath, 'w') as f:
         f.write(new_content)
 
+
+def install_git_hooks():
+    hooks_dir = os.path.join(os.getcwd(), '.git', 'hooks')
+    if not os.path.exists(hooks_dir):
+        return
+
+    template_hooks_dir = os.path.join(os.path.dirname(__file__), 'hooks_templates')
+    if not os.path.exists(template_hooks_dir):
+        # Fallback for when templates aren't available yet or are missing
+        return
+
+    for hook_name in ['pre-commit', 'pre-push']:
+        src_path = os.path.join(template_hooks_dir, hook_name)
+        dst_path = os.path.join(hooks_dir, hook_name)
+        if os.path.exists(src_path):
+            shutil.copy2(src_path, dst_path)
+            os.chmod(dst_path, 0o755)
+
+    print("Brain: Installed Git safeguards (pre-commit, pre-push).")
+
+
+def configure_git_remote():
+
+    print("\nBrain: Securing Git Endpoints (Non-Negotiable)")
+    try:
+        subprocess.run(["git", "remote", "remove", "origin"], stderr=subprocess.DEVNULL)
+        print("✅ Removed template remote 'origin'.")
+    except Exception:
+        pass
+
+    new_remote = input("Brain: Enter your new Git repository URL (HTTPS or SSH), or leave blank to skip for now: ").strip()
+    if new_remote:
+        try:
+            subprocess.run(["git", "remote", "add", "origin", new_remote], check=True)
+            print(f"✅ Added new remote 'origin': {new_remote}")
+        except Exception as e:
+            print(f"⚠️ Failed to add remote: {e}")
+
 def main():
+
     clear_screen()
     print_header()
 
@@ -247,7 +286,16 @@ def main():
     except OSError as e:
         print(f"Warning: Failed to cleanup template source: {e}")
 
-    # 7. Trigger Smart Ingest (The Awakening)
+    # 7. Git Endpoint Security and Hooks
+    configure_git_remote()
+    install_git_hooks()
+
+    # 7.5 LLM Configuration
+    # Safe import from core to survive template deletion
+    from src.core.llm_config import configure_llm_providers
+    configure_llm_providers()
+
+    # 8. Trigger Smart Ingest (The Awakening)
     print("Brain: Initializing memory systems...")
     ingest_script = os.path.join(ROOT, "scripts", "smart_ingest.py")
     if os.path.exists(ingest_script):
