@@ -26,7 +26,6 @@ class LLMProvider(ABC):
             if not isinstance(response, str):
                 response = json.dumps(response, indent=2, default=str)
             logger.info(f"[RAW RETURN]: {response}")
-            print(f"[RAW RETURN]: {response}")
 
 class OpenAIProvider(LLMProvider):
     def __init__(self, **kwargs):
