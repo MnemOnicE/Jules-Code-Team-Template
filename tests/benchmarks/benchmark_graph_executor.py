@@ -21,8 +21,8 @@ if importlib.util.find_spec("jsonschema") is None:
     sys.modules["jsonschema"] = jsonschema_mock
     sys.modules["jsonschema.validators"] = MagicMock()
 
-from src.core.tools.graph_executor import GraphExecutor
-from src.core.bus import NexusBus
+from core.tools.graph_executor import GraphExecutor
+from core.bus import NexusBus
 
 class TimeoutException(BaseException):
     pass

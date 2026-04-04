@@ -16,8 +16,8 @@
 
 import logging
 # Note: Ensure core.bus is implemented as requested previously
-from src.core.bus import NexusBus
-from src.core.tools.registry import ToolRegistry
+from core.bus import NexusBus
+from core.tools.registry import ToolRegistry
 
 class SecurityError(Exception):
     pass
@@ -34,7 +34,8 @@ class GraphExecutor:
 
     def __init__(self, event_bus: NexusBus, registry=None):
         self.bus = event_bus
-        self.registry = registry if registry is not None else ToolRegistry()
+        from core.tools.registry import default_registry
+        self.registry = registry if registry is not None else default_registry
         self.logger = logging.getLogger(__name__)
 
     def validate_integrity(self, graph: dict):

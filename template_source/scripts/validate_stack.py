@@ -21,7 +21,11 @@ import re
 import sys
 
 # Configuration
-TECH_STACK_PATH = "template_source/.agents/config/TECH_STACK.md"
+# Try the installed path first, fallback to template_source for testing
+if os.path.exists(os.path.join(os.getcwd(), ".agents", "config", "TECH_STACK.md")):
+    TECH_STACK_PATH = os.path.join(os.getcwd(), ".agents", "config", "TECH_STACK.md")
+else:
+    TECH_STACK_PATH = "template_source/.agents/config/TECH_STACK.md"
 SRC_DIR = "src"
 
 # Hardcoded mapping for discrepancies between Human Name and Package Name

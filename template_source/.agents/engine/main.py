@@ -21,59 +21,63 @@ import logging
 import sys
 import uuid
 import os
+# Inject engine dir to sys.path so "from core..." works
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 # Imports
 try:
-    from src.core.bus import NexusBus
-    from src.core.context import load_context
-    from src.core.tools.graph_executor import GraphExecutor
-    from src.core.llm_provider import get_llm_provider
-    from src.core.llm_config import LLMConfigManager
+    from core.bus import NexusBus
+    from core.context import load_context
+    from core.tools.graph_executor import GraphExecutor
+    from core.llm_provider import get_llm_provider
+    from core.llm_config import LLMConfigManager
 except ImportError as e:
     print(f"Error importing modules: {e}")
     sys.exit(1)
 
 
-def generate_mock_graph(task_description):
-    """
-    Generates a static execution graph for demonstration.
-    Adheres to src/core/schema/execution_graph.json
-    """
-    graph_id = str(uuid.uuid4())
+import json
 
-    return {
-        "graph_id": graph_id,
-        "intent_glyph": "🤖",
-        "aether_mark": "mock_signature_verified",
-        "entry_point": "node_1",
-        "context_delta": {},
-        "nodes": {
-            "node_1": {
-                "action": "logic_gate",
-                "params": {
-                    "condition": "Is task valid?"
-                },
-                "on_success": "node_2",
-                "on_failure": "node_fail"
-            },
-            "node_2": {
-                "action": "run_tool",
-                "params": {
-                    "tool": "plan_decomposition",
-                    "args": {"task": task_description}
-                },
-                "on_success": "node_4"
-            },
-            "node_4": {
-                "action": "terminate",
-                "params": {}
-            },
-            "node_fail": {
-                 "action": "terminate",
-                 "params": {}
-            }
-        }
-    }
+def generate_llm_graph(task_description, provider):
+    """
+    Calls the LLM provider to dynamically generate a valid execution graph.
+    """
+    schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "core", "schema", "execution_graph.json")
+    with open(schema_path, "r") as f:
+        schema = f.read()
+
+    prompt = f"""
+You are the Brain agent of a coding squad. Your job is to construct an execution graph in JSON format to solve the following task:
+
+<task>
+{task_description}
+</task>
+
+The JSON output MUST strictly conform to the following schema:
+<schema>
+{schema}
+</schema>
+
+Output ONLY valid JSON.
+"""
+    response_text = provider.generate(prompt)
+
+    # Strip markdown code blocks if present
+    response_text = response_text.strip()
+    if response_text.startswith("```json"):
+        response_text = response_text[7:]
+    elif response_text.startswith("```"):
+        response_text = response_text[3:]
+    if response_text.endswith("```"):
+        response_text = response_text[:-3]
+
+    try:
+        return json.loads(response_text.strip())
+    except json.JSONDecodeError as e:
+        print(f"❌ Failed to parse LLM response as JSON: {e}")
+        print(f"Raw response: {response_text}")
+        sys.exit(1)
+
 
 def main():
     parser = argparse.ArgumentParser(description="Agent System V3 Command Interface")
@@ -88,7 +92,7 @@ def main():
     args = parser.parse_args()
 
     if args.config_llm:
-        from src.core.llm_config import configure_llm_providers
+        from core.llm_config import configure_llm_providers
         configure_llm_providers()
         sys.exit(0)
 
@@ -98,7 +102,7 @@ def main():
     # Check if we have an active provider, if not prompt
     if not config_mgr.get_active_provider() and not args.llm:
         print("⚠️ No LLM configuration found.")
-        from src.core.llm_config import configure_llm_providers
+        from core.llm_config import configure_llm_providers
         configure_llm_providers()
 
     # Process Overrides
@@ -151,8 +155,8 @@ def main():
 
     # 3. Generate Execution Graph (Brain)
     print(f"🧠 Brain: Analyzing task: '{task}'")
-    graph = generate_mock_graph(task)
-    print(f"✅ Generated Execution Graph ({graph['graph_id']})")
+    graph = generate_llm_graph(task, provider)
+    print(f"✅ Generated Execution Graph ({graph.get('graph_id', 'unknown')})")
 
     # 4. Execute (Muscles)
     print("\n🚀 \033[1mExecuting Graph...\033[0m")

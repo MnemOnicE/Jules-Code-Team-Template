@@ -1,7 +1,7 @@
 import json
 import logging
 from abc import ABC, abstractmethod
-from src.core.llm_config import LLMConfigManager
+from core.llm_config import LLMConfigManager
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ class OpenAIProvider(LLMProvider):
         try:
             from openai import OpenAI
         except ImportError:
-            raise ImportError("OpenAI SDK not installed. Run initialization or 'pip install openai'.")
+            raise ImportError("Missing required dependency. Please run: pip install openai")
 
         config_mgr = LLMConfigManager()
         api_key = config_mgr.get_api_key('OPENAI_API_KEY')
@@ -75,7 +75,7 @@ class GeminiProvider(LLMProvider):
         try:
             from google import genai
         except ImportError:
-            raise ImportError("Gemini SDK not installed. Run initialization or 'pip install google-genai'.")
+            raise ImportError("Missing required dependency. Please run: pip install google-genai")
 
         config_mgr = LLMConfigManager()
         api_key = config_mgr.get_api_key('GEMINI_API_KEY')
@@ -111,7 +111,7 @@ class JulesProvider(LLMProvider):
         try:
             from openai import OpenAI
         except ImportError:
-            raise ImportError("SDK for Jules (openai) not installed. Run initialization.")
+            raise ImportError("Missing required dependency. Please run: pip install openai")
 
         config_mgr = LLMConfigManager()
         api_key = config_mgr.get_api_key('JULES_API_KEY')
@@ -143,7 +143,7 @@ class OllamaProvider(LLMProvider):
         try:
             import ollama
         except ImportError:
-            raise ImportError("Ollama SDK not installed. Run initialization or 'pip install ollama'.")
+            raise ImportError("Missing required dependency. Please run: pip install ollama")
 
         self.client = ollama
         config_mgr = LLMConfigManager()
@@ -170,7 +170,7 @@ class LlamaCppProvider(LLMProvider):
         try:
             from llama_cpp import Llama
         except ImportError:
-            raise ImportError("llama-cpp-python not installed. Run initialization or 'pip install llama-cpp-python'.")
+            raise ImportError("Missing required dependency. Please run: pip install llama-cpp-python")
 
         config_mgr = LLMConfigManager()
         self.model_path = config_mgr.get_api_key('LLAMACPP_MODEL_PATH')

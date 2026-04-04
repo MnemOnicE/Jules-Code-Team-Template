@@ -1,0 +1,5 @@
+#!/bin/bash
+# Simple wrapper to launch the hidden agent engine
+# Find the directory where this script lives
+DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )"
+python3 "$DIR/.agents/engine/main.py" "$@"

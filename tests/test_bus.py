@@ -17,7 +17,7 @@
 import pytest
 import jsonschema
 from unittest.mock import MagicMock
-from src.core.bus import NexusBus
+from core.bus import NexusBus
 
 # Determine if jsonschema is a mock (occurs in environments without the library)
 # Some tests rely on real schema validation and should be skipped if it's mocked.
@@ -39,7 +39,7 @@ def nexus_bus():
 
 @pytest.fixture
 def tool_registry():
-    from src.core.tools.registry import ToolRegistry
+    from core.tools.registry import ToolRegistry
     registry = ToolRegistry()
     registry.register("test_tool", lambda **kwargs: {"status": "success"})
     return registry
