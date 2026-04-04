@@ -19,6 +19,7 @@
 import argparse
 import logging
 import sys
+import re
 import uuid
 import os
 # Inject engine dir to sys.path so "from core..." works
@@ -46,12 +47,8 @@ def generate_llm_graph(task_description, provider):
     with open(schema_path, "r") as f:
         schema = f.read()
 
-    prompt = f"""
-You are the Brain agent of a coding squad. Your job is to construct an execution graph in JSON format to solve the following task:
-
-<task>
-{task_description}
-</task>
+    system_prompt = f"""
+You are the Brain agent of a coding squad. Your job is to construct an execution graph in JSON format to solve the task provided by the user.
 
 The JSON output MUST strictly conform to the following schema:
 <schema>
@@ -60,7 +57,8 @@ The JSON output MUST strictly conform to the following schema:
 
 Output ONLY valid JSON.
 """
-    response_text = provider.generate(prompt)
+    user_prompt = f"Task: {task_description}"
+    response_text = provider.generate(system_prompt, user_prompt)
 
     # Strip markdown code blocks if present
     response_text = response_text.strip()
@@ -70,6 +68,12 @@ Output ONLY valid JSON.
         response_text = response_text[3:]
     if response_text.endswith("```"):
         response_text = response_text[:-3]
+    # Extract JSON from potential markdown or conversational filler
+    match = re.search(r'\{.*\}', response_text, re.DOTALL)
+    if match:
+        response_text = match.group(0)
+    else:
+        response_text = response_text.strip()
 
     try:
         return json.loads(response_text.strip())
@@ -156,6 +160,9 @@ def main():
     # 3. Generate Execution Graph (Brain)
     print(f"🧠 Brain: Analyzing task: '{task}'")
     graph = generate_llm_graph(task, provider)
+    if not isinstance(graph, dict):
+        print(f"❌ LLM returned invalid graph format (expected dict, got {type(graph).__name__})")
+        sys.exit(1)
     print(f"✅ Generated Execution Graph ({graph.get('graph_id', 'unknown')})")
 
     # 4. Execute (Muscles)
