@@ -29,7 +29,7 @@ During the automated playtest of the template utilizing real user interactions, 
 - The Git endpoint security bypass for "Integration Mode" works correctly.
 
 ## Recommendations for Fixes:
-- Adjust `init_project.py` to ensure `PyYAML`, `python-dotenv`, and `gitingest` are installed via `subprocess` *before* attempting imports or execution loops.
+- Adjust init_project.py to ensure PyYAML, python-dotenv, and gitingest are installed via subprocess (followed by importlib.invalidate_caches()) before attempting imports or execution loops.
 - Add `jsonschema` to the list of core dependencies installed during the template initialization.
 - Refactor `ContextLoader._find_root()` in `context.py` to correctly calculate the root directory robustly without strict level counts, taking into consideration it resides inside `.agents/engine/core/` now instead of `src/core/`.
 - Fix the `generate()` method call inside `main.py` to pass the correct arguments matching the `LLMProvider` signature (e.g., passing `""` for system prompt if only one is meant to be sent).
