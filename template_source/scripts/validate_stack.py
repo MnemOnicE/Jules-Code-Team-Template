@@ -20,14 +20,6 @@ import os
 import re
 import sys
 
-# Pre-compiled Regex Patterns for Performance Improvement
-PY_IMPORT_RE = re.compile(r'^\s*(?:from|import)\s+([a-zA-Z0-9_]+)', re.MULTILINE)
-JS_ES6_IMPORT_RE = re.compile(r'import\s+.*?from\s+[\'"]([@a-zA-Z0-9_./-]+)[\'"]', re.DOTALL)
-JS_CJS_IMPORT_RE = re.compile(r'require\s*\(\s*[\'"]([@a-zA-Z0-9_./-]+)[\'"]\s*\)')
-VERSION_CLEANUP_RE = re.compile(r'\s+\d+(\.\d+)*.*$')
-NORMALIZE_RE = re.compile(r'[^a-z0-9_]')
-NOTE_CLEANUP_RE = re.compile(r'\s*\(.*?\)')
-
 # Configuration
 TECH_STACK_PATH = "template_source/.agents/config/TECH_STACK.md"
 SRC_DIR = "src"
@@ -64,7 +56,7 @@ def normalize_name(name):
              'FastAPI' -> 'fastapi'
     """
     # Remove version numbers if present (simple heuristic)
-    name = VERSION_CLEANUP_RE.sub('', name)
+    name = re.sub(r'\s+\d+(\.\d+)*.*$', '', name)
     # Lowercase
     name = name.lower()
     # Check mapping first
@@ -73,7 +65,7 @@ def normalize_name(name):
 
     # Strip special chars for default normalization
     # We keep underscores as they are common in python packages
-    normalized = NORMALIZE_RE.sub('', name)
+    normalized = re.sub(r'[^a-z0-9_]', '', name)
     return normalized
 
 def parse_tech_stack(filepath):
@@ -91,7 +83,7 @@ def parse_tech_stack(filepath):
                 # Strip marker
                 content = line[3:].strip()
                 # Remove parenthetical notes e.g. "(Backend)"
-                content = NOTE_CLEANUP_RE.sub('', content).strip()
+                content = re.sub(r'\s*\(.*?\)', '', content).strip()
 
                 if content:
                     # Handle multiple items? Usually one per line.
@@ -114,18 +106,18 @@ def get_imports_from_file(filepath):
     if ext == '.py':
         # Regex for 'import X' or 'from X import Y'
         # Captures the top-level package name
-        import_matches = PY_IMPORT_RE.findall(content)
+        import_matches = re.findall(r'^(?:from|import)\s+([a-zA-Z0-9_]+)', content, re.MULTILINE)
         imports.update(import_matches)
 
     elif ext in ['.js', '.ts', '.vue']:
         # Regex for ES6 import
         # import ... from 'package'
-        es6_matches = JS_ES6_IMPORT_RE.findall(content)
+        es6_matches = re.findall(r'import\s+.*?from\s+[\'"]([@a-zA-Z0-9_/-]+)[\'"]', content)
         imports.update(es6_matches)
 
         # Regex for CommonJS require
         # require('package')
-        cjs_matches = JS_CJS_IMPORT_RE.findall(content)
+        cjs_matches = re.findall(r'require\s*\(\s*[\'"]([@a-zA-Z0-9_/-]+)[\'"]\s*\)', content)
         imports.update(cjs_matches)
 
         # Filter out relative imports (starting with . or /)

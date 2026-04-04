@@ -8,37 +8,36 @@ During initialization, the `init_project.py` script performs setup steps and the
 Immediately after this cleanup (Step 7.5), the script attempts to dynamically import and configure the LLM provider using:
 `from src.core.llm_config import configure_llm_providers`
 
-If the script is running in "Integration Mode" (where the extraction of `src/` is skipped), or if the Python process hasn't re-evaluated its system paths, this import fails catastrophically with `ModuleNotFoundError: No module named 'src'`.
+This approach has two critical flaws:
+1. **Integration Mode Failure:** In Integration Mode, the `src` directory is not moved to the root (it stays in `template_source/src` and is skipped). Thus, importing `src` will always fail, regardless of execution order.
+2. **Zero-Dependency Violation:** `init_project.py` has a strict 'ZERO-DEPENDENCY' constraint. Importing `src.core.llm_config` violates this, as that module depends on PyYAML and python-dotenv.
 
-Reference: `PLAYTEST.md`.
+Reference: `PLAYTEST.md` and PR Review Feedback.
 
 ## 3. Scope of Work
 *   **Target:** `template_source/scripts/init_project.py`.
-*   **Goal:** Reorder operations so the LLM configuration occurs *before* cleanup, or execute the configuration in an isolated subprocess that accurately reflects the new environment state.
+*   **Goal:** Execute the LLM configuration using an isolated subprocess to prevent dependency leakage and to dynamically handle varying source code locations.
 
 ## 4. Execution Instructions
 
-**Phase 1: Reorder Operations (Preferred Solution)**
-1. Review `template_source/scripts/init_project.py`.
-2. Move Step 7.5 (LLM Configuration) to occur *before* Step 6 (Cleanup).
-3. Ensure that the Python `sys.path` allows the import of `src.core.llm_config` at the time it is executed (which it should, since `template_source` still exists and the root is in the path).
-
-**Alternative/Phase 2 (Subprocess approach, if necessary)**
-If moving the step breaks other logic, the LLM configuration can be spawned as a separate process:
+**Phase 1: Implement Subprocess Execution**
+1. Review `template_source/scripts/init_project.py`, specifically Step 7.5.
+2. Remove the dynamic `import` statement.
+3. Spawn the LLM configuration as a separate process. This isolates dependencies.
 ```python
 import subprocess
 import sys
 
-# Instead of dynamic import
-subprocess.run([sys.executable, "-c", "from src.core.llm_config import configure_llm_providers; configure_llm_providers()"], check=True)
+# Ensure you dynamically resolve the correct path to llm_config based on the environment
+# (e.g., if Issue #1 is complete, it will be in .agents/engine/core/llm_config.py)
+subprocess.run([sys.executable, "-c", "from core.llm_config import configure_llm_providers; configure_llm_providers()"], check=True)
 ```
-*(Note: If Issue #1 "The Hidden Engine Refactor" is completed, this import path will change to `.agents.engine...`, which must be taken into account.)*
 
-**Phase 3: Dependency Handling**
-1. Ensure `init_project.py` gracefully handles the scenario where standard LLM SDK dependencies (`google-genai`, `openai`) are missing.
-2. Wrap the configuration call in a `try...except ImportError` block. Provide a helpful instruction to the user (e.g., "Skipping LLM config: missing dependencies. Run `pip install -r requirements.txt`") rather than crashing the script.
+**Phase 2: Dependency Handling**
+1. Ensure `init_project.py` gracefully handles the scenario where standard LLM SDK dependencies (`google-genai`, `openai`, `pyyaml`) are missing in the subprocess.
+2. Wrap the subprocess call in a `try...except subprocess.CalledProcessError` block. Provide a helpful instruction to the user (e.g., "Skipping LLM config: missing dependencies. Run `pip install -r requirements.txt`") rather than crashing the initialization script.
 
-**Phase 4: Test & Verify**
+**Phase 3: Test & Verify**
 1. Run `python template_source/scripts/init_project.py`.
 2. Ensure the script completes 100% of its steps without throwing a Python stack trace.
 3. Verify the final print statement ("Brain: Initializing memory systems...") is reached and executed.
@@ -46,4 +45,4 @@ subprocess.run([sys.executable, "-c", "from src.core.llm_config import configure
 ## 5. Definition of Done
 * `init_project.py` completes execution entirely.
 * Missing LLM SDKs result in a graceful warning, not a fatal crash.
-* The script succeeds in both Greenfield and Integration modes.
+* The script respects the zero-dependency constraint and succeeds in both Greenfield and Integration modes.
