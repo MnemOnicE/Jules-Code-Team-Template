@@ -22,7 +22,7 @@ class LLMConfigManager:
     def set_api_key(self, key_name, key_value):
         # Create .env if it doesn't exist
         if not os.path.exists(self.env_path):
-            with open(self.env_path, 'w'):
+            with open(self.env_path, 'w') as f:
                 pass
 
         set_key(self.env_path, key_name, key_value)
@@ -86,10 +86,7 @@ def configure_llm_providers():
             mgr = LLMConfigManager()
             mgr.set_api_key('OPENAI_API_KEY', api_key)
         print("Installing openai sdk...")
-        try:
-            subprocess.run([sys.executable, "-m", "pip", "install", "openai"], check=True)
-        except subprocess.CalledProcessError:
-            print("❌ Failed to install openai sdk. Please install manually: pip install openai")
+        subprocess.run([sys.executable, "-m", "pip", "install", "openai"], check=False)
 
     if get_input("Use Gemini?", "n").lower() == 'y':
         providers.append('gemini')
@@ -99,10 +96,7 @@ def configure_llm_providers():
             mgr = LLMConfigManager()
             mgr.set_api_key('GEMINI_API_KEY', api_key)
         print("Installing google-genai sdk...")
-        try:
-            subprocess.run([sys.executable, "-m", "pip", "install", "google-genai"], check=True)
-        except subprocess.CalledProcessError:
-            print("❌ Failed to install google-genai sdk. Please install manually: pip install google-genai")
+        subprocess.run([sys.executable, "-m", "pip", "install", "google-genai"], check=False)
 
     if get_input("Use Jules API?", "n").lower() == 'y':
         providers.append('jules')
@@ -118,10 +112,7 @@ def configure_llm_providers():
         mgr = LLMConfigManager()
         mgr.set_api_key('OLLAMA_MODEL', model)
         print("Installing ollama sdk...")
-        try:
-            subprocess.run([sys.executable, "-m", "pip", "install", "ollama"], check=True)
-        except subprocess.CalledProcessError:
-            print("❌ Failed to install ollama sdk. Please install manually: pip install ollama")
+        subprocess.run([sys.executable, "-m", "pip", "install", "ollama"], check=False)
 
     if get_input("Use Llama.cpp (Local)?", "n").lower() == 'y':
         providers.append('llamacpp')
@@ -129,13 +120,10 @@ def configure_llm_providers():
         mgr = LLMConfigManager()
         mgr.set_api_key('LLAMACPP_MODEL_PATH', model_path)
         print("Installing llama-cpp-python sdk...")
-        try:
-            subprocess.run([sys.executable, "-m", "pip", "install", "llama-cpp-python"], check=True)
-        except subprocess.CalledProcessError:
-            print("❌ Failed to install llama-cpp-python sdk. Please install manually: pip install llama-cpp-python")
+        subprocess.run([sys.executable, "-m", "pip", "install", "llama-cpp-python"], check=False)
 
     if providers:
-        print("\nBrain: Generating llm_config.yaml for active provider...")
+        print(f"\nBrain: Generating llm_config.yaml for active provider...")
         active = providers[0]
         mgr = LLMConfigManager()
 

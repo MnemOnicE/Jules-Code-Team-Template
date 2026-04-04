@@ -11,16 +11,17 @@ Furthermore, this mock graph attempts to call an unregistered tool (`plan_decomp
 Reference: `PLAYTEST.md`.
 
 ## 3. Scope of Work
-*   **Target:** `src/main.py` (or its new location after the Hidden Engine refactor), `src/core/tools/registry.py` (optional, if default tools need updating), `src/core/schema/execution_graph.json`.
+*   **Target:** `src/main.py` (or its new location after the Hidden Engine refactor), `src/core/tools/registry.py` (optional, if default tools need updating).
 *   **Goal:** Connect the initialized LLM provider to the task input and parse its response into a valid Execution Graph.
 
 ## 4. Execution Instructions
 
 **Phase 1: Implement LLM Orchestration**
-1. Review `src/main.py` and locate the `generate_mock_graph` call.
+1. Review the CLI entry point (e.g., `main.py`) and locate the `generate_mock_graph` call.
 2. Remove the mock function entirely.
-3. Utilize the instantiated LLM provider (e.g., `provider = get_provider(...)`) to send a prompt containing the `task_description` and the required JSON schema (`src/core/schema/execution_graph.json`).
+3. Utilize the instantiated LLM provider (e.g., `provider = get_provider(...)`) to send a prompt containing the `task_description` and the required JSON schema (`execution_graph.json`).
 4. Instruct the LLM to return *only* a JSON object conforming to the schema.
+5. **Important:** The path to `execution_graph.json` must be resolved dynamically. After Issue #1 (Hidden Engine Refactor) is completed, this file will reside in `.agents/engine/core/schema/`, not `src/core/schema/`.
 
 **Phase 2: Response Parsing & Validation**
 1. Implement robust parsing logic to extract the JSON payload from the LLM's response (handling potential markdown formatting like ```json ... ```).
@@ -28,7 +29,7 @@ Reference: `PLAYTEST.md`.
 3. Ensure proper error handling if the LLM returns invalid JSON or a graph that fails schema validation (e.g., prompting the LLM again for a correction, or failing gracefully).
 
 **Phase 3: Clean up Unregistered Tools**
-1. Investigate if the `plan_decomposition` tool mentioned in the mock graph should exist. If it's a legacy concept, ignore it. If it's intended, ensure it is registered in `src/core/tools/registry.py` or `src/core/tools/agent_tools.py`.
+1. Investigate if the `plan_decomposition` tool mentioned in the mock graph should exist. If it's a legacy concept, ignore it. If it's intended, ensure it is registered in `core/tools/registry.py` or `core/tools/agent_tools.py`.
 2. Ensure the initial prompt to the LLM includes a list of *currently available/registered tools* so it knows what actions it can take.
 
 **Phase 4: Test & Verify**
@@ -37,5 +38,5 @@ Reference: `PLAYTEST.md`.
 
 ## 5. Definition of Done
 * `generate_mock_graph` is removed.
-* `src/main.py` dynamically calls an LLM, parses the response, and executes a real graph.
-* The system handles invalid LLM responses gracefully.
+* The system dynamically calls an LLM, parses the response, and executes a real graph.
+* The system dynamically resolves the schema path and handles invalid LLM responses gracefully.

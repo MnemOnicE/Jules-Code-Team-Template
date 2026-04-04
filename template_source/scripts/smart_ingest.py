@@ -26,7 +26,7 @@ import sys
 INGEST_DIR = "ingests"
 DIGEST_PREFIX = "digest_"
 DELTA_PREFIX = "delta_"
-INGEST_FILE_SUFFIX = ".txt"
+INGEST_FILE_SUFFIX = ".md"
 
 
 def get_commit_count():
@@ -48,10 +48,10 @@ def run_ingest(is_delta=False):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     if is_delta:
-        filename = f"delta_{timestamp}.txt"
+        filename = f"delta_{timestamp}.md"
         print(f"Running Delta Ingest (Tree + Diff) -> {os.path.join(INGEST_DIR, filename)}")
     else:
-        filename = f"digest_{timestamp}.txt"
+        filename = f"digest_{timestamp}.md"
         print(f"Running Full Ingest (gitingest) -> {os.path.join(INGEST_DIR, filename)}")
 
     filepath = os.path.join(INGEST_DIR, filename)
@@ -138,7 +138,7 @@ def main():
     commit_count = get_commit_count()
 
     # Check if ingest directory is empty (of digests)
-    has_digests = glob.glob(os.path.join(INGEST_DIR, "digest_*.txt"))
+    has_digests = glob.glob(os.path.join(INGEST_DIR, "digest_*.md"))
     is_empty = not os.path.exists(INGEST_DIR) or not has_digests
 
     print(f"Commit count: {commit_count}")

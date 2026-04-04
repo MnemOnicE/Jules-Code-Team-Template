@@ -22,13 +22,12 @@ Reference: `_meta/ARCHITECTURE_CRISIS.md` and `PLAYTEST.md`.
 
 **Phase 2: Import Refactoring**
 1. Perform a project-wide search for imports starting with `src.core` (e.g., `from src.core.bus import ...`).
-2. Update all imports to reflect the new path structure (e.g., `from engine.core.bus import ...` or `from _agents.engine.core.bus import ...` depending on Python path configuration).
-3. Pay special attention to tests and utility scripts in `template_source/scripts/`.
+2. Update all imports to reflect the new path structure. Assuming `.agents/engine/` is added to the Python path, these imports should become `from core.bus import ...`.
 
 **Phase 3: Update `init_project.py`**
 1. Modify `template_source/scripts/init_project.py` so that the extraction of the engine logic targets `.agents/engine/`.
 2. Ensure Integration Mode no longer skips the installation of the execution engine.
-3. Update the LLM Configuration step (line ~295) to import from the new location instead of `src.core.llm_config`.
+3. Update the LLM Configuration step (line ~295) to execute the new module path via an isolated subprocess (see Issue #5 documentation).
 
 **Phase 4: Test & Verify**
 1. Update `pytest.ini` to ensure `pythonpath` includes the new `.agents/engine` directory so tests can discover the modules.
@@ -38,4 +37,4 @@ Reference: `_meta/ARCHITECTURE_CRISIS.md` and `PLAYTEST.md`.
 ## 5. Definition of Done
 * The `src/` directory is no longer required for the agent system to function.
 * `init_project.py` successfully installs the agent engine in Integration Mode without overwriting user code.
-* All tests pass with the new directory structure.
+* All tests pass with the new directory structure, and imports correctly resolve from `core...`.
