@@ -32,4 +32,4 @@ During the automated playtest of the template utilizing real user interactions, 
 - Adjust init_project.py to ensure PyYAML, python-dotenv, and gitingest are installed via subprocess (followed by importlib.invalidate_caches()) before attempting imports or execution loops.
 - Add `jsonschema` to the list of core dependencies installed during the template initialization.
 - Refactor ContextLoader._find_root() in context.py to correctly calculate the root directory robustly and fix the persona path mismatch (init_project.py uses config/ while context.py expects config/defaults/).
-- Fix the `generate()` method call inside `main.py` to pass the correct arguments matching the `LLMProvider` signature (e.g., passing `""` for system prompt if only one is meant to be sent).
+- Fix the generate() method call inside main.py to pass the correct arguments matching the LLMProvider signature by separating system instructions and the user task description.
