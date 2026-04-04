@@ -41,7 +41,6 @@ class LLMProvider(ABC):
         self.raw_return = raw_return
 
     @abstractmethod
-    @retry_with_backoff(max_retries=5)
     def generate(self, system_prompt: str, user_prompt: str) -> str:
         """Takes standard standard prompt and returns standard string response."""
         pass
