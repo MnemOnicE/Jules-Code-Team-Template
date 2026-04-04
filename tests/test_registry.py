@@ -1,7 +1,7 @@
 import pytest
 import threading
 import logging
-from src.core.tools.registry import ToolRegistry
+from core.tools.registry import ToolRegistry
 
 @pytest.fixture
 def registry():
@@ -109,7 +109,7 @@ def test_concurrency(registry):
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import pytest
-from src.core.tools.registry import ToolRegistry
+from core.tools.registry import ToolRegistry
 
 class TestToolRegistry:
     @pytest.fixture

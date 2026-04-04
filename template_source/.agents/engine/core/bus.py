@@ -73,7 +73,7 @@ class NexusBus:
         Delegates to GraphExecutor for traversal.
         Used by existing tests in tests/test_bus.py.
         """
-        from src.core.tools.graph_executor import GraphExecutor
+        from core.tools.graph_executor import GraphExecutor
         executor = GraphExecutor(self)
         if registry:
             executor.registry = registry

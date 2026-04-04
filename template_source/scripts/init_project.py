@@ -74,9 +74,15 @@ def install_git_hooks():
     print("Brain: Installed Git safeguards (pre-commit, pre-push).")
 
 
-def configure_git_remote():
+def configure_git_remote(is_migration=False):
 
     print("\nBrain: Securing Git Endpoints (Non-Negotiable)")
+
+    # Do not wipe the user's remote if this is an integration/migration!
+    if is_migration:
+        print("Brain: Integration mode detected. Skipping Git remote reconfiguration to protect existing repository.")
+        return
+
     try:
         subprocess.run(["git", "remote", "remove", "origin"], stderr=subprocess.DEVNULL)
         print("✅ Removed template remote 'origin'.")
@@ -109,7 +115,7 @@ def main():
     # 0. Environment Scan (Migration Detection)
     # We check for files that are NOT part of the template mechanism
     # Added src, tests, etc. to ignored list so fresh clones don't trigger Migration Mode
-    ignored_items = {'.git', 'template_source', 'README.md', 'LICENSE', 'CONTRIBUTING.md', '.DS_Store', 'src', 'tests', 'requirements.txt', 'package.json', 'package-lock.json', '.agents'}
+    ignored_items = {'.git', 'template_source', 'README.md', 'LICENSE', 'CONTRIBUTING.md', '.DS_Store', 'tests', 'requirements.txt', 'package.json', 'package-lock.json', '.agents'}
     existing_items = set(os.listdir(ROOT)) - ignored_items
 
     IS_MIGRATION = len(existing_items) > 0
@@ -213,13 +219,21 @@ def main():
 
         # Default Move (Overwrite if exists in Creation Mode, Skip/Merge in Migration?)
         # For .agents/ folder, we always want to install it.
+
+        # Deploy wrapper script to root
+        if item == "squad":
+            if os.path.exists(d): os.remove(d)
+            shutil.move(s, d)
+            os.chmod(d, 0o755)
+            continue
+
         if item == ".agents":
             if os.path.exists(d): shutil.rmtree(d) # Re-install agents
             shutil.move(s, d)
             continue
 
         # For src/ or other scaffold files, SKIP in Migration Mode
-        if IS_MIGRATION and item in ['src', 'tests', 'package.json', 'requirements.txt']:
+        if IS_MIGRATION and item in ['tests', 'package.json', 'requirements.txt']:
             print(f"Brain: Skipping scaffolding file '{item}' (preserving existing).")
             if os.path.isdir(s): shutil.rmtree(s)
             else: os.remove(s)
@@ -259,8 +273,8 @@ def main():
         os.path.join(ROOT, 'tests', 'verification', '.hypothesis'),
         os.path.join(ROOT, '.hypothesis'),
         os.path.join(ROOT, '__pycache__'),
-        os.path.join(ROOT, 'src', '__pycache__'),
-        os.path.join(ROOT, 'src', 'core', '__pycache__')
+        os.path.join(ROOT, '__pycache__'),
+        os.path.join(ROOT, 'core', '__pycache__')
     ]
 
     # Recursive cleaning for __pycache__
@@ -287,12 +301,21 @@ def main():
         print(f"Warning: Failed to cleanup template source: {e}")
 
     # 7. Git Endpoint Security and Hooks
-    configure_git_remote()
+    configure_git_remote(IS_MIGRATION)
     install_git_hooks()
 
     # 7.5 LLM Configuration
     # Safe import from core to survive template deletion
-    from src.core.llm_config import configure_llm_providers
+
+    # Install minimal dependencies silently before importing llm_config
+    try:
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "PyYAML", "python-dotenv"], check=False)
+    except Exception:
+        pass
+
+    import sys
+    sys.path.insert(0, os.path.join(ROOT, ".agents", "engine"))
+    from core.llm_config import configure_llm_providers
     configure_llm_providers()
 
     # 8. Trigger Smart Ingest (The Awakening)

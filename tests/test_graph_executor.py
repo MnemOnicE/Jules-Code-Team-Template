@@ -17,7 +17,7 @@
 import pytest
 import jsonschema
 from unittest.mock import MagicMock
-from src.core.tools.graph_executor import GraphExecutor, SecurityError, MaxStepsExceededError
+from core.tools.graph_executor import GraphExecutor, SecurityError, MaxStepsExceededError
 
 @pytest.fixture
 def graph_executor():

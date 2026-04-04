@@ -6,7 +6,7 @@ import contextlib
 # Add src to path if run from root
 sys.path.append(os.getcwd())
 
-from src.core.bus import NexusBus
+from core.bus import NexusBus
 
 @contextlib.contextmanager
 def suppress_stdout():
