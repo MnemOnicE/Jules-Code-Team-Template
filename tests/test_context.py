@@ -129,7 +129,7 @@ def test_load_persona_success(mock_fs):
         assert content == expected_content
 
         # Verify path
-        expected_path = os.path.join(mock_agents_dir, 'config', 'defaults', f'{agent_name.lower()}.md')
+        expected_path = os.path.join(mock_agents_dir, 'config', f'{agent_name.lower()}.md')
         mock_fs['open'].assert_called_with(expected_path, 'r', encoding='utf-8')
 
 def test_load_persona_missing(mock_fs):
@@ -207,7 +207,7 @@ def test_load_persona_path_traversal_prevention(
             mock_fs['open'].return_value.__enter__.return_value.read.return_value = "content"
             loader.load_persona(traversal_name)
             expected_path = os.path.join(
-                mock_agents_dir, 'config', 'defaults', f'{expected_sanitized_name}.md'
+                mock_agents_dir, 'config', f'{expected_sanitized_name}.md'
             )
             mock_fs['open'].assert_called_with(expected_path, 'r', encoding='utf-8')
 
