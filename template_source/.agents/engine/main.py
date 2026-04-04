@@ -72,8 +72,6 @@ Output ONLY valid JSON.
     match = re.search(r'\{.*\}', response_text, re.DOTALL)
     if match:
         response_text = match.group(0)
-    else:
-        response_text = response_text.strip()
 
     try:
         return json.loads(response_text.strip())
