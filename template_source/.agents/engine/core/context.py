@@ -34,7 +34,7 @@ class ContextLoader:
             if (parent / '.agents').exists() or (parent / 'template_source' / '.agents').exists():
                 return str(parent)
 
-        return str(current_path.parent.parent.parent)
+        return str(current_path.parent.parent.parent.parent)
 
     def _find_agents_dir(self):
         # Try root .agents first (Production/Deployed)
