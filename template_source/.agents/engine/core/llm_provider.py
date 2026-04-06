@@ -5,6 +5,36 @@ from core.llm_config import LLMConfigManager
 
 logger = logging.getLogger(__name__)
 
+import time
+from functools import wraps
+
+def retry_with_backoff(max_retries=5, base_delay=1):
+    """
+    Custom decorator for exponential backoff.
+    Catches common rate limit exceptions and retries with an exponentially increasing delay.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            retries = 0
+            while retries <= max_retries:
+                try:
+                    return func(*args, **kwargs)
+                except Exception as e:
+                    error_msg = str(e).lower()
+                    if "429" in error_msg or "resource_exhausted" in error_msg or "rate limit" in error_msg:
+                        if retries == max_retries:
+                            logger.error(f"[RATE LIMIT] Max retries ({max_retries}) reached. Failing.")
+                            raise e
+                        delay = base_delay * (2 ** retries)
+                        logger.warning(f"[RATE LIMIT] Encountered 429/Resource Exhausted. Retrying in {delay} seconds (Attempt {retries + 1}/{max_retries})...")
+                        time.sleep(delay)
+                        retries += 1
+                    else:
+                        raise e
+        return wrapper
+    return decorator
+
 class LLMProvider(ABC):
     def __init__(self, raw_send=False, raw_return=False):
         self.raw_send = raw_send
@@ -52,6 +82,7 @@ class OpenAIProvider(LLMProvider):
 
         self.client = OpenAI(api_key=api_key)
 
+    @retry_with_backoff(max_retries=5)
     def generate(self, system_prompt: str, user_prompt: str) -> str:
         messages = [
             {"role": "system", "content": system_prompt},
@@ -84,6 +115,7 @@ class GeminiProvider(LLMProvider):
 
         self.client = genai.Client(api_key=api_key)
 
+    @retry_with_backoff(max_retries=5)
     def generate(self, system_prompt: str, user_prompt: str) -> str:
         from google.genai import types
         # Gemini often uses a single text stream, but we can configure system instructions.
@@ -123,6 +155,7 @@ class JulesProvider(LLMProvider):
             base_url="https://api.jules.ai/v1" # Example fallback endpoint
         )
 
+    @retry_with_backoff(max_retries=5)
     def generate(self, system_prompt: str, user_prompt: str) -> str:
         messages = [
             {"role": "system", "content": system_prompt},
@@ -149,6 +182,7 @@ class OllamaProvider(LLMProvider):
         config_mgr = LLMConfigManager()
         self.model = config_mgr.get_api_key('OLLAMA_MODEL') or 'llama3'
 
+    @retry_with_backoff(max_retries=5)
     def generate(self, system_prompt: str, user_prompt: str) -> str:
         messages = [
             {"role": "system", "content": system_prompt},
@@ -183,6 +217,7 @@ class LlamaCppProvider(LLMProvider):
             verbose=False
         )
 
+    @retry_with_backoff(max_retries=5)
     def generate(self, system_prompt: str, user_prompt: str) -> str:
         # Simple formatting for Llama models
         prompt = f"System: {system_prompt}\n\nUser: {user_prompt}\n\nAssistant:"

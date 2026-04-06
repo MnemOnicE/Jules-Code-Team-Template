@@ -30,6 +30,34 @@ import re
 import sys
 import json
 import subprocess
+import importlib.util
+
+def check_dependencies():
+    required_packages = {
+        'yaml': 'PyYAML',
+        'dotenv': 'python-dotenv',
+        'gitingest': 'gitingest',
+        'jsonschema': 'jsonschema'
+    }
+    missing = []
+    for module_name, pip_name in required_packages.items():
+        try:
+            if importlib.util.find_spec(module_name) is None:
+                missing.append(pip_name)
+        except (ValueError, ImportError):
+            missing.append(pip_name)
+
+    if missing:
+        print("\n\033[1;31m❌ CRITICAL: Missing Required Dependencies\033[0m")
+        print("The Coding Squad engine requires the following packages:")
+        for pkg in missing:
+            print(f"  - {pkg}")
+        print("\nTo safely install these without polluting your global environment, please run:")
+        print("\033[1;36m  python3 -m venv venv")
+        print("  source venv/bin/activate  # Or venv\\Scripts\\activate on Windows")
+        print("  pip install " + " ".join(required_packages.values()) + "\033[0m\n")
+        print("Or if you already have a virtual environment active, simply install the requirements.")
+        sys.exit(1)
 
 def clear_screen():
     print("\033[H\033[J", end="")
@@ -307,11 +335,6 @@ def main():
     # 7.5 LLM Configuration
     # Safe import from core to survive template deletion
 
-    # Install minimal dependencies silently before importing llm_config
-    try:
-        subprocess.run([sys.executable, "-m", "pip", "install", "-q", "PyYAML", "python-dotenv"], check=False)
-    except Exception:
-        pass
 
     import sys
     sys.path.insert(0, os.path.join(ROOT, ".agents", "engine"))
@@ -338,4 +361,5 @@ def main():
     print("\nRun '/standup' to begin.")
 
 if __name__ == "__main__":
+    check_dependencies()
     main()
