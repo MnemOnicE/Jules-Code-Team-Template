@@ -110,6 +110,8 @@ class GraphExecutor:
 
         # State Segregation
         system_context = system_context or {}
+        if any(k in system_context for k in graph.get("context_delta", {})):
+            raise SecurityError("Graph's initial context_delta attempted to overwrite protected system context keys.")
         context = graph.get("context_delta", {})
 
         current_node_id = graph["entry_point"]
