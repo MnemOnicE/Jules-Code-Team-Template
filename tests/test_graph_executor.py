@@ -289,13 +289,37 @@ def test_execute_happy_path_logging(graph_executor, caplog):
 
     assert "[EXECUTING] Node node1: test_action" in caplog.text
 
+def test_validate_integrity_shield_with_scan(graph_executor):
+    """Test validation passes when security_scan precedes a privileged tool."""
+    graph = {
+        "intent_glyph": "🛡️",
+        "entry_point": "scan",
+        "nodes": {
+            "scan": {"action": "security_scan", "next": "start"},
+            "start": {"action": "run_tool", "params": {"tool": "execute_command"}}
+        }
+    }
+    # Should not raise exception
+    graph_executor.validate_integrity(graph)
 
+def test_validate_integrity_shield_missing_scan(graph_executor):
+    """Test validation raises SecurityError when a privileged tool is missing a prior security_scan."""
+    graph = {
+        "intent_glyph": "🛡️",
+        "entry_point": "start",
+        "nodes": {
+            "start": {"action": "run_tool", "params": {"tool": "execute_command"}}
+        }
+    }
+    with pytest.raises(SecurityError, match="Unverified path to privileged tool 'execute_command' detected. Halting."):
+        graph_executor.validate_integrity(graph)
 
 def test_validate_integrity_empty_glyph(graph_executor):
-    """Test validation passes when intent_glyph is empty."""
+    """Test validation passes when intent_glyph is empty, provided no privileged tool is run without scan."""
     graph = {
         "intent_glyph": "",
-        "nodes": {"start": {"action": "run_tool"}}
+        "entry_point": "start",
+        "nodes": {"start": {"action": "run_tool", "params": {"tool": "read_file"}}}
     }
     # Should not raise exception
     graph_executor.validate_integrity(graph)
@@ -303,7 +327,8 @@ def test_validate_integrity_empty_glyph(graph_executor):
 def test_validate_integrity_missing_glyph_key(graph_executor):
     """Test validation passes when intent_glyph key is missing (defaults to empty string)."""
     graph = {
-        "nodes": {"start": {"action": "run_tool"}}
+        "entry_point": "start",
+        "nodes": {"start": {"action": "run_tool", "params": {"tool": "read_file"}}}
     }
     # Should not raise exception
     graph_executor.validate_integrity(graph)
@@ -312,12 +337,60 @@ def test_validate_integrity_none_glyph(graph_executor):
     """Test validation handles explicit None for intent_glyph gracefully (treats as empty)."""
     graph = {
         "intent_glyph": None,
-        "nodes": {"start": {"action": "run_tool"}}
+        "entry_point": "start",
+        "nodes": {"start": {"action": "run_tool", "params": {"tool": "read_file"}}}
     }
     # Should not raise exception
     graph_executor.validate_integrity(graph)
 
+def test_validate_integrity_loose_check(graph_executor):
+    """
+    Test that an orphaned security_scan does not bypass the check for a privileged tool.
+    """
+    graph = {
+        "intent_glyph": "🛡️",
+        "entry_point": "start",
+        "nodes": {
+            "start": {"action": "run_tool", "params": {"tool": "execute_command"}},
+            "fake_scan": {"action": "security_scan"}
+        }
+    }
+    # Should raise exception because scan is not in path
+    with pytest.raises(SecurityError, match="Unverified path to privileged tool"):
+        graph_executor.validate_integrity(graph)
 
+def test_validate_integrity_multiple_shields(graph_executor):
+    """Test validation handles multiple shields correctly (it shouldn't matter anymore)."""
+    graph = {
+        "intent_glyph": "🛡️🛡️",
+        "entry_point": "scan",
+        "nodes": {
+            "scan": {"action": "security_scan", "next": "start"},
+            "start": {"action": "run_tool", "params": {"tool": "execute_command"}}
+        }
+    }
+    # Should not raise exception
+    graph_executor.validate_integrity(graph)
+
+def test_validate_integrity_failure_path_bypass(graph_executor):
+    """Test that an attacker cannot bypass the scan by using an on_failure edge."""
+    graph = {
+        "intent_glyph": "🧪",
+        "entry_point": "node1",
+        "nodes": {
+            "node1": {
+                "action": "run_tool",
+                "params": {"tool": "read_file"},
+                "on_failure": "hack_node"
+            },
+            "hack_node": {
+                "action": "run_tool",
+                "params": {"tool": "modify_context"}
+            }
+        }
+    }
+    with pytest.raises(SecurityError, match="Unverified path to privileged tool 'modify_context' detected"):
+        graph_executor.validate_integrity(graph)
 
 def test_execute_max_steps_exceeded(graph_executor, caplog):
     """Test that cyclic graphs are terminated when MAX_STEPS is exceeded."""
