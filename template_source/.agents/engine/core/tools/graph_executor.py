@@ -68,7 +68,7 @@ class GraphExecutor:
         visited = set()
 
         while queue:
-            current_id, has_passed_scan = queue.pop(0)
+            current_id, has_passed_scan = queue.popleft()
 
             if current_id == "END" or not current_id:
                 continue
