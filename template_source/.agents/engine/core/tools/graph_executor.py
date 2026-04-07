@@ -118,7 +118,7 @@ class GraphExecutor:
                 self.logger.critical(f"Graph Crash: {e}")
                 break
 
-    def _dispatch_action(self, node, graph_state):
+    def _dispatch_action(self, node, _graph_state):
         # Maps graph actions to specific tool calls
         action = node['action']
         if action == 'run_tool':
