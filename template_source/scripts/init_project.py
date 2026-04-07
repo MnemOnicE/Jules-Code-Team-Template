@@ -261,7 +261,7 @@ def main():
             continue
 
         # For src/ or other scaffold files, SKIP in Migration Mode
-        if IS_MIGRATION and item in ['src', 'tests', 'package.json', 'requirements.txt']:
+        if IS_MIGRATION and item in ['tests', 'package.json', 'requirements.txt']:
             print(f"Brain: Skipping scaffolding file '{item}' (preserving existing).")
             if os.path.isdir(s): shutil.rmtree(s)
             else: os.remove(s)

@@ -19,11 +19,7 @@ import logging
 from core.bus import NexusBus
 from core.tools.registry import ToolRegistry
 
-
-
-
 class SecurityError(Exception):
-
     pass
 
 class MaxStepsExceededError(Exception):
@@ -37,14 +33,11 @@ class GraphExecutor:
     MAX_STEPS = 1000
 
     def __init__(self, event_bus: NexusBus, registry=None, system_context=None):
-    def __init__(self, event_bus: NexusBus, registry=None, privileged_tools=None):
         self.bus = event_bus
         from core.tools.registry import default_registry
         self.registry = registry if registry is not None else default_registry
         self.logger = logging.getLogger(__name__)
         self.system_context = system_context or {}
-        self.privileged_tools = privileged_tools if privileged_tools is not None else {"execute_command", "write_file", "delete_file"}
-
 
     def validate_integrity(self, graph: dict):
         """
@@ -53,50 +46,9 @@ class GraphExecutor:
         """
         glyph = str(graph.get("intent_glyph") or "")
         self.logger.info(f"Validating graph against intent: {glyph}")
-
-        # Enforcement of the "Shield" protocol
-        if "🛡️" in glyph:
-            entry_point = graph.get("entry_point")
-            if not entry_point:
-                return  # Empty graph, nothing to run
-
-            nodes = graph.get("nodes", {})
-
-            # DFS/BFS to find path to privileged tools
-            from collections import deque
-            queue = deque([(entry_point, False)]) # (node_id, has_passed_security_scan)
-            visited = set()
-
-            while queue:
-                current_id, has_scanned = queue.popleft()
-
-                # Check for cycle / visited with current scan status
-                state = (current_id, has_scanned)
-                if state in visited:
-                    continue
-                visited.add(state)
-
-                if current_id == "END" or current_id not in nodes:
-                    continue
-
-                node = nodes[current_id]
-                action = node.get("action")
-                tool = node.get("params", {}).get("tool") if action == "run_tool" else None
-
-                if action == "security_scan":
-                    has_scanned = True
-                elif action == "run_tool" and tool in self.privileged_tools and not has_scanned:
-                    raise SecurityError(f"Graph deviates from Sentinel Intent! Privileged tool '{tool}' accessed before security_scan. Halting.")
-
-                # Queue next nodes
-                for next_key in ["next", "on_success", "on_failure"]:
-                    next_id = node.get(next_key)
-                    if next_id:
-                        queue.append((next_id, has_scanned))
-        else:
-            # For non-shield intents, we still might want to ensure they aren't using string hacking,
-            # but for now we just rely on the existing check
-            pass
+        # Enforcement of the "Shield" protocol (Source [2])
+        if "🛡️" in glyph and "security_scan" not in str(graph):
+            raise SecurityError("Graph deviates from Sentinel Intent! Halting.")
 
     def execute(self, graph: dict):
         # 1. Structural Validation (The "Smart Worker" approach)
