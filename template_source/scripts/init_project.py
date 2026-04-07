@@ -31,6 +31,7 @@ import sys
 import json
 import subprocess
 import importlib.util
+import argparse
 
 def check_dependencies():
     required_packages = {
@@ -59,18 +60,34 @@ def check_dependencies():
         print("Or if you already have a virtual environment active, simply install the requirements.")
         sys.exit(1)
 
+def validate_governance(value):
+    return value.lower() in ['democracy', 'dictator']
+
+def validate_risk(value):
+    return value.lower() in ['high', 'medium', 'low']
+
 def clear_screen():
     print("\033[H\033[J", end="")
 
 def print_header():
     print("🧠 \033[1mBrain: Initializing Onboarding Protocol...\033[0m")
     print("---------------------------------------------")
+    print("Welcome to Jules Code Team Template!")
+    print("This script will set up AI-powered coding assistants for your project.")
+    print("Answer a few questions, and we'll get you started.\n")
 
-def get_input(prompt, default=None):
-    if default:
-        user_input = input(f"{prompt} [{default}]: ")
-        return user_input if user_input.strip() else default
-    return input(f"{prompt}: ")
+def get_input(prompt, default=None, validator=None):
+    while True:
+        if default:
+            user_input = input(f"{prompt} [{default}]: ")
+            value = user_input if user_input.strip() else default
+        else:
+            value = input(f"{prompt}: ")
+        
+        if validator and not validator(value):
+            print("❌ Invalid input. Please try again.")
+            continue
+        return value
 
 def update_file(filepath, search_pattern, replace_value):
     if not os.path.exists(filepath):
@@ -125,7 +142,7 @@ def configure_git_remote(is_migration=False):
         except Exception as e:
             print(f"⚠️ Failed to add remote: {e}")
 
-def main():
+def main(dry_run=False, force=False):
 
     clear_screen()
     print_header()
@@ -139,6 +156,10 @@ def main():
         print("Brain: System already initialized. Skipping onboarding.")
         return
     # --- [END PATCH] ---------------------------
+
+    if dry_run:
+        print("🧪 DRY RUN MODE: Simulating initialization without making changes.")
+        print("This will show what would happen without actually modifying files.\n")
 
     # 0. Environment Scan (Migration Detection)
     # We check for files that are NOT part of the template mechanism
@@ -158,6 +179,7 @@ def main():
 
     # 1. The Interview
     print("Brain: I am waking up. I need to understand the mission parameters.\n")
+    print("💡 Tip: Press Enter to accept defaults in brackets []\n")
 
     if IS_MIGRATION:
         project_name = get_input("Brain: What is the name of this existing project?", os.path.basename(ROOT))
@@ -166,10 +188,34 @@ def main():
         project_name = get_input("Brain: First, what is the Project Name?", "MyNewProject")
         project_context = get_input("Brain: What are we building? (SaaS, Game, Library?)", "SaaS")
 
-    governance = get_input("Brain: Governance Mode? (Democracy/Dictator)", "Democracy")
-    risk = get_input("Brain: Risk Tolerance? (High/Medium/Low)", "Low")
+    print("\n🤖 Governance determines how decisions are made:")
+    print("   Democracy: All agents vote on changes")
+    print("   Dictator: Lead agent makes final decisions")
+    governance = get_input("Brain: Governance Mode? (Democracy/Dictator)", "Democracy", validate_governance)
+    
+    print("\n⚠️  Risk tolerance affects security and speed:")
+    print("   High: Fast but less secure")
+    print("   Medium: Balanced approach")
+    print("   Low: Secure but slower")
+    risk = get_input("Brain: Risk Tolerance? (High/Medium/Low)", "Low", validate_risk)
 
     print("\nBrain: Configuring squad parameters...")
+
+    print("\n📋 Configuration Summary:")
+    print(f"   Project: {project_name}")
+    print(f"   Context: {project_context}")
+    print(f"   Governance: {governance}")
+    print(f"   Risk Level: {risk}")
+    print(f"   Mode: {'INTEGRATION' if IS_MIGRATION else 'GENESIS'}")
+
+    confirm = get_input("\nBrain: Ready to proceed? (Y/n)", "Y")
+    if confirm.lower() not in ['y', 'yes', '']:
+        print("Brain: Initialization cancelled.")
+        return
+
+    if dry_run:
+        print("🧪 Would configure squad parameters...")
+        return  # Exit early for dry run
 
     AGENTS_DIR = os.path.join(TEMPLATE_DIR, ".agents")
     RULES_DIR = os.path.join(AGENTS_DIR, "rules")
@@ -358,8 +404,42 @@ def main():
         print(f"ℹ️  Manual installed at: .agents/docs/USER_MANUAL.md")
     else:
         print(f"ℹ️  See README.md for instructions.")
-    print("\nRun '/standup' to begin.")
+    
+    print("\n🚀 Next Steps:")
+    print("   1. Run './squad' to start the coding assistant")
+    print("   2. Try '/standup' to begin your first session")
+    print("   3. Check .agents/config/ for agent configurations")
+    print("\n🆘 Need help? Run './squad --help' or check the documentation.")
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="🧠 Jules Code Team Template Initialization Script",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python init_project.py                    # Interactive initialization
+  python init_project.py --dry-run         # Preview what would happen
+  python init_project.py --help            # Show this help
+
+Modes:
+  GENESIS: For new projects - creates full project structure
+  INTEGRATION: For existing projects - integrates agents without overwriting
+
+The script will automatically detect the appropriate mode based on existing files.
+        """
+    )
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Simulate initialization without making changes'
+    )
+    parser.add_argument(
+        '--force',
+        action='store_true',
+        help='Force initialization even if already initialized'
+    )
+
+    args = parser.parse_args()
+
     check_dependencies()
-    main()
+    main(dry_run=args.dry_run, force=args.force)
