@@ -30,26 +30,25 @@ def mock_fs():
 
 # --- Tests for _find_root ---
 
+
 def test_find_root_logic():
-    """Test that _find_root correctly navigates up two levels from the file location."""
+    """Test that _find_root correctly navigates up four levels from the file location as a fallback."""
     # We mock __file__ in the module where ContextLoader is defined
-    mock_file_path = "/usr/local/src/project/src/core/context.py"
+    mock_file_path = "/usr/local/src/project/.agents/engine/core/context.py"
 
     with patch("core.context.__file__", mock_file_path):
-        # We also need to mock os.path.abspath and os.path.dirname because the real ones rely on actual FS
-        # But wait, os.path functions (except abspath depending on cwd) are pure logic usually.
-        # However, verifying exactly how it climbs is safer with mocks if we want to be OS-agnostic
-        # or just trust python's os.path implementation.
-        # Let's rely on real os.path behavior but with a mocked starting point.
-        # But wait, __file__ is imported. Patching it on the module object is correct.
+        # We need to mock path existence checks to trigger the fallback
+        with patch("pathlib.Path.exists", return_value=False):
+            with patch.object(ContextLoader, '_find_agents_dir', return_value="/mock/agents"):
+                loader = ContextLoader()
+                # Calculate what we expect based on the mocked file path fallback:
+                # /usr/local/src/project/.agents/engine/core/context.py
+                # parents[0]: core
+                # parents[1]: engine
+                # parents[2]: .agents
+                # parents[3]: project
+                assert loader.root_dir == "/usr/local/src/project"
 
-        # Create an instance. __init__ calls _find_root.
-        # We need to mock _find_agents_dir to avoid it failing during init
-        with patch.object(ContextLoader, '_find_agents_dir', return_value="/mock/agents"):
-            loader = ContextLoader()
-            # Calculate what we expect based on the mocked file path
-            # /usr/local/src/project/src/core/context.py -> dirname -> .../src/core -> .. -> .../src -> .. -> .../project
-            assert loader.root_dir == os.path.abspath(os.path.join(os.path.dirname(mock_file_path), '..', '..'))
 
 # --- Tests for _find_agents_dir ---
 
