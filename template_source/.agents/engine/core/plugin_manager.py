@@ -25,6 +25,7 @@ class PluginManager:
         self.plugins = {}
         self.loaded_plugins = []
         self.allowed_plugins = self._load_allowlist()
+        self._dynamic_hooks = {}
 
     def _load_allowlist(self):
         allowlist_path = self.plugins_dir / "allowed_plugins.json"
@@ -134,6 +135,19 @@ class PluginManager:
 
         return loaded, failed
 
+
+    def register_hook(self, hook_name, callback):
+        """Register a dynamic hook callback"""
+        if hook_name not in self._dynamic_hooks:
+            self._dynamic_hooks[hook_name] = []
+        if callback not in self._dynamic_hooks[hook_name]:
+            self._dynamic_hooks[hook_name].append(callback)
+
+    def deregister_hook(self, hook_name, callback):
+        """Deregister a dynamic hook callback"""
+        if hook_name in self._dynamic_hooks and callback in self._dynamic_hooks[hook_name]:
+            self._dynamic_hooks[hook_name].remove(callback)
+
     def get_plugin(self, plugin_name):
         """Get a loaded plugin module"""
         if plugin_name not in self.plugins:
@@ -141,8 +155,10 @@ class PluginManager:
         return self.plugins[plugin_name]['module']
 
     def call_plugin_hook(self, hook_name, *args, **kwargs):
-        """Call a hook on all loaded plugins"""
+        """Call a hook on all loaded plugins and dynamic hooks"""
         results = {}
+
+        # Call static plugins
         for plugin_name in self.loaded_plugins:
             plugin = self.get_plugin(plugin_name)
             if hasattr(plugin, hook_name):
@@ -151,6 +167,15 @@ class PluginManager:
                     results[plugin_name] = hook_func(*args, **kwargs)
                 except Exception as e:
                     results[plugin_name] = f"Error: {e}"
+
+        # Call dynamic hooks
+        if hook_name in self._dynamic_hooks:
+            for idx, callback in enumerate(self._dynamic_hooks[hook_name]):
+                try:
+                    results[f"dynamic_{hook_name}_{idx}"] = callback(*args, **kwargs)
+                except Exception as e:
+                    results[f"dynamic_{hook_name}_{idx}"] = f"Error: {e}"
+
         return results
 
 # Global plugin manager instance

@@ -315,6 +315,7 @@ def main():
     parser.add_argument("-rs", "--raw-send", action="store_true", help="Output raw JSON payload sent to the LLM")
     parser.add_argument("-rr", "--raw-return", action="store_true", help="Output raw JSON response from the LLM")
     parser.add_argument("--status", action="store_true", help="Show system status and metrics")
+    parser.add_argument("--ui", action="store_true", help="Launch the Textual User Interface")
 
     args = parser.parse_args()
 
@@ -406,6 +407,25 @@ def main():
         print(f"❌ Failed to load context: {e}")
         sys.exit(1)
 
+    if args.ui:
+        import os
+        import sys
+        import logging
+
+        # Redirect print() and logging away from stdout
+        sys.stdout = open(os.devnull, 'w')
+        logging.disable(logging.CRITICAL)
+
+        from ui import AgentTUI
+        try:
+            app = AgentTUI(task=task, provider=provider, brain_context=brain_context)
+            app.run()  # Textual takes ownership of main thread here
+        finally:
+            # Restore after TUI exits
+            sys.stdout = sys.__stdout__
+            logging.disable(logging.NOTSET)
+        sys.exit(0)
+
     # 3. Generate Execution Graph (Brain)
     print(f"🧠 Brain: Analyzing task: '{task}'")
     monitor.increment_metric('llm_calls')
@@ -416,7 +436,7 @@ def main():
         print(f"❌ LLM returned invalid graph format (expected dict, got {type(graph).__name__})")
         sys.exit(1)
     monitor.log_event('graph_generated', {'graph_id': graph.get('graph_id', 'unknown')})
-    plugin_manager.call_plugin_hook('on_graph_generated', graph.get('graph_id', 'unknown'))
+    plugin_manager.call_plugin_hook('on_graph_generated', graph)
     print(f"✅ Generated Execution Graph ({graph.get('graph_id', 'unknown')})")
 
     # 4. Execute (Muscles)
