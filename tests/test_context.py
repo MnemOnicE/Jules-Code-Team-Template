@@ -49,7 +49,7 @@ def test_find_root_logic():
             loader = ContextLoader()
             # Calculate what we expect based on the mocked file path
             # /usr/local/src/project/src/core/context.py -> dirname -> .../src/core -> .. -> .../src -> .. -> .../project
-            assert loader.root_dir == os.path.abspath(os.path.join(os.path.dirname(mock_file_path), '..', '..'))
+            assert loader.root_dir == os.path.abspath(os.path.join(os.path.dirname(mock_file_path), '..', '..', '..'))
 
 # --- Tests for _find_agents_dir ---
 

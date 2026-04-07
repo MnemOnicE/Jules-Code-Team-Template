@@ -32,11 +32,12 @@ class GraphExecutor:
     """
     MAX_STEPS = 1000
 
-    def __init__(self, event_bus: NexusBus, registry=None):
+    def __init__(self, event_bus: NexusBus, registry=None, system_context=None):
         self.bus = event_bus
         from core.tools.registry import default_registry
         self.registry = registry if registry is not None else default_registry
         self.logger = logging.getLogger(__name__)
+        self.system_context = system_context or {}
 
     def validate_integrity(self, graph: dict):
         """
@@ -55,7 +56,17 @@ class GraphExecutor:
 
         # 2. Security Validation
         self.validate_integrity(graph)
-        context = graph.get("context_delta", {})
+        graph_state = graph.get("context_delta", {})
+
+        # 3. Privilege Escalation Prevention (The "Captain's Orders" protocol)
+        if self.system_context:
+            protected_keys = set(self.system_context.keys())
+            attempted_keys = set(graph_state.keys())
+            violations = protected_keys.intersection(attempted_keys)
+            if violations:
+                msg = f"Security Violation: Graph attempted to overwrite protected system context keys: {violations}"
+                self.logger.critical(msg)
+                raise SecurityError(msg)
         current_node_id = graph["entry_point"]
         step_count = 0
 
@@ -77,7 +88,7 @@ class GraphExecutor:
 
             # Execute Action via Registry
             try:
-                result = self._dispatch_action(node, context)
+                result = self._dispatch_action(node, graph_state)
 
                 # Determine transition
                 prev_id = current_node_id
@@ -88,9 +99,9 @@ class GraphExecutor:
                     repair_node = node.get("on_failure")
 
                     # Recursive Logic (Source [2])
-                    if context.get("retry_on_fail") and context.get("retry_count", 0) < 3:
+                    if graph_state.get("retry_on_fail") and graph_state.get("retry_count", 0) < 3:
                         self.logger.warning("Triggering Self-Correction Loop...")
-                        context["retry_count"] = context.get("retry_count", 0) + 1
+                        graph_state["retry_count"] = graph_state.get("retry_count", 0) + 1
 
                         # Implement Repair Loop:
                         # If a specific on_failure node exists, it's our repair node.
@@ -98,7 +109,7 @@ class GraphExecutor:
                         current_node_id = repair_node if repair_node else current_node_id
                     else:
                         current_node_id = repair_node
-                        if context.get("retry_on_fail"):
+                        if graph_state.get("retry_on_fail"):
                              self.logger.error("Max retries exceeded. Aborting.")
                              break
 
@@ -109,7 +120,7 @@ class GraphExecutor:
                 self.logger.critical(f"Graph Crash: {e}")
                 break
 
-    def _dispatch_action(self, node, context):
+    def _dispatch_action(self, node, graph_state):
         # Maps graph actions to specific tool calls
         action = node['action']
         if action == 'run_tool':
@@ -117,7 +128,7 @@ class GraphExecutor:
             tool_name = params.get('tool')
             args = params.get('args', {}).copy()
             # Inject context if needed (Source [1])
-            if context.get("shizuku_active"):
+            if self.system_context.get("shizuku_active"):
                 args["use_root"] = True
 
             if not tool_name:
