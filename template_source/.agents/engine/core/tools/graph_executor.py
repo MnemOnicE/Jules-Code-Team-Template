@@ -19,11 +19,14 @@ import logging
 from core.bus import NexusBus
 from core.tools.registry import ToolRegistry
 
+
 class SecurityError(Exception):
     pass
 
 class MaxStepsExceededError(Exception):
     pass
+
+PRIVILEGED_TOOLS = {"execute_command", "write_file", "update_memory"}
 
 class GraphExecutor:
     """
@@ -49,13 +52,66 @@ class GraphExecutor:
         if "🛡️" in glyph and "security_scan" not in str(graph):
             raise SecurityError("Graph deviates from Sentinel Intent! Halting.")
 
-    def execute(self, graph: dict):
+        # Structural Traversal (DFS) to enforce security_scan for privileged tools
+        entry_point = graph.get("entry_point")
+        nodes = graph.get("nodes", {})
+
+        if not entry_point or entry_point not in nodes:
+            return
+
+        visited = set()
+
+        def dfs(node_id, has_been_scanned):
+            # To handle cycles, if we've visited this node with the current scan state, return
+            state_key = (node_id, has_been_scanned)
+            if state_key in visited:
+                return
+            visited.add(state_key)
+
+            if node_id == "END":
+                return
+
+            node = nodes.get(node_id)
+            if not node:
+                return
+
+            # Update scan state
+            current_scan_state = has_been_scanned
+            if node.get("action") == "security_scan":
+                current_scan_state = True
+
+            # Check privileged tool violation
+            if node.get("action") == "run_tool":
+                tool_name = node.get("params", {}).get("tool")
+                if tool_name in PRIVILEGED_TOOLS and not current_scan_state:
+                    raise SecurityError(f"Security violation: Node '{node_id}' invokes privileged tool '{tool_name}' without prior security_scan.")
+
+            # Traverse children
+            next_nodes = []
+            if "on_success" in node:
+                next_nodes.append(node["on_success"])
+            if "on_failure" in node:
+                next_nodes.append(node["on_failure"])
+            if "next" in node:
+                next_nodes.append(node["next"])
+
+            for next_node in next_nodes:
+                if next_node:
+                    dfs(next_node, current_scan_state)
+
+        dfs(entry_point, False)
+
+    def execute(self, graph: dict, system_context: dict = None):
         # 1. Structural Validation (The "Smart Worker" approach)
         self.bus.validate_graph(graph)
 
         # 2. Security Validation
         self.validate_integrity(graph)
+
+        # State Segregation
+        system_context = system_context or {}
         context = graph.get("context_delta", {})
+
         current_node_id = graph["entry_point"]
         step_count = 0
 
@@ -75,9 +131,20 @@ class GraphExecutor:
 
             self.logger.info(f"[EXECUTING] Node {current_node_id}: {node['action']}")
 
+            # Validate node-defined context_delta before applying it
+            node_delta = node.get("context_delta", {})
+            if any(k in system_context for k in node_delta):
+                raise SecurityError(f"Node '{current_node_id}' attempted to overwrite protected system context keys.")
+
+            # Apply allowed deltas to context
+            context.update(node_delta)
+
+            # Create merged view for action execution
+            merged_view = {**context, **system_context}
+
             # Execute Action via Registry
             try:
-                result = self._dispatch_action(node, context)
+                result = self._dispatch_action(node, merged_view)
 
                 # Determine transition
                 prev_id = current_node_id
@@ -109,7 +176,7 @@ class GraphExecutor:
                 self.logger.critical(f"Graph Crash: {e}")
                 break
 
-    def _dispatch_action(self, node, context):
+    def _dispatch_action(self, node, merged_view):
         # Maps graph actions to specific tool calls
         action = node['action']
         if action == 'run_tool':
@@ -117,7 +184,7 @@ class GraphExecutor:
             tool_name = params.get('tool')
             args = params.get('args', {}).copy()
             # Inject context if needed (Source [1])
-            if context.get("shizuku_active"):
+            if merged_view.get("shizuku_active"):
                 args["use_root"] = True
 
             if not tool_name:

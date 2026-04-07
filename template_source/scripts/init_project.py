@@ -143,7 +143,7 @@ def main():
     # 0. Environment Scan (Migration Detection)
     # We check for files that are NOT part of the template mechanism
     # Added src, tests, etc. to ignored list so fresh clones don't trigger Migration Mode
-    ignored_items = {'.git', 'template_source', 'README.md', 'LICENSE', 'CONTRIBUTING.md', '.DS_Store', 'tests', 'requirements.txt', 'package.json', 'package-lock.json', '.agents'}
+    ignored_items = {'.git', 'template_source', 'README.md', 'LICENSE', 'CONTRIBUTING.md', '.DS_Store', 'src', 'tests', 'requirements.txt', 'package.json', 'package-lock.json', '.agents'}
     existing_items = set(os.listdir(ROOT)) - ignored_items
 
     IS_MIGRATION = len(existing_items) > 0
@@ -261,7 +261,7 @@ def main():
             continue
 
         # For src/ or other scaffold files, SKIP in Migration Mode
-        if IS_MIGRATION and item in ['tests', 'package.json', 'requirements.txt']:
+        if IS_MIGRATION and item in ['src', 'tests', 'package.json', 'requirements.txt']:
             print(f"Brain: Skipping scaffolding file '{item}' (preserving existing).")
             if os.path.isdir(s): shutil.rmtree(s)
             else: os.remove(s)
