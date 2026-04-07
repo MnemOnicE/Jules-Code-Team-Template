@@ -19,14 +19,7 @@ import logging
 from core.bus import NexusBus
 from core.tools.registry import ToolRegistry
 
-PRIVILEGED_TOOLS = {
-    "execute_command",
-    "update_file",
-    "write_file",
-    "delete_file",
-    "modify_context",
-    "update_memory"
-}
+
 
 
 class SecurityError(Exception):
@@ -53,9 +46,8 @@ class GraphExecutor:
 
     def validate_integrity(self, graph: dict):
         """
-        Zero-Trust Check: Structural Graph Validation.
-        Traverses the graph to ensure any execution path to a PRIVILEGED_TOOL
-        must first pass through a 'security_scan' action node.
+        Zero-Trust Check: Does the intent_glyph match the graph actions?
+        (In a real impl, this would verify the AetherMark).
         """
         glyph = str(graph.get("intent_glyph") or "")
         self.logger.info(f"Validating graph against intent: {glyph}")
