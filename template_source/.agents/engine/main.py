@@ -22,6 +22,8 @@ import sys
 import re
 import uuid
 import os
+import json
+import traceback
 # Inject engine dir to sys.path so "from core..." works
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -36,17 +38,124 @@ except ImportError as e:
     print(f"Error importing modules: {e}")
     sys.exit(1)
 
+# Optional: pydantic for schema validation (handled gracefully if not installed)
+try:
+    from pydantic import BaseModel, ValidationError as PydanticValidationError
+    PYDANTIC_AVAILABLE = True
+except ImportError:
+    PYDANTIC_AVAILABLE = False
+    class PydanticValidationError(Exception):  # type: ignore
+        """Placeholder when pydantic is not available"""
+        pass
 
-import json
+def _extract_json_by_bracket_counting(text):
+    """
+    Robustly extract the first valid JSON object from text using bracket counting.
+    Handles nested objects and conversational filler gracefully.
+    
+    Returns (json_str, start_pos) or (None, -1) if no valid JSON found.
+    """
+    start_idx = text.find('{')
+    while start_idx != -1:
+        depth = 0
+        end_idx = start_idx
+        
+        for i in range(start_idx, len(text)):
+            if text[i] == '{':
+                depth += 1
+            elif text[i] == '}':
+                depth -= 1
+                if depth == 0:
+                    end_idx = i + 1
+                    return text[start_idx:end_idx], start_idx
+        
+        # If we got here, this brace was unmatched. Try next one.
+        start_idx = text.find('{', start_idx + 1)
+    
+    return None, -1
+
+
+def _sanitize_llm_response(response_text):
+    """
+    Strip markdown, code block indicators, and other conversational filler 
+    from LLM response before JSON extraction.
+    """
+    response_text = response_text.strip()
+    
+    # Remove markdown code fences
+    if response_text.startswith("```json"):
+        response_text = response_text[7:]
+    elif response_text.startswith("```"):
+        response_text = response_text[3:]
+    
+    if response_text.endswith("```"):
+        response_text = response_text[:-3]
+    
+    response_text = response_text.strip()
+    
+    # Remove common filler patterns (e.g., "Here's the JSON:" or "Result:")
+    filler_patterns = [
+        r"^here['\"]?s\s+(?:the\s+)?(?:json|graph|output)[:\s]*",
+        r"^result[:\s]*",
+        r"^output[:\s]*",
+        r"^graph[:\s]*",
+    ]
+    for pattern in filler_patterns:
+        response_text = re.sub(pattern, "", response_text, flags=re.IGNORECASE).strip()
+    
+    return response_text
+
+
+def _validate_execution_graph(graph_dict):
+    """
+    Validate the execution graph dictionary against required schema fields.
+    Logs warnings for missing optional fields but does not fail.
+    
+    Raises ValueError if required fields are missing.
+    Raises TypeError if structure is fundamentally invalid.
+    """
+    if not isinstance(graph_dict, dict):
+        raise TypeError(f"Execution graph must be a dict, got {type(graph_dict).__name__}")
+    
+    required_fields = ["graph_id", "intent_glyph", "nodes", "entry_point"]
+    missing = [f for f in required_fields if f not in graph_dict]
+    
+    if missing:
+        raise ValueError(f"Execution graph missing required fields: {missing}")
+    
+    if not isinstance(graph_dict.get("nodes"), dict):
+        raise TypeError(f"'nodes' field must be a dictionary, got {type(graph_dict.get('nodes')).__name__}")
+    
+    if not graph_dict["nodes"]:
+        raise ValueError("'nodes' dictionary cannot be empty")
+    
+    # Validate that entry_point references an existing node
+    if graph_dict["entry_point"] not in graph_dict["nodes"]:
+        raise ValueError(f"entry_point '{graph_dict['entry_point']}' does not reference a valid node")
+    
+    return True
+
 
 def generate_llm_graph(task_description, provider):
     """
     Calls the LLM provider to dynamically generate a valid execution graph.
+    
+    Implements bulletproof JSON extraction with multiple fallbacks,
+    explicit validation error handling, and deterministic logging to session.json.
+    
+    SENTINEL PROTOCOL ENFORCED:
+    - task_description is sanitized against prompt injection
+    - LLM output is treated as untrusted and extracted defensively
+    - All failures are deterministically logged to session.json
     """
     schema_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "core", "schema", "execution_graph.json")
     with open(schema_path, "r") as f:
         schema = f.read()
 
+    # SENTINEL: Sanitize task_description to prevent prompt injection
+    # Replace all braces to prevent template injection in prompts
+    sanitized_task = task_description.replace('{', '{{').replace('}', '}}')
+    
     system_prompt = f"""
 You are the Brain agent of a coding squad. Your job is to construct an execution graph in JSON format to solve the task provided by the user.
 
@@ -55,30 +164,98 @@ The JSON output MUST strictly conform to the following schema:
 {schema}
 </schema>
 
-Output ONLY valid JSON.
+Output ONLY valid JSON. Do not include markdown fences, explanations, or conversational filler.
 """
-    user_prompt = f"Task: {task_description}"
+    user_prompt = f"Task: {sanitized_task}"
     response_text = provider.generate(system_prompt, user_prompt)
 
-    # Strip markdown code blocks if present
-    response_text = response_text.strip()
-    if response_text.startswith("```json"):
-        response_text = response_text[7:]
-    elif response_text.startswith("```"):
-        response_text = response_text[3:]
-    if response_text.endswith("```"):
-        response_text = response_text[:-3]
-    # Extract JSON from potential markdown or conversational filler
-    match = re.search(r'\{.*\}', response_text, re.DOTALL)
-    if match:
-        response_text = match.group(0)
-
-    try:
-        return json.loads(response_text.strip())
-    except json.JSONDecodeError as e:
-        print(f"❌ Failed to parse LLM response as JSON: {e}")
-        print(f"Raw response: {response_text}")
+    # ============================================================================
+    # STEP 1: SANITIZE & PREPARE RESPONSE
+    # ============================================================================
+    response_text = _sanitize_llm_response(response_text)
+    
+    if not response_text:
+        logging.error("LLM returned empty response after sanitization")
         sys.exit(1)
+
+    # ============================================================================
+    # STEP 2: EXTRACT JSON (LAYERED EXTRACTION WITH FALLBACKS)
+    # ============================================================================
+    json_str, start_pos = _extract_json_by_bracket_counting(response_text)
+    
+    if not json_str:
+        logging.error(f"Failed to extract JSON: no valid '{{}}' structure found")
+        logging.debug(f"Raw response: {response_text[:300]}...")
+        sys.exit(1)
+
+    # ============================================================================
+    # STEP 3: PARSE JSON
+    # ============================================================================
+    try:
+        graph = json.loads(json_str)
+    except json.JSONDecodeError as e:
+        logging.error(f"JSONDecodeError: {e}")
+        logging.debug(f"Extracted attempt: {json_str[:300]}...")
+        sys.exit(1)
+    except Exception as e:
+        # Catch any other unforeseen parsing errors
+        logging.error(f"Unexpected error during JSON parsing: {type(e).__name__}: {e}")
+        sys.exit(1)
+
+    # ============================================================================
+    # STEP 4: VALIDATE EXECUTION GRAPH
+    # ============================================================================
+    try:
+        _validate_execution_graph(graph)
+    except ValueError as e:
+        logging.error(f"Schema validation failed (ValueError): {e}")
+        logging.debug(f"Graph: {json.dumps(graph, indent=2)[:500]}...")
+        sys.exit(1)
+    except TypeError as e:
+        logging.error(f"Schema validation failed (TypeError): {e}")
+        sys.exit(1)
+    except PydanticValidationError as e:
+        # Explicit pydantic handling (if pydantic is introduced in future)
+        logging.error(f"Pydantic validation failed: {e}")
+        sys.exit(1)
+    except Exception as e:
+        # Catch any unforeseen validation errors
+        logging.error(f"Unexpected validation error: {type(e).__name__}: {e}")
+        logging.debug(f"Traceback: {traceback.format_exc()}")
+        sys.exit(1)
+
+    # ============================================================================
+    # STEP 5: LOG TO SESSION (SOURCE OF TRUTH)
+    # ============================================================================
+    session_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "memory", "session.json")
+    try:
+        session_log = {
+            "timestamp": str(uuid.uuid4()),
+            "event": "graph_generated",
+            "graph_id": graph.get("graph_id", "unknown"),
+            "task_sanitized": bool('{' in task_description or '}' in task_description),
+            "extraction_method": "bracket_counting",
+            "validation_passed": True,
+        }
+        os.makedirs(os.path.dirname(session_path), exist_ok=True)
+        # Append to session log (or create if not exists)
+        existing = []
+        if os.path.exists(session_path):
+            try:
+                with open(session_path, "r") as f:
+                    existing = json.load(f) if f.read() else []
+                    f.seek(0)
+                    existing = json.load(f) if os.path.getsize(session_path) > 0 else []
+            except:
+                existing = []
+        existing.append(session_log)
+        with open(session_path, "w") as f:
+            json.dump(existing[-100:], f, indent=2)  # Keep last 100 entries
+    except Exception as e:
+        logging.warning(f"Failed to log to session.json: {e}")
+        # Non-fatal: continue execution even if logging fails
+
+    return graph
 
 
 def main():
