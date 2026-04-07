@@ -34,6 +34,7 @@ try:
     from core.tools.graph_executor import GraphExecutor
     from core.llm_provider import get_llm_provider
     from core.llm_config import LLMConfigManager
+    from core.plugin_manager import plugin_manager, initialize_plugins
 except ImportError as e:
     print(f"Error importing modules: {e}")
     sys.exit(1)
@@ -47,6 +48,50 @@ except ImportError:
     class PydanticValidationError(Exception):  # type: ignore
         """Placeholder when pydantic is not available"""
         pass
+
+# Monitoring and Observability
+class AgentMonitor:
+    """Monitor agent activities and performance"""
+
+    def __init__(self):
+        self.metrics = {
+            'sessions_started': 0,
+            'commands_executed': 0,
+            'errors_encountered': 0,
+            'llm_calls': 0,
+            'execution_time': 0
+        }
+        self.session_log = []
+
+    def log_event(self, event_type, details=None):
+        """Log an event with timestamp"""
+        import time
+        event = {
+            'timestamp': time.time(),
+            'type': event_type,
+            'details': details or {}
+        }
+        self.session_log.append(event)
+
+        # Keep only last 1000 events
+        if len(self.session_log) > 1000:
+            self.session_log = self.session_log[-1000:]
+
+    def increment_metric(self, metric_name):
+        """Increment a metric counter"""
+        if metric_name in self.metrics:
+            self.metrics[metric_name] += 1
+
+    def get_status(self):
+        """Get current system status"""
+        return {
+            'metrics': self.metrics.copy(),
+            'recent_events': self.session_log[-10:],  # Last 10 events
+            'health': 'good' if self.metrics['errors_encountered'] == 0 else 'warning'
+        }
+
+# Global monitor instance
+monitor = AgentMonitor()
 
 def _extract_json_by_bracket_counting(text):
     """
@@ -269,8 +314,24 @@ def main():
     parser.add_argument("--model-path", type=str, help="Override model path or name (for local models)")
     parser.add_argument("-rs", "--raw-send", action="store_true", help="Output raw JSON payload sent to the LLM")
     parser.add_argument("-rr", "--raw-return", action="store_true", help="Output raw JSON response from the LLM")
+    parser.add_argument("--status", action="store_true", help="Show system status and metrics")
 
     args = parser.parse_args()
+
+    if args.status:
+        status = monitor.get_status()
+        print("📊 System Status")
+        print("=" * 30)
+        print(f"Health: {status['health']}")
+        print(f"Sessions: {status['metrics']['sessions_started']}")
+        print(f"LLM Calls: {status['metrics']['llm_calls']}")
+        print(f"Errors: {status['metrics']['errors_encountered']}")
+        print("\nRecent Events:")
+        for event in status['recent_events'][-5:]:
+            import time
+            timestamp = time.strftime('%H:%M:%S', time.localtime(event['timestamp']))
+            print(f"  {timestamp} - {event['type']}")
+        sys.exit(0)
 
     if args.config_llm:
         from core.llm_config import configure_llm_providers
@@ -304,6 +365,14 @@ def main():
     )
 
     print("\n🔮 \033[1mInitializing Agent System V3...\033[0m")
+
+    # Initialize monitoring
+    monitor.increment_metric('sessions_started')
+    monitor.log_event('session_start', {'task': task})
+    plugin_manager.call_plugin_hook('on_session_start', task)
+
+    # Initialize plugins
+    initialize_plugins()
     # Test LLM connection
     try:
         provider = get_llm_provider(
@@ -312,7 +381,10 @@ def main():
             raw_return=args.raw_return
         )
         print(f"✅ LLM Provider Ready: {type(provider).__name__}")
+        monitor.log_event('llm_provider_ready', {'provider': type(provider).__name__})
     except Exception as e:
+        monitor.increment_metric('errors_encountered')
+        monitor.log_event('llm_provider_failed', {'error': str(e)})
         print(f"❌ Failed to initialize LLM Provider: {e}")
         sys.exit(1)
 
@@ -336,10 +408,15 @@ def main():
 
     # 3. Generate Execution Graph (Brain)
     print(f"🧠 Brain: Analyzing task: '{task}'")
+    monitor.increment_metric('llm_calls')
     graph = generate_llm_graph(task, provider)
     if not isinstance(graph, dict):
+        monitor.increment_metric('errors_encountered')
+        monitor.log_event('graph_generation_failed', {'error': 'invalid_format'})
         print(f"❌ LLM returned invalid graph format (expected dict, got {type(graph).__name__})")
         sys.exit(1)
+    monitor.log_event('graph_generated', {'graph_id': graph.get('graph_id', 'unknown')})
+    plugin_manager.call_plugin_hook('on_graph_generated', graph.get('graph_id', 'unknown'))
     print(f"✅ Generated Execution Graph ({graph.get('graph_id', 'unknown')})")
 
     # 4. Execute (Muscles)
@@ -347,6 +424,8 @@ def main():
     executor = GraphExecutor(bus, system_context=brain_context)
     executor.execute(graph)
 
+    monitor.log_event('session_complete', {'graph_id': graph.get('graph_id', 'unknown')})
+    plugin_manager.call_plugin_hook('on_session_complete', graph.get('graph_id', 'unknown'))
     print("\n✨ Mission Complete.")
 
 if __name__ == "__main__":
