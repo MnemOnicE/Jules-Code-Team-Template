@@ -165,7 +165,7 @@ def main():
 
     # 4. Execute (Muscles)
     print("\n🚀 \033[1mExecuting Graph...\033[0m")
-    executor = GraphExecutor(bus)
+    executor = GraphExecutor(bus, system_context=brain_context)
     executor.execute(graph)
 
     print("\n✨ Mission Complete.")
