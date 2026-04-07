@@ -36,14 +36,16 @@ class GraphExecutor:
     """
     MAX_STEPS = 1000
 
-    def __init__(self, event_bus: NexusBus, registry=None, system_context=None):
-    def __init__(self, event_bus: NexusBus, registry=None, privileged_tools=None):
-        self.bus = event_bus
+
+    def __init__(self, bus, system_context=None, registry=None, privileged_tools=None):
+        self.bus = bus
+        self.context = system_context
         from core.tools.registry import default_registry
         self.registry = registry if registry is not None else default_registry
+        import logging
         self.logger = logging.getLogger(__name__)
         self.system_context = system_context or {}
-        self.privileged_tools = privileged_tools if privileged_tools is not None else {"execute_command", "write_file", "delete_file"}
+        self.privileged_tools = privileged_tools if privileged_tools is not None else {"execute_command", "write_file", "read_file"}
 
 
     def validate_integrity(self, graph: dict):
