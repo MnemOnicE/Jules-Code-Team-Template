@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -30,6 +30,7 @@ jobs:
             tests/verification/requirements.txt
 
       - name: Install Node Dependencies
+        working-directory: template_source
         run: |
           npm install --prefer-offline --no-audit
 
@@ -45,6 +46,7 @@ jobs:
         continue-on-error: false
 
       - name: Architectural Complexity Check
+        working-directory: template_source
         run: npm run check:complexity
 
       - name: Property-Based Verification
