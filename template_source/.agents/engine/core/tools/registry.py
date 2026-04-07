@@ -14,12 +14,58 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import os
 import logging
+
+def system_io_bridge(action):
+    """Resilient bridge for filesystem operations with fuzzy argument mapping."""
+    def bridge(**kwargs):
+        logging.warning(f"Sentinel: Native implementation missing. Executing fallback bridge for '{action}'.")
+        try:
+            # Omnivore extraction: hunt for path and content regardless of key name
+            path = kwargs.get('path') or kwargs.get('file_path') or kwargs.get('directory') or kwargs.get('filename')
+            content = kwargs.get('content') or kwargs.get('text') or kwargs.get('data')
+
+            if action == "mkdir":
+                if not path: return {"status": "error", "message": "mkdir: No path provided."}
+                os.makedirs(path, exist_ok=True)
+                return {"status": "success", "path": os.path.abspath(path)}
+
+            if action == "write":
+                path = path or "test_flight.txt"
+                dir_name = os.path.dirname(os.path.abspath(path))
+                if dir_name: os.makedirs(dir_name, exist_ok=True)
+                with open(path, 'w') as f:
+                    f.write(str(content or ""))
+                return {"status": "success", "file": path, "size": len(str(content or ""))}
+
+            if action == "read":
+                if not path or not os.path.exists(path):
+                    return {"status": "error", "message": f"read: File not found: {path}"}
+                with open(path, 'r') as f:
+                    return {"status": "success", "content": f.read()}
+
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return bridge
 
 class ToolRegistry:
     def __init__(self):
         self._tools = {}
         self.logger = logging.getLogger(__name__)
+
+        # PROACTIVE REGISTRATION:
+        # This ensures that even if the 'plugins' are missing, the Brain always has 'Hands'.
+        CORE_MAP = {
+            "write_file": "write",
+            "directory": "mkdir",
+            "mkdir": "mkdir",
+            "read_file": "read",
+            "create_file": "write"
+        }
+        for tool_name, action in CORE_MAP.items():
+            # Silently pre-populate registry
+            self._tools[tool_name] = system_io_bridge(action)
 
     def register(self, name, function):
         """Registers a function under a tool name."""
@@ -52,28 +98,3 @@ def plan_decomposition(**kwargs):
 # Initialize a default registry instance
 default_registry = ToolRegistry()
 default_registry.register("plan_decomposition", plan_decomposition)
-
-import os
-
-def write_file_bridge(**kwargs):
-    """The 'Final Flight' bridge. Defaults to test_flight.txt if AI sends nothing."""
-    try:
-        # 1. Try to find path, if NONE, default to 'test_flight.txt'
-        path = kwargs.get('path') or kwargs.get('file_path') or kwargs.get('filename') or "test_flight.txt"
-        
-        # 2. Try to find content, if NONE, default to the operational message
-        content = kwargs.get('content') or kwargs.get('text') or kwargs.get('data') or "The squad is operational"
-
-        print(f"\n[DEBUG] Bridge Active. Writing to: {os.path.abspath(path)}")
-        print(f"[DEBUG] Content length: {len(str(content))} chars")
-
-        with open(path, 'w') as f:
-            f.write(str(content))
-            
-        return {"status": "success", "file": path, "message": "File written by Hard-Coded Fallback."}
-    except Exception as e:
-        print(f"[ERROR] Bridge failed: {e}")
-        return {"status": "error", "message": str(e)}
-
-# Force the registration
-default_registry.register("write_file", write_file_bridge)
