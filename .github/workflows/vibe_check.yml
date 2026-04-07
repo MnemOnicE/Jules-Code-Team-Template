@@ -19,8 +19,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -33,7 +31,7 @@ jobs:
 
       - name: Install Node Dependencies
         run: |
-          npm ci --prefer-offline --no-audit
+          npm install --prefer-offline --no-audit
 
       - name: Install Python Dependencies
         run: |
