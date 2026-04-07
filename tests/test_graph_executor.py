@@ -289,28 +289,7 @@ def test_execute_happy_path_logging(graph_executor, caplog):
 
     assert "[EXECUTING] Node node1: test_action" in caplog.text
 
-def test_validate_integrity_shield_with_scan(graph_executor):
-    """Test validation passes when intent_glyph contains shield and security_scan is present."""
-    graph = {
-        "intent_glyph": "🛡️",
-        "nodes": {
-            "scan": {"action": "security_scan"},
-            "start": {"action": "run_tool"}
-        }
-    }
-    # Should not raise exception
-    graph_executor.validate_integrity(graph)
 
-def test_validate_integrity_shield_missing_scan(graph_executor):
-    """Test validation raises SecurityError when shield is present but security_scan is missing."""
-    graph = {
-        "intent_glyph": "🛡️",
-        "nodes": {
-            "start": {"action": "run_tool"}
-        }
-    }
-    with pytest.raises(SecurityError, match="Graph deviates from Sentinel Intent! Halting."):
-        graph_executor.validate_integrity(graph)
 
 def test_validate_integrity_empty_glyph(graph_executor):
     """Test validation passes when intent_glyph is empty."""
@@ -338,30 +317,7 @@ def test_validate_integrity_none_glyph(graph_executor):
     # Should not raise exception
     graph_executor.validate_integrity(graph)
 
-def test_validate_integrity_loose_check(graph_executor):
-    """
-    Test documents the current loose validation behavior:
-    'security_scan' in a value (not action) satisfies the check.
-    """
-    graph = {
-        "intent_glyph": "🛡️",
-        "metadata": "security_scan",  # This triggers the check
-        "nodes": {"start": {"action": "run_tool"}}
-    }
-    # Should not raise exception due to str(graph) check
-    graph_executor.validate_integrity(graph)
 
-def test_validate_integrity_multiple_shields(graph_executor):
-    """Test validation handles multiple shields correctly."""
-    graph = {
-        "intent_glyph": "🛡️🛡️",
-        "nodes": {
-            "scan": {"action": "security_scan"},
-            "start": {"action": "run_tool"}
-        }
-    }
-    # Should not raise exception
-    graph_executor.validate_integrity(graph)
 
 def test_execute_max_steps_exceeded(graph_executor, caplog):
     """Test that cyclic graphs are terminated when MAX_STEPS is exceeded."""
@@ -521,3 +477,104 @@ def test_execute_failure_without_retry(graph_executor, caplog):
     # If retry_on_fail is False, it just sets current_node_id = repair_node and continues.
     assert graph_executor._dispatch_action.call_count == 2
     assert "Triggering Self-Correction Loop..." not in caplog.text
+
+
+def test_validate_integrity_shield_with_scan_before_privileged(graph_executor):
+    """Test validation passes when security_scan precedes privileged tool execution."""
+    graph = {
+        "intent_glyph": "🛡️",
+        "entry_point": "scan",
+        "nodes": {
+            "scan": {"action": "security_scan", "next": "start"},
+            "start": {"action": "run_tool", "params": {"tool": "write_file"}}
+        }
+    }
+    # Should not raise exception
+    graph_executor.validate_integrity(graph)
+
+def test_validate_integrity_shield_missing_scan_before_privileged(graph_executor):
+    """Test validation raises SecurityError when privileged tool is accessed before security_scan."""
+    graph = {
+        "intent_glyph": "🛡️",
+        "entry_point": "start",
+        "nodes": {
+            "start": {"action": "run_tool", "params": {"tool": "write_file"}, "next": "scan"},
+            "scan": {"action": "security_scan"}
+        }
+    }
+    with pytest.raises(SecurityError, match="Graph deviates from Sentinel Intent! Privileged tool 'write_file' accessed before security_scan. Halting."):
+        graph_executor.validate_integrity(graph)
+
+def test_validate_integrity_shield_with_unprivileged_tool(graph_executor):
+    """Test validation passes when a non-privileged tool is accessed without a security_scan."""
+    graph = {
+        "intent_glyph": "🛡️",
+        "entry_point": "start",
+        "nodes": {
+            "start": {"action": "run_tool", "params": {"tool": "read_file"}}
+        }
+    }
+    # Should not raise exception
+    graph_executor.validate_integrity(graph)
+
+def test_validate_integrity_shield_path_branching(graph_executor):
+    """Test validation correctly analyzes branching paths."""
+    graph = {
+        "intent_glyph": "🛡️",
+        "entry_point": "branch",
+        "nodes": {
+            "branch": {
+                "action": "run_tool",
+                "params": {"tool": "safe_tool"},
+                "on_success": "scan",
+                "on_failure": "unsafe"
+            },
+            "scan": {"action": "security_scan", "next": "safe_unsafe"},
+            "safe_unsafe": {"action": "run_tool", "params": {"tool": "execute_command"}},
+            "unsafe": {"action": "run_tool", "params": {"tool": "delete_file"}}
+        }
+    }
+    with pytest.raises(SecurityError, match="Graph deviates from Sentinel Intent! Privileged tool 'delete_file' accessed before security_scan. Halting."):
+        graph_executor.validate_integrity(graph)
+
+def test_validate_integrity_shield_loop_before_scan(graph_executor):
+    """Test validation detects privileged tools inside a loop before scan."""
+    graph = {
+        "intent_glyph": "🛡️",
+        "entry_point": "loop",
+        "nodes": {
+            "loop": {"action": "run_tool", "params": {"tool": "safe_tool"}, "next": "unsafe"},
+            "unsafe": {"action": "run_tool", "params": {"tool": "write_file"}, "next": "loop"}
+        }
+    }
+    with pytest.raises(SecurityError, match="Graph deviates from Sentinel Intent! Privileged tool 'write_file' accessed before security_scan. Halting."):
+        graph_executor.validate_integrity(graph)
+
+def test_validate_integrity_multiple_shields(graph_executor):
+    """Test validation handles multiple shields correctly."""
+    graph = {
+        "intent_glyph": "🛡️🛡️",
+        "entry_point": "scan",
+        "nodes": {
+            "scan": {"action": "security_scan", "next": "start"},
+            "start": {"action": "run_tool", "params": {"tool": "write_file"}}
+        }
+    }
+    # Should not raise exception
+    graph_executor.validate_integrity(graph)
+
+def test_validate_integrity_loose_check_no_longer_valid(graph_executor):
+    """
+    Ensure the previous loose check (security_scan string in graph) is no longer valid
+    if a privileged tool is accessed without a real scan node.
+    """
+    graph = {
+        "intent_glyph": "🛡️",
+        "entry_point": "start",
+        "metadata": "security_scan",
+        "nodes": {
+            "start": {"action": "run_tool", "params": {"tool": "execute_command"}}
+        }
+    }
+    with pytest.raises(SecurityError, match="Graph deviates from Sentinel Intent! Privileged tool 'execute_command' accessed before security_scan. Halting."):
+        graph_executor.validate_integrity(graph)
