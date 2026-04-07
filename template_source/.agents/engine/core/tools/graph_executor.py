@@ -78,7 +78,7 @@ class GraphExecutor:
 
                 node = nodes[current_id]
                 action = node.get("action")
-                tool = node.get("params", {}).get("tool") if action == "run_tool" else None
+                tool = (node.get("params") or {}).get("tool") if action == "run_tool" else None
 
                 if action == "security_scan":
                     has_scanned = True
