@@ -60,9 +60,7 @@ class GraphExecutor:
 
         # 3. Privilege Escalation Prevention (The "Captain's Orders" protocol)
         if self.system_context:
-            protected_keys = set(self.system_context.keys())
-            attempted_keys = set(graph_state.keys())
-            violations = protected_keys.intersection(attempted_keys)
+            violations = self.system_context.keys() & graph_state.keys()
             if violations:
                 msg = f"Security Violation: Graph attempted to overwrite protected system context keys: {violations}"
                 self.logger.critical(msg)
