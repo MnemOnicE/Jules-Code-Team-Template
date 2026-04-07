@@ -43,7 +43,7 @@ def system_io_bridge(action):
                 if not path or not os.path.exists(path):
                     return {"status": "error", "message": f"read: File not found: {path}"}
                 with open(path, 'r') as f:
-                    return {"status": "success", "content": f.read()}
+                    return {"status": "success", "content": f.read(1_000_000)}
 
         except Exception as e:
             return {"status": "error", "message": str(e)}
