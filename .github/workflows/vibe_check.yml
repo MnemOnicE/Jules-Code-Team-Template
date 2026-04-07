@@ -1,0 +1,58 @@
+name: Vibe Check
+
+on:
+  schedule:
+    - cron: '0 0 * * 1' # Weekly
+  workflow_dispatch:
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Required for gitleaks history
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: 'package-lock.json'
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+          cache: 'pip'
+          cache-dependency-path: |
+            requirements.txt
+            tests/verification/requirements.txt
+
+      - name: Install Node Dependencies
+        run: |
+          npm ci --prefer-offline --no-audit
+
+      - name: Install Python Dependencies
+        run: |
+          pip install --cache-dir ~/.cache/pip -r requirements.txt
+          if [ -f tests/verification/requirements.txt ]; then pip install --cache-dir ~/.cache/pip -r tests/verification/requirements.txt; fi
+
+      - name: Secret Scanning (Gitleaks)
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        continue-on-error: false
+
+      - name: Architectural Complexity Check
+        run: npm run check:complexity
+
+      - name: Property-Based Verification
+        run: |
+          if [ -d tests/verification ]; then
+            pytest tests/verification/
+          else
+            echo "No verification tests found. Skipping."
+          fi
