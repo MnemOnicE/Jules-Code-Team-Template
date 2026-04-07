@@ -20,7 +20,7 @@ from core.bus import NexusBus
 from core.tools.registry import ToolRegistry
 
 
-PRIVILEGED_TOOLS = {"execute_command", "write_file", "delete_file"}
+
 
 class SecurityError(Exception):
 
@@ -36,11 +36,12 @@ class GraphExecutor:
     """
     MAX_STEPS = 1000
 
-    def __init__(self, event_bus: NexusBus, registry=None):
+    def __init__(self, event_bus: NexusBus, registry=None, privileged_tools=None):
         self.bus = event_bus
         from core.tools.registry import default_registry
         self.registry = registry if registry is not None else default_registry
         self.logger = logging.getLogger(__name__)
+        self.privileged_tools = privileged_tools if privileged_tools is not None else {"execute_command", "write_file", "delete_file"}
 
 
     def validate_integrity(self, graph: dict):
@@ -78,11 +79,11 @@ class GraphExecutor:
 
                 node = nodes[current_id]
                 action = node.get("action")
-                tool = (node.get("params") or {}).get("tool") if action == "run_tool" else None
+                tool = node.get("params", {}).get("tool") if action == "run_tool" else None
 
                 if action == "security_scan":
                     has_scanned = True
-                elif action == "run_tool" and tool in PRIVILEGED_TOOLS and not has_scanned:
+                elif action == "run_tool" and tool in self.privileged_tools and not has_scanned:
                     raise SecurityError(f"Graph deviates from Sentinel Intent! Privileged tool '{tool}' accessed before security_scan. Halting.")
 
                 # Queue next nodes
