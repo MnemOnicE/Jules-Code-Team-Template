@@ -238,19 +238,21 @@ Output ONLY valid JSON. Do not include markdown fences, explanations, or convers
             "validation_passed": True,
         }
         os.makedirs(os.path.dirname(session_path), exist_ok=True)
-        # Append to session log (or create if not exists)
+        # Load existing session log (non-fatal if missing or corrupted)
         existing = []
-        if os.path.exists(session_path):
+        if os.path.exists(session_path) and os.path.getsize(session_path) > 0:
             try:
                 with open(session_path, "r") as f:
-                    existing = json.load(f) if f.read() else []
-                    f.seek(0)
-                    existing = json.load(f) if os.path.getsize(session_path) > 0 else []
-            except:
+                    existing = json.load(f)
+                    if not isinstance(existing, list):
+                        existing = []
+            except (json.JSONDecodeError, IOError):
+                logging.debug(f"Could not parse existing session.json, starting fresh")
                 existing = []
+        # Append new entry and persist (keep last 100 entries)
         existing.append(session_log)
         with open(session_path, "w") as f:
-            json.dump(existing[-100:], f, indent=2)  # Keep last 100 entries
+            json.dump(existing[-100:], f, indent=2)
     except Exception as e:
         logging.warning(f"Failed to log to session.json: {e}")
         # Non-fatal: continue execution even if logging fails
