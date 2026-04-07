@@ -3,22 +3,52 @@
 # Jules Code Team Template - Update Utility
 # Copyright (C) 2026  MnemOnicE
 
-import os
-import sys
 import json
-import shutil
+import re
+import sys
 import argparse
 import subprocess
-import tempfile
 from pathlib import Path
-from urllib.request import urlopen
-from urllib.error import URLError
+
+SEMVER_PATTERN = re.compile(r'^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$')
+
+
+def parse_version(version_string):
+    if not version_string:
+        return None
+
+    match = SEMVER_PATTERN.match(version_string.strip())
+    if not match:
+        return None
+
+    return tuple(int(part) for part in match.groups())
+
+
+def compare_versions(a, b):
+    parsed_a = parse_version(a)
+    parsed_b = parse_version(b)
+    if parsed_a is None or parsed_b is None:
+        return 0
+    return (parsed_a > parsed_b) - (parsed_a < parsed_b)
+
+
+def get_current_version():
+    root = Path(__file__).resolve().parent.parent
+    package_file = root / 'package.json'
+    if package_file.exists():
+        try:
+            with open(package_file, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+            return data.get('version')
+        except Exception:
+            return None
+    return None
+
 
 def get_latest_version():
     """Get the latest version from GitHub releases"""
     try:
-        # This would need to be implemented with GitHub API
-        # For now, return a placeholder
+        # TODO: Replace this placeholder with a real GitHub releases query.
         return "v1.0.0"
     except Exception:
         return None
@@ -39,7 +69,7 @@ def download_update(version=None):
     print("   This would download the latest template files...")
     return True
 
-def apply_update(dry_run=False):
+def apply_update(dry_run=False, force=False):
     """Apply the downloaded update"""
     if not Path('.agents').exists():
         print("❌ No .agents directory found. Initialize first.")
@@ -55,42 +85,48 @@ def apply_update(dry_run=False):
         print("   - Preserve existing memory and customizations")
         return True
 
-    # Create backup before updating
     print("   Creating pre-update backup...")
     backup_result = subprocess.run([
         sys.executable, 'scripts/backup_restore.py', 'backup'
     ], capture_output=True, text=True)
 
     if backup_result.returncode != 0:
-        print(f"⚠️  Backup failed: {backup_result.stderr}")
-        if not input("Continue without backup? (y/N): ").lower().startswith('y'):
+        stderr = backup_result.stderr.strip()
+        print(f"⚠️  Backup failed: {stderr}")
+        if not force:
+            print("❌ Aborting update because backup could not be created. Use --force to override.")
             return False
+        print("⚠️  Forced update requested, continuing without verified backup.")
 
-    # Apply updates (this would be more sophisticated)
+    if not download_update():
+        print("❌ Update download failed")
+        return False
+
     print("   Updating configurations...")
     print("   Updating workflows...")
     print("   Updating engine...")
 
     print("✅ Update applied successfully")
-    print("🔄 Run 'squad --health-check' to verify the update")
+    print("🔄 Run 'python scripts/update.py --check' to verify the update")
     return True
 
 def check_for_updates():
     """Check if updates are available"""
-    current_version = "v1.0.0"  # This would read from a version file
+    current_version = get_current_version() or "v0.0.0"
     latest_version = get_latest_version()
 
     if not latest_version:
         print("❌ Could not check for updates")
         return False
 
-    if latest_version > current_version:
+    comparison = compare_versions(latest_version, current_version)
+    if comparison > 0:
         print(f"📢 Update available: {current_version} → {latest_version}")
         print("   Run 'python scripts/update.py --apply' to update")
         return True
-    else:
-        print("✅ System is up to date")
-        return False
+
+    print("✅ System is up to date")
+    return False
 
 def main():
     parser = argparse.ArgumentParser(
@@ -115,13 +151,18 @@ def main():
         '--version',
         help='Specific version to update to'
     )
+    parser.add_argument(
+        '--force',
+        action='store_true',
+        help='Force update even if pre-update backup cannot be created'
+    )
 
     args = parser.parse_args()
 
     if args.check:
         return 0 if check_for_updates() else 1
     elif args.apply or args.dry_run:
-        return 0 if apply_update(dry_run=args.dry_run) else 1
+        return 0 if apply_update(dry_run=args.dry_run, force=args.force) else 1
     else:
         parser.print_help()
         return 1

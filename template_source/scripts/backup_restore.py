@@ -5,13 +5,32 @@
 
 import os
 import sys
-import json
 import shutil
 import argparse
 import tarfile
 import tempfile
 from pathlib import Path
 from datetime import datetime
+
+
+def _is_within_directory(directory, target):
+    abs_directory = os.path.abspath(directory)
+    abs_target = os.path.abspath(target)
+    return os.path.commonpath([abs_directory, abs_target]) == abs_directory
+
+
+def _safe_extract(tar, path='.', members=None):
+    for member in tar.getmembers():
+        member_path = os.path.join(path, member.name)
+
+        if not _is_within_directory(path, member_path):
+            raise Exception(f"Unsafe path in archive: {member.name}")
+
+        if member.issym() or member.islnk():
+            raise Exception(f"Unsupported symlink in archive: {member.name}")
+
+    tar.extractall(path, members)
+
 
 def create_backup(output_path=None):
     """Create a backup of the current agent state"""
@@ -27,7 +46,6 @@ def create_backup(output_path=None):
 
     try:
         with tarfile.open(output_path, "w:gz") as tar:
-            # Backup agent configurations and memory
             backup_items = [
                 '.agents/config',
                 '.agents/memory',
@@ -43,15 +61,18 @@ def create_backup(output_path=None):
                 else:
                     print(f"   Skipping {item} (not found)")
 
-        print("✅ Backup created successfully"        return True
+        print("✅ Backup created successfully")
+        return True
 
     except Exception as e:
         print(f"❌ Backup failed: {e}")
         return False
 
+
 def restore_backup(backup_path, force=False):
     """Restore agent state from backup"""
-    if not Path(backup_path).exists():
+    backup_file = Path(backup_path)
+    if not backup_file.exists():
         print(f"❌ Backup file not found: {backup_path}")
         return False
 
@@ -63,11 +84,9 @@ def restore_backup(backup_path, force=False):
 
     try:
         with tempfile.TemporaryDirectory() as temp_dir:
-            # Extract backup
-            with tarfile.open(backup_path, "r:gz") as tar:
-                tar.extractall(temp_dir)
+            with tarfile.open(backup_file, "r:gz") as tar:
+                _safe_extract(tar, temp_dir)
 
-            # Restore files
             temp_path = Path(temp_dir)
             restore_items = ['.agents', 'session.json', 'AI_MEMORY.md']
 
@@ -82,7 +101,8 @@ def restore_backup(backup_path, force=False):
                             shutil.rmtree(item)
                         shutil.copytree(src, item)
 
-        print("✅ Restore completed successfully"        return True
+        print("✅ Restore completed successfully")
+        return True
 
     except Exception as e:
         print(f"❌ Restore failed: {e}")
@@ -98,7 +118,7 @@ def list_backups():
     print("Available backups:")
     for backup in sorted(backups, reverse=True):
         size = backup.stat().st_size / 1024 / 1024  # MB
-        print(".1f")
+        print(f"  {backup.name} - {size:.1f} MB")
 
 def main():
     parser = argparse.ArgumentParser(

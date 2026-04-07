@@ -150,12 +150,15 @@ Extend functionality with plugins in `.agents/plugins/`:
 PLUGIN_INFO = {
     'name': 'My Plugin',
     'version': '1.0.0',
-    'description': 'Custom functionality'
+    'description': 'Custom functionality',
+    'author': 'Your Name'
 }
 
 def on_session_start(task):
     print(f"Custom plugin activated for: {task}")
 ```
+
+If present, `.agents/plugins/allowed_plugins.json` controls which plugins are permitted to load, and may include SHA-256 hash entries for stronger integrity checks.
 
 ### Command Line Options
 ```bash
@@ -193,6 +196,9 @@ python scripts/health_check.py
 
 # Restore from backup
 python scripts/backup_restore.py restore --file backup.tar.gz
+
+# Restore safety
+The restore process validates archive contents to prevent path traversal and rejects symlinks or unsafe archive members.
 ```
 
 ### Getting Help

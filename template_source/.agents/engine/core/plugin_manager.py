@@ -3,17 +3,20 @@
 # Jules Code Team Template - Plugin System
 # Copyright (C) 2026  MnemOnicE
 
-import os
-import sys
+import hashlib
 import importlib.util
+import json
+import re
 from pathlib import Path
 
 class PluginManager:
     """Simple plugin system for extending agent capabilities"""
 
+    REQUIRED_METADATA = {'name', 'version', 'description', 'author'}
+    PLUGIN_NAME_PATTERN = re.compile(r'^[A-Za-z0-9_-]+$')
+
     def __init__(self, plugins_dir=None):
         if plugins_dir is None:
-            # Find plugins directory relative to this file
             current_dir = Path(__file__).parent
             self.plugins_dir = current_dir / "plugins"
         else:
@@ -21,23 +24,70 @@ class PluginManager:
 
         self.plugins = {}
         self.loaded_plugins = []
+        self.allowed_plugins = self._load_allowlist()
+
+    def _load_allowlist(self):
+        allowlist_path = self.plugins_dir / "allowed_plugins.json"
+        if not allowlist_path.exists():
+            return {}
+
+        try:
+            with open(allowlist_path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            return data.get("plugins", {}) if isinstance(data, dict) else {}
+        except Exception as e:
+            raise ValueError(f"Failed to parse plugin allowlist: {e}")
+
+    def _is_plugin_allowed(self, plugin_name):
+        if self.allowed_plugins:
+            return plugin_name in self.allowed_plugins
+        return True
+
+    def _ensure_valid_plugin_name(self, plugin_name):
+        if not self.PLUGIN_NAME_PATTERN.match(plugin_name):
+            raise ValueError(f"Invalid plugin name: {plugin_name}")
+
+    def _compute_file_hash(self, path):
+        sha256 = hashlib.sha256()
+        with open(path, "rb") as f:
+            for chunk in iter(lambda: f.read(8192), b""):
+                sha256.update(chunk)
+        return sha256.hexdigest()
+
+    def _verify_plugin_file(self, plugin_name, plugin_file):
+        if not self._is_plugin_allowed(plugin_name):
+            raise PermissionError(f"Plugin {plugin_name} is not authorized by allowed_plugins.json")
+
+        entry = self.allowed_plugins.get(plugin_name)
+        if isinstance(entry, dict) and entry.get("hash"):
+            actual_hash = self._compute_file_hash(plugin_file)
+            expected_hash = entry["hash"]
+            if actual_hash != expected_hash:
+                raise ImportError(
+                    f"Plugin {plugin_name} hash mismatch: expected {expected_hash}, got {actual_hash}"
+                )
 
     def discover_plugins(self):
         """Discover available plugins"""
         if not self.plugins_dir.exists():
             return []
 
-        plugins = []
-        for item in self.plugins_dir.iterdir():
-            if item.is_file() and item.suffix == '.py' and not item.name.startswith('_'):
-                plugins.append(item.stem)
-        return plugins
+        if self.allowed_plugins:
+            candidates = [name for name in self.allowed_plugins.keys()]
+        else:
+            candidates = [item.stem for item in self.plugins_dir.iterdir()
+                          if item.is_file() and item.suffix == '.py' and not item.name.startswith('_')]
+
+        return [name for name in candidates if self.PLUGIN_NAME_PATTERN.match(name)]
 
     def load_plugin(self, plugin_name):
         """Load a specific plugin"""
+        self._ensure_valid_plugin_name(plugin_name)
         plugin_file = self.plugins_dir / f"{plugin_name}.py"
         if not plugin_file.exists():
             raise FileNotFoundError(f"Plugin {plugin_name} not found")
+
+        self._verify_plugin_file(plugin_name, plugin_file)
 
         try:
             spec = importlib.util.spec_from_file_location(plugin_name, plugin_file)
@@ -47,11 +97,17 @@ class PluginManager:
             module = importlib.util.module_from_spec(spec)
             spec.loader.exec_module(module)
 
-            # Check if plugin has required interface
             if not hasattr(module, 'PLUGIN_INFO'):
                 raise AttributeError(f"Plugin {plugin_name} missing PLUGIN_INFO")
 
             plugin_info = module.PLUGIN_INFO
+            if not isinstance(plugin_info, dict):
+                raise TypeError(f"PLUGIN_INFO in {plugin_name} must be a dict")
+
+            missing_fields = self.REQUIRED_METADATA - plugin_info.keys()
+            if missing_fields:
+                raise ValueError(f"Plugin {plugin_name} missing metadata fields: {missing_fields}")
+
             self.plugins[plugin_name] = {
                 'module': module,
                 'info': plugin_info

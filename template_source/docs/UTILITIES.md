@@ -58,6 +58,12 @@ python scripts/backup_restore.py restore --file agents_backup_20260407_120000.ta
 python scripts/backup_restore.py restore --file backup.tar.gz --force
 ```
 
+### Restore Safety
+- Archives are extracted with path traversal protection.
+- Symlinks and unsafe archive members are rejected.
+- Only whitelisted state files and directories are restored.
+- Use `--force` only when you intend to overwrite the existing `.agents/` state.
+
 ### Safety Features
 - **Automatic timestamps** for backup files
 - **Confirmation prompts** before destructive operations
@@ -88,11 +94,13 @@ python scripts/update.py --apply --version v1.2.0
 ```
 
 ### Update Process
-1. **Version Check**: Compares current vs latest versions
-2. **Backup Creation**: Automatically backs up current state
-3. **Safe Update**: Downloads and applies updates
+1. **Version Check**: Compares semantic versions from `package.json`
+2. **Backup Creation**: Automatically backs up current state before applying updates
+3. **Safe Update**: Downloads and applies updates with a forced backup path available
 4. **Verification**: Runs health checks post-update
 5. **Rollback Ready**: Backup available if issues occur
+
+> Note: The current update implementation is a placeholder for signed artifact downloads. In production, enforce artifact integrity and signatures before applying updates.
 
 ## Initialization Script (`scripts/init_project.py`)
 
@@ -152,7 +160,8 @@ The plugin system allows extending Jules Code Team functionality without modifyi
 ```
 .agents/plugins/
 ├── example_plugin.py
-└── my_custom_plugin.py
+├── my_custom_plugin.py
+└── allowed_plugins.json
 ```
 
 ### Plugin Structure
@@ -179,8 +188,26 @@ def on_session_complete(graph_id):
     print(f"Session finished: {graph_id}")
 ```
 
+### Plugin Allowlist
+If present, `.agents/plugins/allowed_plugins.json` defines which plugins may load and optionally verifies file hashes.
+
+Example allowlist:
+```json
+{
+  "plugins": {
+    "metrics": {
+      "hash": "<sha256-of-metrics.py>"
+    }
+  }
+}
+```
+
+The plugin system will reject unauthorized plugin files and verify hashes when provided.
+
 ### Plugin Management
 - **Automatic Loading**: Plugins in `.agents/plugins/` load on startup
+- **Allowlist Support**: `.agents/plugins/allowed_plugins.json` can restrict which plugins may load
+- **Hash Verification**: Plugin files may be validated against SHA-256 hashes
 - **Error Isolation**: Plugin failures don't affect core system
 - **Hot Reloading**: Restart engine to load plugin changes
 

@@ -61,14 +61,30 @@ The system supports plugins for extending functionality. Plugins are loaded from
 - `on_graph_generated(graph_id)` - Called after graph generation
 - `on_session_complete(graph_id)` - Called when a session ends
 
+Plugins must include `PLUGIN_INFO` metadata and may be restricted by `.agents/plugins/allowed_plugins.json`.
+
+If an allowlist file exists, only listed plugin names are permitted to load. A plugin entry may also include a `hash` field to verify the plugin file integrity using SHA-256.
+
 Example plugin structure:
 ```python
 PLUGIN_INFO = {
     'name': 'My Plugin',
     'version': '1.0.0',
-    'description': 'Custom functionality'
+    'description': 'Custom functionality',
+    'author': 'Your Name'
 }
 
 def on_session_start(task):
     print(f"Plugin activated for: {task}")
+```
+
+Example allowlist:
+```json
+{
+  "plugins": {
+    "metrics": {
+      "hash": "<sha256-of-metrics.py>"
+    }
+  }
+}
 ```
