@@ -19,6 +19,16 @@ import logging
 from core.bus import NexusBus
 from core.tools.registry import ToolRegistry
 
+PRIVILEGED_TOOLS = {
+    "execute_command",
+    "update_file",
+    "write_file",
+    "delete_file",
+    "modify_context",
+    "update_memory"
+}
+
+
 class SecurityError(Exception):
     pass
 
@@ -40,14 +50,61 @@ class GraphExecutor:
 
     def validate_integrity(self, graph: dict):
         """
-        Zero-Trust Check: Does the intent_glyph match the graph actions?
-        (In a real impl, this would verify the AetherMark).
+        Zero-Trust Check: Structural Graph Validation.
+        Traverses the graph to ensure any execution path to a PRIVILEGED_TOOL
+        must first pass through a 'security_scan' action node.
         """
         glyph = str(graph.get("intent_glyph") or "")
         self.logger.info(f"Validating graph against intent: {glyph}")
-        # Enforcement of the "Shield" protocol (Source [2])
-        if "🛡️" in glyph and "security_scan" not in str(graph):
-            raise SecurityError("Graph deviates from Sentinel Intent! Halting.")
+
+        entry_point = graph.get("entry_point")
+        if not entry_point:
+            return  # Empty or invalid graph, let normal validation handle it
+
+        nodes = graph.get("nodes", {})
+
+        # Queue stores tuples of (node_id, has_passed_scan)
+        queue = [(entry_point, False)]
+        visited = set()
+
+        while queue:
+            current_id, has_passed_scan = queue.pop(0)
+
+            if current_id == "END" or not current_id:
+                continue
+
+            state_key = (current_id, has_passed_scan)
+            if state_key in visited:
+                continue
+            visited.add(state_key)
+
+            node = nodes.get(current_id)
+            if not node:
+                continue
+
+            action = node.get("action")
+
+            # Update scan state if we hit a security checkpoint
+            if action == "security_scan":
+                has_passed_scan = True
+
+            # Check for privileged tool execution
+            if action == "run_tool":
+                tool = (node.get("params") or {}).get("tool")
+                if tool in PRIVILEGED_TOOLS and not has_passed_scan:
+                    raise SecurityError(f"Unverified path to privileged tool '{tool}' detected. Halting.")
+
+            # Enqueue next possible paths
+            next_nodes = []
+            if "next" in node:
+                next_nodes.append(node["next"])
+            if "on_success" in node:
+                next_nodes.append(node["on_success"])
+            if "on_failure" in node:
+                next_nodes.append(node["on_failure"])
+
+            for nxt in next_nodes:
+                queue.append((nxt, has_passed_scan))
 
     def execute(self, graph: dict):
         # 1. Structural Validation (The "Smart Worker" approach)

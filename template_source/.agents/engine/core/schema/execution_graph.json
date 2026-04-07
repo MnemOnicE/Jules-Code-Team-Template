@@ -3,7 +3,12 @@
   "title": "Sovereign Execution Graph",
   "description": "A directed acyclic graph (DAG) of agentic tasks derived from NexusGlyph intent.",
   "type": "object",
-  "required": ["graph_id", "intent_glyph", "nodes", "entry_point"],
+  "required": [
+    "graph_id",
+    "intent_glyph",
+    "nodes",
+    "entry_point"
+  ],
   "properties": {
     "graph_id": {
       "type": "string",
@@ -11,7 +16,7 @@
     },
     "intent_glyph": {
       "type": "string",
-      "description": "The high-density NexusGlyph that generated this graph (e.g., '🛡️💎'). Used for audit."
+      "description": "The high-density NexusGlyph that generated this graph (e.g., '\ud83d\udee1\ufe0f\ud83d\udc8e'). Used for audit."
     },
     "aether_mark": {
       "type": "string",
@@ -35,11 +40,19 @@
   "definitions": {
     "Node": {
       "type": "object",
-      "required": ["action"],
+      "required": [
+        "action"
+      ],
       "properties": {
         "action": {
           "type": "string",
-          "enum": ["run_tool", "human_input", "logic_gate", "terminate"]
+          "enum": [
+            "run_tool",
+            "human_input",
+            "logic_gate",
+            "terminate",
+            "security_scan"
+          ]
         },
         "params": {
           "type": "object"
