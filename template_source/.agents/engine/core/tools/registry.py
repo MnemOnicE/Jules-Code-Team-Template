@@ -17,13 +17,18 @@
 import os
 import logging
 
+logger = logging.getLogger(__name__)
+
 def system_io_bridge(action):
     """Resilient bridge for filesystem operations with fuzzy argument mapping."""
     def bridge(**kwargs):
-        logging.warning(f"Sentinel: Native implementation missing. Executing fallback bridge for '{action}'.")
+        logger.warning(f"Sentinel: Native implementation missing. Executing fallback bridge for '{action}'.")
         try:
             # Omnivore extraction: hunt for path and content regardless of key name
-            path = kwargs.get('path') or kwargs.get('file_path') or kwargs.get('directory') or kwargs.get('filename')
+            raw_path = kwargs.get('path') or kwargs.get('file_path') or kwargs.get('directory') or kwargs.get('filename')
+
+            # Security: Sanitize path to prevent traversal attacks
+            path = os.path.basename(str(raw_path)) if raw_path else None
             content = kwargs.get('content') or kwargs.get('text') or kwargs.get('data')
 
             if action == "mkdir":

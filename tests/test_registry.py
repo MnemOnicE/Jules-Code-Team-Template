@@ -1,7 +1,7 @@
 import pytest
 import threading
 import logging
-from core.tools.registry import ToolRegistry
+from core.tools.registry import system_io_bridge, ToolRegistry
 
 @pytest.fixture
 def registry():
@@ -109,7 +109,7 @@ def test_concurrency(registry):
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import pytest
-from core.tools.registry import ToolRegistry
+from core.tools.registry import system_io_bridge, ToolRegistry
 
 class TestToolRegistry:
     @pytest.fixture
@@ -154,3 +154,70 @@ class TestToolRegistry:
         result = registry.invoke("broken")
         assert result["status"] == "error"
         assert "Something went wrong" in result["message"]
+
+
+def test_system_io_bridge_mkdir(tmp_path):
+    bridge = system_io_bridge("mkdir")
+
+    # Test fuzzy path keys
+    result = bridge(directory="test_dir")
+    assert result["status"] == "success"
+    assert "test_dir" in result["path"]
+
+    # Test empty path
+    result = bridge()
+    assert result["status"] == "error"
+    assert "No path provided" in result["message"]
+
+def test_system_io_bridge_write(tmp_path):
+    import os
+    bridge = system_io_bridge("write")
+
+    # Change dir to tmp_path to avoid littering the source tree
+    original_cwd = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        # Test default path
+        result = bridge(content="hello")
+        assert result["status"] == "success"
+        assert result["file"] == "test_flight.txt"
+        with open("test_flight.txt", "r") as f:
+            assert f.read() == "hello"
+
+        # Test fuzzy path & content
+        result = bridge(file_path="custom.txt", text="world")
+        assert result["status"] == "success"
+        assert result["file"] == "custom.txt"
+        with open("custom.txt", "r") as f:
+            assert f.read() == "world"
+
+        # Test path traversal sanitization
+        result = bridge(path="../../etc/passwd", text="hacked")
+        assert result["status"] == "success"
+        assert result["file"] == "passwd"
+        assert os.path.exists("passwd")
+        assert not os.path.exists("../../etc/passwd") or "hacked" not in open("../../etc/passwd", "r").read()
+    finally:
+        os.chdir(original_cwd)
+
+def test_system_io_bridge_read(tmp_path):
+    import os
+    bridge = system_io_bridge("read")
+
+    original_cwd = os.getcwd()
+    os.chdir(tmp_path)
+    try:
+        # Test file not found
+        result = bridge(path="nonexistent.txt")
+        assert result["status"] == "error"
+        assert "File not found" in result["message"]
+
+        # Test valid read
+        with open("target.txt", "w") as f:
+            f.write("content_to_read")
+
+        result = bridge(filename="target.txt")
+        assert result["status"] == "success"
+        assert result["content"] == "content_to_read"
+    finally:
+        os.chdir(original_cwd)
