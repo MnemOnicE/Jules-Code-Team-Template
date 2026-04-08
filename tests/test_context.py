@@ -336,3 +336,27 @@ def test_load_context_singleton():
         context2 = load_context(agent_name)
         assert context2 == expected_context
         assert MockLoaderClass.call_count == 1
+
+# --- Security Tests ---
+
+def test_load_persona_path_traversal_prevention(mock_fs):
+    """Test that path traversal is prevented in load_persona."""
+    mock_agents_dir = "/mock/agents"
+    traversal_name = "../../../secret"
+    expected_sanitized_path = os.path.join(mock_agents_dir, 'config', 'defaults', 'secret.md')
+
+    with patch.object(ContextLoader, '_find_root', return_value="/mock/root"), \
+         patch.object(ContextLoader, '_find_agents_dir', return_value=mock_agents_dir):
+
+        loader = ContextLoader()
+
+        # Mock exists to return False so we can check which path it was called with.
+        mock_exists = mock_fs['exists']
+        mock_exists.return_value = False
+
+        with pytest.raises(FileNotFoundError):
+            loader.load_persona(traversal_name)
+
+        # Verify that os.path.exists was called with the sanitized path,
+        # proving that the traversal attempt was neutralized.
+        mock_exists.assert_called_once_with(expected_sanitized_path)
