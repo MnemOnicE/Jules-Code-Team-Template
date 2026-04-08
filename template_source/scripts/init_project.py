@@ -347,11 +347,7 @@ def main(dry_run=False, force=False):
     # Define sanitization targets
     cleanup_targets = [
         os.path.join(ROOT, 'ingests'),
-        os.path.join(ROOT, 'tests', 'verification', 'logs'),
-        os.path.join(ROOT, 'tests', 'verification', '.hypothesis'),
-        os.path.join(ROOT, '.hypothesis'),
-        os.path.join(ROOT, '__pycache__'),
-        os.path.join(ROOT, 'core', '__pycache__')
+        os.path.join(ROOT, 'tests', 'verification', 'logs')
     ]
 
     # Recursive cleaning for __pycache__
