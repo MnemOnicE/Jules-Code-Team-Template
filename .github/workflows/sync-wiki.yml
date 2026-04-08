@@ -22,6 +22,21 @@ jobs:
           path: wiki-repo
           token: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate API Documentation
+        run: |
+          pip install pydoc-markdown
+          cd main-repo
+          mkdir -p generated_docs
+
+          # Generate documentation for core engine and scripts
+          pydoc-markdown -p scripts -I template_source > generated_docs/Scripts_API.md || echo "Failed to generate scripts docs"
+          pydoc-markdown -p core -I template_source/.agents/engine > generated_docs/Engine_API.md || echo "Failed to generate engine docs"
+
       - name: Sync contents
         run: |
           # Ensure the source directory exists
@@ -38,6 +53,9 @@ jobs:
             --exclude='.git' \
             --exclude='.obsidian' \
             main-repo/template_source/docs/ wiki-repo/
+
+          # Also copy generated docs to the wiki
+          cp -r main-repo/generated_docs/*.md wiki-repo/ || echo "No generated docs to copy"
 
       - name: Commit and Push to Wiki
         run: |
