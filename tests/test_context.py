@@ -31,7 +31,7 @@ def mock_fs():
 # --- Tests for _find_root ---
 
 def test_find_root_logic():
-    """Test that _find_root correctly navigates up two levels from the file location."""
+    """Test that _find_root correctly navigates up three levels from the file's directory."""
     # We mock __file__ in the module where ContextLoader is defined
     mock_file_path = "/usr/local/src/project/src/core/context.py"
 
