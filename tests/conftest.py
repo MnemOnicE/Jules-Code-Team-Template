@@ -1,9 +1,11 @@
-import sys
-import os
 
-# Add the new engine location to sys.path
-engine_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "template_source", ".agents", "engine"))
-sys.path.insert(0, engine_path)
+import sys
+from unittest.mock import MagicMock
+# Patch modules for isolated test environments where dependencies might not be installed
+if 'yaml' not in sys.modules:
+    sys.modules['yaml'] = MagicMock()
+if 'dotenv' not in sys.modules:
+    sys.modules['dotenv'] = MagicMock()
 
 from unittest.mock import MagicMock
 import importlib.util

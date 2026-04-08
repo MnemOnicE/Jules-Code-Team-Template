@@ -31,7 +31,7 @@ def mock_fs():
 # --- Tests for _find_root ---
 
 def test_find_root_logic():
-    """Test that _find_root correctly navigates up two levels from the file location."""
+    """Test that _find_root correctly navigates up three levels from the file's directory."""
     # We mock __file__ in the module where ContextLoader is defined
     mock_file_path = "/usr/local/src/project/src/core/context.py"
 
@@ -48,8 +48,8 @@ def test_find_root_logic():
         with patch.object(ContextLoader, '_find_agents_dir', return_value="/mock/agents"):
             loader = ContextLoader()
             # Calculate what we expect based on the mocked file path
-            # /usr/local/src/project/src/core/context.py -> dirname -> .../src/core -> .. -> .../src -> .. -> .../project
-            assert loader.root_dir == os.path.abspath(os.path.join(os.path.dirname(mock_file_path), '..', '..'))
+                # /usr/local/src/project/src/core/context.py -> dirname -> .../src/core -> .. -> .../src -> .. -> .../project -> .. -> /usr/local/src
+            assert loader.root_dir == os.path.abspath(os.path.join(os.path.dirname(mock_file_path), '..', '..', '..'))
 
 # --- Tests for _find_agents_dir ---
 
@@ -129,7 +129,7 @@ def test_load_persona_success(mock_fs):
         assert content == expected_content
 
         # Verify path
-        expected_path = os.path.join(mock_agents_dir, 'config', 'defaults', f'{agent_name.lower()}.md')
+        expected_path = os.path.join(mock_agents_dir, 'config', f'{agent_name.lower()}.md')
         mock_fs['open'].assert_called_with(expected_path, 'r', encoding='utf-8')
 
 def test_load_persona_missing(mock_fs):
@@ -173,6 +173,43 @@ def test_load_persona_caching(mock_fs):
 
         # Verify open was called only once
         assert mock_fs['open'].call_count == 1
+
+@pytest.mark.parametrize(
+    "traversal_name, raises_error, expected_sanitized_name",
+    [
+        # The original test case
+        ("../../etc/passwd", False, "passwd"),
+        # Edge cases for basename
+        ("..", True, None),
+        (".", True, None),
+        ("", True, None),
+        # Other vectors
+        ("/etc/passwd", False, "passwd"),
+        ("safe_name", False, "safe_name"),
+    ]
+)
+def test_load_persona_path_traversal_prevention(
+    mock_fs, traversal_name, raises_error, expected_sanitized_name
+):
+    """Test that path traversal attempts in agent_name are sanitized or rejected."""
+    mock_agents_dir = "/mock/agents"
+
+    with patch.object(ContextLoader, '_find_root', return_value="/mock/root"), \
+         patch.object(ContextLoader, '_find_agents_dir', return_value=mock_agents_dir):
+
+        loader = ContextLoader()
+
+        if raises_error:
+            with pytest.raises(ValueError, match="Invalid agent name"):
+                loader.load_persona(traversal_name)
+        else:
+            mock_fs['exists'].return_value = True
+            mock_fs['open'].return_value.__enter__.return_value.read.return_value = "content"
+            loader.load_persona(traversal_name)
+            expected_path = os.path.join(
+                mock_agents_dir, 'config', f'{expected_sanitized_name}.md'
+            )
+            mock_fs['open'].assert_called_with(expected_path, 'r', encoding='utf-8')
 
 # --- Tests for load_tech_stack ---
 

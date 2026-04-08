@@ -1,2 +1,4 @@
 gitingest
 jsonschema
+python-dotenv
+PyYAML

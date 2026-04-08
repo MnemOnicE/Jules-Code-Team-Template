@@ -11,7 +11,7 @@ def timeout_handler(signum, frame):
 
 def test_infinite_loop():
     mock_bus = MagicMock()
-    executor = GraphExecutor(event_bus=mock_bus)
+    executor = GraphExecutor(bus=mock_bus)
 
     # Cyclic graph: node1 -> node2 -> node1
     graph = {

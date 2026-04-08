@@ -30,6 +30,45 @@ import re
 import sys
 import json
 import subprocess
+import importlib.util
+import argparse
+
+def check_dependencies():
+    required_packages = {
+        'yaml': 'PyYAML',
+        'dotenv': 'python-dotenv',
+        'gitingest': 'gitingest',
+        'jsonschema': 'jsonschema'
+    }
+    missing = []
+    for module_name, pip_name in required_packages.items():
+        try:
+            if importlib.util.find_spec(module_name) is None:
+                missing.append(pip_name)
+        except (ValueError, ImportError):
+            missing.append(pip_name)
+
+    if missing:
+        print("\n\033[1;33m⚠️ Missing Required Dependencies detected.\033[0m")
+        print("Attempting to auto-install the following packages:")
+        for pkg in missing:
+            print(f"  - {pkg}")
+        try:
+            subprocess.run([sys.executable, "-m", "pip", "install"] + missing, check=True)
+            print("\033[1;32m✅ Dependencies installed successfully.\033[0m\n")
+        except subprocess.CalledProcessError as e:
+            print("\n\033[1;31m❌ CRITICAL: Failed to auto-install dependencies.\033[0m")
+            print("Please ensure you have internet access and the correct permissions, or run:")
+            print("\033[1;36m  python3 -m venv venv")
+            print("  source venv/bin/activate  # Or venv\\Scripts\\activate on Windows")
+            print("  pip install " + " ".join(missing) + "\033[0m\n")
+            sys.exit(1)
+
+def validate_governance(value):
+    return value.lower() in ['democracy', 'dictator']
+
+def validate_risk(value):
+    return value.lower() in ['high', 'medium', 'low']
 
 def clear_screen():
     print("\033[H\033[J", end="")
@@ -37,12 +76,22 @@ def clear_screen():
 def print_header():
     print("🧠 \033[1mBrain: Initializing Onboarding Protocol...\033[0m")
     print("---------------------------------------------")
+    print("Welcome to Jules Code Team Template!")
+    print("This script will set up AI-powered coding assistants for your project.")
+    print("Answer a few questions, and we'll get you started.\n")
 
-def get_input(prompt, default=None):
-    if default:
-        user_input = input(f"{prompt} [{default}]: ")
-        return user_input if user_input.strip() else default
-    return input(f"{prompt}: ")
+def get_input(prompt, default=None, validator=None):
+    while True:
+        if default:
+            user_input = input(f"{prompt} [{default}]: ")
+            value = user_input if user_input.strip() else default
+        else:
+            value = input(f"{prompt}: ")
+        
+        if validator and not validator(value):
+            print("❌ Invalid input. Please try again.")
+            continue
+        return value
 
 def update_file(filepath, search_pattern, replace_value):
     if not os.path.exists(filepath):
@@ -53,7 +102,52 @@ def update_file(filepath, search_pattern, replace_value):
     with open(filepath, 'w') as f:
         f.write(new_content)
 
-def main():
+
+def install_git_hooks():
+    hooks_dir = os.path.join(os.getcwd(), '.git', 'hooks')
+    if not os.path.exists(hooks_dir):
+        return
+
+    template_hooks_dir = os.path.join(os.path.dirname(__file__), 'hooks_templates')
+    if not os.path.exists(template_hooks_dir):
+        # Fallback for when templates aren't available yet or are missing
+        return
+
+    for hook_name in ['pre-commit', 'pre-push']:
+        src_path = os.path.join(template_hooks_dir, hook_name)
+        dst_path = os.path.join(hooks_dir, hook_name)
+        if os.path.exists(src_path):
+            shutil.copy2(src_path, dst_path)
+            os.chmod(dst_path, 0o755)
+
+    print("Brain: Installed Git safeguards (pre-commit, pre-push).")
+
+
+def configure_git_remote(is_migration=False):
+
+    print("\nBrain: Securing Git Endpoints (Non-Negotiable)")
+
+    # Do not wipe the user's remote if this is an integration/migration!
+    if is_migration:
+        print("Brain: Integration mode detected. Skipping Git remote reconfiguration to protect existing repository.")
+        return
+
+    try:
+        subprocess.run(["git", "remote", "remove", "origin"], stderr=subprocess.DEVNULL)
+        print("✅ Removed template remote 'origin'.")
+    except Exception:
+        pass
+
+    new_remote = input("Brain: Enter your new Git repository URL (HTTPS or SSH), or leave blank to skip for now: ").strip()
+    if new_remote:
+        try:
+            subprocess.run(["git", "remote", "add", "origin", new_remote], check=True)
+            print(f"✅ Added new remote 'origin': {new_remote}")
+        except Exception as e:
+            print(f"⚠️ Failed to add remote: {e}")
+
+def main(dry_run=False, force=False):
+
     clear_screen()
     print_header()
 
@@ -67,10 +161,14 @@ def main():
         return
     # --- [END PATCH] ---------------------------
 
+    if dry_run:
+        print("🧪 DRY RUN MODE: Simulating initialization without making changes.")
+        print("This will show what would happen without actually modifying files.\n")
+
     # 0. Environment Scan (Migration Detection)
     # We check for files that are NOT part of the template mechanism
     # Added src, tests, etc. to ignored list so fresh clones don't trigger Migration Mode
-    ignored_items = {'.git', 'template_source', 'README.md', 'LICENSE', 'CONTRIBUTING.md', '.DS_Store', 'src', 'tests', 'requirements.txt', 'package.json', 'package-lock.json', '.agents'}
+    ignored_items = {'.git', 'template_source', 'README.md', 'LICENSE', 'CONTRIBUTING.md', '.DS_Store', 'tests', 'requirements.txt', 'package.json', 'package-lock.json', '.agents'}
     existing_items = set(os.listdir(ROOT)) - ignored_items
 
     IS_MIGRATION = len(existing_items) > 0
@@ -85,6 +183,7 @@ def main():
 
     # 1. The Interview
     print("Brain: I am waking up. I need to understand the mission parameters.\n")
+    print("💡 Tip: Press Enter to accept defaults in brackets []\n")
 
     if IS_MIGRATION:
         project_name = get_input("Brain: What is the name of this existing project?", os.path.basename(ROOT))
@@ -93,10 +192,34 @@ def main():
         project_name = get_input("Brain: First, what is the Project Name?", "MyNewProject")
         project_context = get_input("Brain: What are we building? (SaaS, Game, Library?)", "SaaS")
 
-    governance = get_input("Brain: Governance Mode? (Democracy/Dictator)", "Democracy")
-    risk = get_input("Brain: Risk Tolerance? (High/Medium/Low)", "Low")
+    print("\n🤖 Governance determines how decisions are made:")
+    print("   Democracy: All agents vote on changes")
+    print("   Dictator: Lead agent makes final decisions")
+    governance = get_input("Brain: Governance Mode? (Democracy/Dictator)", "Democracy", validate_governance)
+    
+    print("\n⚠️  Risk tolerance affects security and speed:")
+    print("   High: Fast but less secure")
+    print("   Medium: Balanced approach")
+    print("   Low: Secure but slower")
+    risk = get_input("Brain: Risk Tolerance? (High/Medium/Low)", "Low", validate_risk)
 
     print("\nBrain: Configuring squad parameters...")
+
+    print("\n📋 Configuration Summary:")
+    print(f"   Project: {project_name}")
+    print(f"   Context: {project_context}")
+    print(f"   Governance: {governance}")
+    print(f"   Risk Level: {risk}")
+    print(f"   Mode: {'INTEGRATION' if IS_MIGRATION else 'GENESIS'}")
+
+    confirm = get_input("\nBrain: Ready to proceed? (Y/n)", "Y")
+    if confirm.lower() not in ['y', 'yes', '']:
+        print("Brain: Initialization cancelled.")
+        return
+
+    if dry_run:
+        print("🧪 Would configure squad parameters...")
+        return  # Exit early for dry run
 
     AGENTS_DIR = os.path.join(TEMPLATE_DIR, ".agents")
     RULES_DIR = os.path.join(AGENTS_DIR, "rules")
@@ -174,13 +297,21 @@ def main():
 
         # Default Move (Overwrite if exists in Creation Mode, Skip/Merge in Migration?)
         # For .agents/ folder, we always want to install it.
+
+        # Deploy wrapper script to root
+        if item == "squad":
+            if os.path.exists(d): os.remove(d)
+            shutil.move(s, d)
+            os.chmod(d, 0o755)
+            continue
+
         if item == ".agents":
             if os.path.exists(d): shutil.rmtree(d) # Re-install agents
             shutil.move(s, d)
             continue
 
         # For src/ or other scaffold files, SKIP in Migration Mode
-        if IS_MIGRATION and item in ['tests', 'package.json', 'requirements.txt']:
+        if IS_MIGRATION and item in ['src', 'tests', 'package.json', 'requirements.txt']:
             print(f"Brain: Skipping scaffolding file '{item}' (preserving existing).")
             if os.path.isdir(s): shutil.rmtree(s)
             else: os.remove(s)
@@ -210,21 +341,6 @@ def main():
                 with open(root_readme, 'a') as f:
                     f.write("\n\n> 🧠 **This project is now managed by The Coding Squad.**\n> See `.agents/docs/USER_MANUAL.md` for commands.\n")
 
-
-
-    # 5. Generate Cross-Platform Wrappers (The Entrypoints)
-    print("Brain: Generating squad entrypoints...")
-    squad_unix = os.path.join(ROOT, "squad")
-    with open(squad_unix, "w") as f:
-        f.write("#!/usr/bin/env bash\n")
-        f.write('python3 .agents/engine/main.py "$@"\n')
-    os.chmod(squad_unix, 0o755)
-
-    squad_windows = os.path.join(ROOT, "squad.bat")
-    with open(squad_windows, "w") as f:
-        f.write("@echo off\n")
-        f.write("python .agents/engine/main.py %*\n")
-
     # 5. The Lift (Runtime Sanitization)
     print("Brain: Lifting Runtime Engine...")
 
@@ -235,8 +351,8 @@ def main():
         os.path.join(ROOT, 'tests', 'verification', '.hypothesis'),
         os.path.join(ROOT, '.hypothesis'),
         os.path.join(ROOT, '__pycache__'),
-        os.path.join(ROOT, 'src', '__pycache__'),
-        os.path.join(ROOT, 'src', 'core', '__pycache__')
+        os.path.join(ROOT, '__pycache__'),
+        os.path.join(ROOT, 'core', '__pycache__')
     ]
 
     # Recursive cleaning for __pycache__
@@ -262,7 +378,20 @@ def main():
     except OSError as e:
         print(f"Warning: Failed to cleanup template source: {e}")
 
-    # 7. Trigger Smart Ingest (The Awakening)
+    # 7. Git Endpoint Security and Hooks
+    configure_git_remote(IS_MIGRATION)
+    install_git_hooks()
+
+    # 7.5 LLM Configuration
+    # Safe import from core to survive template deletion
+
+
+    import sys
+    sys.path.insert(0, os.path.join(ROOT, ".agents", "engine"))
+    from core.llm_config import configure_llm_providers
+    configure_llm_providers()
+
+    # 8. Trigger Smart Ingest (The Awakening)
     print("Brain: Initializing memory systems...")
     ingest_script = os.path.join(ROOT, "scripts", "smart_ingest.py")
     if os.path.exists(ingest_script):
@@ -279,7 +408,42 @@ def main():
         print(f"ℹ️  Manual installed at: .agents/docs/USER_MANUAL.md")
     else:
         print(f"ℹ️  See README.md for instructions.")
-    print("\nRun '/standup' to begin.")
+    
+    print("\n🚀 Next Steps:")
+    print("   1. Run './squad' to start the coding assistant")
+    print("   2. Try '/standup' to begin your first session")
+    print("   3. Check .agents/config/ for agent configurations")
+    print("\n🆘 Need help? Run './squad --help' or check the documentation.")
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="🧠 Jules Code Team Template Initialization Script",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  python init_project.py                    # Interactive initialization
+  python init_project.py --dry-run         # Preview what would happen
+  python init_project.py --help            # Show this help
+
+Modes:
+  GENESIS: For new projects - creates full project structure
+  INTEGRATION: For existing projects - integrates agents without overwriting
+
+The script will automatically detect the appropriate mode based on existing files.
+        """
+    )
+    parser.add_argument(
+        '--dry-run',
+        action='store_true',
+        help='Simulate initialization without making changes'
+    )
+    parser.add_argument(
+        '--force',
+        action='store_true',
+        help='Force initialization even if already initialized'
+    )
+
+    args = parser.parse_args()
+
+    check_dependencies()
+    main(dry_run=args.dry_run, force=args.force)

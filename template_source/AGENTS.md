@@ -25,3 +25,84 @@ No task is complete until:
 *   **Context First**: Before writing code, read `/.context/` to understand the domain.
 *   **Plan Then Act**: Update `Project_Plan.md` or design docs before implementation.
 *   **Evidence Over Hallucination**: Use the "Proof" tools (Hypothesis, Formal Specs) to verify logic.
+
+## 5. System Monitoring & Observability
+
+The system includes comprehensive monitoring capabilities to ensure reliability and performance:
+
+### Real-time Metrics
+- **Session Tracking**: Monitor agent sessions and task completion
+- **LLM Usage**: Track API calls and response quality
+- **Error Detection**: Automatic error logging and alerting
+- **Performance Monitoring**: Execution time and resource usage
+
+### Health Checks
+Run `python scripts/health_check.py` to validate system integrity:
+- Directory structure verification
+- Dependency validation
+- Configuration integrity
+- Engine functionality tests
+
+### Status Monitoring
+Use `./squad --status` for real-time system status:
+- Current health assessment
+- Recent activity log
+- Performance metrics
+- Active session information
+
+## 6. Plugin Architecture
+
+The system supports extensible functionality through a plugin system:
+
+### Plugin Development
+Create plugins in `.agents/plugins/` with the following structure:
+```python
+PLUGIN_INFO = {
+    'name': 'Plugin Name',
+    'version': '1.0.0',
+    'description': 'Plugin functionality',
+    'author': 'Developer Name'
+}
+
+def on_session_start(task):
+    """Hook called when sessions begin"""
+    pass
+
+def on_graph_generated(graph_id):
+    """Hook called after graph generation"""
+    pass
+
+def on_session_complete(graph_id):
+    """Hook called when sessions complete"""
+    pass
+```
+
+### Available Hooks
+- `on_session_start(task)`: Session initialization
+- `on_graph_generated(graph_id)`: After execution graph creation
+- `on_session_complete(graph_id)`: Session completion
+- Custom hooks can be added by extending the plugin manager
+
+### Plugin Management
+- Automatic discovery and loading
+- Error isolation (plugin failures don't affect core system)
+- Hot reloading support
+- Version management and compatibility checking
+
+## 7. Maintenance & Operations
+
+### Backup & Recovery
+- **Automated Backups**: `python scripts/backup_restore.py backup`
+- **Selective Restore**: Restore specific configurations or full system
+- **Version Control**: Timestamped backups with compression
+
+### System Updates
+- **Update Checking**: `python scripts/update.py --check`
+- **Safe Updates**: Automatic backup before applying changes
+- **Rollback Support**: Restore from backup if update fails
+
+### Troubleshooting
+- **Diagnostic Tools**: Comprehensive health checking
+- **Log Analysis**: Session logs in `.agents/memory/`
+- **Performance Monitoring**: Real-time metrics and alerts
+- **Recovery Procedures**: Documented restoration processes

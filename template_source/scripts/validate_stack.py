@@ -20,8 +20,10 @@ import os
 import re
 import sys
 
+from path_utils import get_tech_stack_path
+
 # Configuration
-TECH_STACK_PATH = "template_source/.agents/config/TECH_STACK.md"
+TECH_STACK_PATH = get_tech_stack_path()
 SRC_DIR = "src"
 
 # Hardcoded mapping for discrepancies between Human Name and Package Name

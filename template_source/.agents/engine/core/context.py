@@ -25,9 +25,16 @@ class ContextLoader:
         self._system_context_cache = {}
 
     def _find_root(self):
-        # Assumes src/core/context.py
-        # Go up two levels: src/core/ -> src/ -> root
-        return os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+        from pathlib import Path
+        current_path = Path(__file__).resolve()
+
+        # Traverse up looking for a directory containing '.agents'
+        # Fallback to the current directory's parent if not found (mostly for dev/test)
+        for parent in current_path.parents:
+            if (parent / '.agents').exists() or (parent / 'template_source' / '.agents').exists():
+                return str(parent)
+
+        return str(current_path.parent.parent.parent.parent)
 
     def _find_agents_dir(self):
         # Try root .agents first (Production/Deployed)
@@ -48,6 +55,12 @@ class ContextLoader:
         # Normalize name and sanitize to prevent path traversal
         agent_name = os.path.basename(agent_name.lower())
         filepath = os.path.join(self.agents_dir, 'config', 'defaults', f'{agent_name}.md')
+        # Normalize and sanitize name
+        sanitized_name = os.path.basename(agent_name)
+        if sanitized_name in {'.', '..', ''}:
+            raise ValueError(f"Invalid agent name provided: '{agent_name}'")
+        agent_name = sanitized_name.lower()
+        filepath = os.path.join(self.agents_dir, 'config', f'{agent_name}.md')
 
         if not os.path.exists(filepath):
             raise FileNotFoundError(f"Persona file not found: {filepath}")

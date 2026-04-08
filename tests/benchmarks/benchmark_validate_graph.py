@@ -1,13 +1,3 @@
-import sys
-import os
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'template_source', '.agents', 'engine')))
-
-import sys
-import os
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'template_source', '.agents', 'engine')))
-
 import timeit
 import sys
 import os

@@ -22,7 +22,7 @@ from core.tools.graph_executor import GraphExecutor, SecurityError, MaxStepsExce
 @pytest.fixture
 def graph_executor():
     mock_bus = MagicMock()
-    return GraphExecutor(event_bus=mock_bus)
+    return GraphExecutor(bus=mock_bus)
 
 def test_validate_integrity_no_shield(graph_executor):
     """Test validation passes when intent_glyph does not contain shield."""
@@ -42,11 +42,11 @@ def test_dispatch_action_shizuku_active_injects_use_root(graph_executor):
             "args": {"arg1": "val1"}
         }
     }
-    context = {"shizuku_active": True}
+    graph_executor.system_context = {"shizuku_active": True}
 
     graph_executor.registry.invoke = MagicMock(return_value={"status": "success"})
 
-    graph_executor._dispatch_action(node, context)
+    graph_executor._dispatch_action(node, {})
 
     graph_executor.registry.invoke.assert_called_once_with(
         "test_tool",
@@ -84,10 +84,10 @@ def test_dispatch_action_preserves_existing_args(graph_executor):
             "args": {"other": "value"}
         }
     }
-    context = {"shizuku_active": True}
+    graph_executor.system_context = {"shizuku_active": True}
     graph_executor.registry.invoke = MagicMock(return_value={"status": "success"})
 
-    graph_executor._dispatch_action(node, context)
+    graph_executor._dispatch_action(node, {})
 
     graph_executor.registry.invoke.assert_called_once_with(
         "test_tool",
@@ -95,10 +95,10 @@ def test_dispatch_action_preserves_existing_args(graph_executor):
         use_root=True
     )
 
-def test_dispatch_action_shizuku_injection_side_effect_check(graph_executor):
+def test_dispatch_action_shizuku_injection_no_side_effect(graph_executor):
     """
-    Test documents that _dispatch_action currently modifies the input node's args.
-    If this behavior is unintended, it should be refactored to use a copy.
+    Test that _dispatch_action does NOT modify the input node's args.
+    It should use a copy for injection.
     """
     node = {
         "action": "run_tool",
@@ -112,8 +112,8 @@ def test_dispatch_action_shizuku_injection_side_effect_check(graph_executor):
 
     graph_executor._dispatch_action(node, context)
 
-    # Verify that the original node was modified
-    assert node["params"]["args"]["use_root"] is True
+    # Verify that the original node was NOT modified
+    assert "use_root" not in node["params"]["args"]
 
 
 def test_execute_exception_handling(graph_executor, caplog):
@@ -215,7 +215,7 @@ def test_execute_missing_node(graph_executor, caplog):
     with caplog.at_level("ERROR"):
         graph_executor.execute(graph)
 
-    assert "Node missing_node not found." in caplog.text
+    assert "[ERROR] Node 'missing_node' not found in graph." in caplog.text
 
 def test_execute_traversal_logic(graph_executor):
     """Test that on_success takes precedence over next."""
@@ -287,7 +287,7 @@ def test_execute_happy_path_logging(graph_executor, caplog):
     with caplog.at_level("INFO"):
         graph_executor.execute(graph)
 
-    assert "Executing Node: node1 [test_action]" in caplog.text
+    assert "[EXECUTING] Node node1: test_action" in caplog.text
 
 def test_validate_integrity_shield_with_scan(graph_executor):
     """Test validation passes when intent_glyph contains shield and security_scan is present."""
@@ -387,8 +387,6 @@ def test_execute_max_steps_exceeded(graph_executor, caplog):
     graph_executor.validate_integrity = MagicMock()
     graph_executor._dispatch_action = MagicMock(return_value={"status": "success"})
 
-
-    import pytest
     try:
         with pytest.raises(MaxStepsExceededError):
             graph_executor.execute(graph)
@@ -403,3 +401,140 @@ def test_execute_max_steps_exceeded(graph_executor, caplog):
 
     # Verify error was logged
     assert f"Max steps (5) exceeded. Potential infinite loop." in caplog.text
+
+def test_execute_retry_same_node(graph_executor, caplog):
+    """Test that the executor retries the same node when retry_on_fail is True and no on_failure node is present."""
+    graph = {
+        "intent_glyph": "🧪",
+        "entry_point": "node1",
+        "context_delta": {"retry_on_fail": True},
+        "nodes": {
+            "node1": {
+                "action": "run_tool",
+                "next": "END"
+            }
+        }
+    }
+
+    graph_executor.validate_integrity = MagicMock()
+    # Mock tool to fail
+    graph_executor._dispatch_action = MagicMock(return_value={"status": "error"})
+
+    with caplog.at_level("WARNING"):
+        graph_executor.execute(graph)
+
+    # Initial execution + 3 retries = 4 calls
+    assert graph_executor._dispatch_action.call_count == 4
+    assert "Triggering Self-Correction Loop..." in caplog.text
+    assert caplog.text.count("Triggering Self-Correction Loop...") == 3
+    assert "Max retries exceeded. Aborting." in caplog.text
+
+def test_execute_retry_with_repair_node(graph_executor, caplog):
+    """Test that the executor transitions to the on_failure node and increments retry_count."""
+    graph = {
+        "intent_glyph": "🧪",
+        "entry_point": "node1",
+        "context_delta": {"retry_on_fail": True},
+        "nodes": {
+            "node1": {
+                "action": "run_tool",
+                "on_failure": "repair_node",
+                "next": "END"
+            },
+            "repair_node": {
+                "action": "run_tool",
+                "next": "node1"
+            }
+        }
+    }
+
+    graph_executor.validate_integrity = MagicMock()
+    # First call to node1 fails, repair_node succeeds, second call to node1 succeeds
+    graph_executor._dispatch_action = MagicMock(side_effect=[
+        {"status": "error"},   # node1 (fail)
+        {"status": "success"}, # repair_node (success)
+        {"status": "success"}  # node1 (success)
+    ])
+
+    graph_executor.execute(graph)
+
+    assert graph_executor._dispatch_action.call_count == 3
+    assert "Triggering Self-Correction Loop..." in caplog.text
+    # Verify context was updated
+    context_passed_to_last_call = graph_executor._dispatch_action.call_args_list[-1].args[1]
+    assert context_passed_to_last_call["retry_count"] == 1
+
+def test_execute_max_retries_exceeded(graph_executor, caplog):
+    """Test that the executor stops after max retries."""
+    graph = {
+        "intent_glyph": "🧪",
+        "entry_point": "node1",
+        "context_delta": {"retry_on_fail": True},
+        "nodes": {
+            "node1": {
+                "action": "run_tool",
+                "next": "END"
+            }
+        }
+    }
+
+    graph_executor.validate_integrity = MagicMock()
+    graph_executor._dispatch_action = MagicMock(return_value={"status": "error"})
+
+    with caplog.at_level("ERROR"):
+        graph_executor.execute(graph)
+
+    assert graph_executor._dispatch_action.call_count == 4 # 1st try + 3 retries
+    assert "Max retries exceeded. Aborting." in caplog.text
+
+def test_execute_failure_without_retry(graph_executor, caplog):
+    """Test that the executor follows on_failure immediately if retry_on_fail is False."""
+    graph = {
+        "intent_glyph": "🧪",
+        "entry_point": "node1",
+        "context_delta": {"retry_on_fail": False},
+        "nodes": {
+            "node1": {
+                "action": "run_tool",
+                "on_failure": "fail_node",
+                "next": "END"
+            },
+            "fail_node": {
+                "action": "run_tool",
+                "next": "END"
+            }
+        }
+    }
+
+    graph_executor.validate_integrity = MagicMock()
+    graph_executor._dispatch_action = MagicMock(return_value={"status": "error"})
+
+    graph_executor.execute(graph)
+
+    # node1 fails, then fail_node (even if it also fails, it will just try to move to next/on_failure)
+    # Wait, the code says:
+    # else:
+    #     current_node_id = repair_node
+    #     if context.get("retry_on_fail"):
+    #          self.logger.error("Max retries exceeded. Aborting.")
+    #          break
+    # If retry_on_fail is False, it just sets current_node_id = repair_node and continues.
+    assert graph_executor._dispatch_action.call_count == 2
+    assert "Triggering Self-Correction Loop..." not in caplog.text
+
+
+def test_execute_raises_security_error_on_context_pollution(graph_executor):
+    """Test that execution halts if graph_state tries to overwrite system_context."""
+    graph_executor.system_context = {"shizuku_active": True}
+    graph = {
+        "entry_point": "node1",
+        "context_delta": {
+            "shizuku_active": True
+        },
+        "nodes": {
+            "node1": {"action": "terminate"}
+        }
+    }
+
+    with pytest.raises(SecurityError, match="Security Violation: Graph attempted to overwrite protected system context keys"):
+        graph_executor.execute(graph)

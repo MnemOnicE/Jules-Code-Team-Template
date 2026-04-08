@@ -1,15 +1,4 @@
 
-def run_with_catch(executor, graph):
-    try:
-        executor.execute(graph)
-    except MaxStepsExceededError:
-        pass
-
-import sys
-import os
-
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..', 'template_source', '.agents', 'engine')))
-
 import timeit
 import sys
 import os
@@ -32,8 +21,8 @@ if importlib.util.find_spec("jsonschema") is None:
     sys.modules["jsonschema"] = jsonschema_mock
     sys.modules["jsonschema.validators"] = MagicMock()
 
-from src.core.tools.graph_executor import GraphExecutor
-from src.core.bus import NexusBus
+from core.tools.graph_executor import GraphExecutor
+from core.bus import NexusBus
 
 class TimeoutException(BaseException):
     pass
@@ -63,7 +52,7 @@ def benchmark_linear_graph():
     }
 
     number = 1000
-    execution_time = timeit.timeit(lambda: run_with_catch(executor, graph), number=number)
+    execution_time = timeit.timeit(lambda: executor.execute(graph), number=number)
 
     print(f"Linear graph (10 nodes, {number} calls): {execution_time:.6f} seconds")
     print(f"Average time per call: {execution_time/number:.9f} seconds")
@@ -98,7 +87,7 @@ def benchmark_cyclic_graph():
     print("Benchmarking cyclic graph (should terminate via step limit)...")
     start_time = timeit.default_timer()
     try:
-        run_with_catch(executor, graph)
+        executor.execute(graph)
         end_time = timeit.default_timer()
         print(f"Cyclic graph terminated via step limit in {end_time - start_time:.6f} seconds")
     except TimeoutException:

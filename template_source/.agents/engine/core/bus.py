@@ -15,8 +15,9 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import json
-import threading
+import logging
 from pathlib import Path
+import threading
 import jsonschema
 
 class NexusBus:
@@ -25,6 +26,7 @@ class NexusBus:
     _lock = threading.Lock()
 
     def __init__(self):
+        self.logger = logging.getLogger(__name__)
         # Use class-level caching for schema and validator to improve performance
         if NexusBus._validator is None:
             with NexusBus._lock:
@@ -50,9 +52,24 @@ class NexusBus:
         """Validates the given graph data against the Sovereign Execution Graph schema."""
         try:
             self.validator.validate(instance=graph_data)
-            print("[VALIDATION] Graph structure is valid.")
+            self.logger.info("[VALIDATION] Graph structure is valid.")
             return True
         except jsonschema.ValidationError as e:
-            print(f"[VALIDATION ERROR] {e.message}")
+            self.logger.error("[VALIDATION ERROR] Graph validation failed", exc_info=True)
             raise e
 
+    def execute(self, graph, registry=None):
+        """
+        Legacy execution method for NexusBus.
+        Delegates to GraphExecutor for traversal.
+        Used by existing tests in tests/test_bus.py.
+
+        Args:
+            graph (dict): The execution graph to process.
+            registry (ToolRegistry, optional): A custom tool registry to use for execution.
+        """
+        from core.tools.graph_executor import GraphExecutor
+        executor = GraphExecutor(self)
+        if registry:
+            executor.registry = registry
+        executor.execute(graph)

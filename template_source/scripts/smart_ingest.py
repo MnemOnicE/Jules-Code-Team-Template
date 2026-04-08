@@ -22,7 +22,12 @@ from datetime import datetime
 import shutil
 import sys
 
+
 INGEST_DIR = "ingests"
+DIGEST_PREFIX = "digest_"
+DELTA_PREFIX = "delta_"
+INGEST_FILE_SUFFIX = ".md"
+
 
 def get_commit_count():
     try:
@@ -43,10 +48,10 @@ def run_ingest(is_delta=False):
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
     if is_delta:
-        filename = f"delta_{timestamp}.txt"
+        filename = f"delta_{timestamp}.md"
         print(f"Running Delta Ingest (Tree + Diff) -> {os.path.join(INGEST_DIR, filename)}")
     else:
-        filename = f"digest_{timestamp}.txt"
+        filename = f"digest_{timestamp}.md"
         print(f"Running Full Ingest (gitingest) -> {os.path.join(INGEST_DIR, filename)}")
 
     filepath = os.path.join(INGEST_DIR, filename)
@@ -61,7 +66,7 @@ def run_ingest(is_delta=False):
             # Generate Tree (Lightweight)
             for root, dirs, files in os.walk("."):
                 # Filter ignore dirs
-                dirs[:] = [d for d in dirs if d not in ['.git', 'node_modules', 'ingests', '__pycache__', '.pytest_cache']]
+                dirs[:] = [d for d in dirs if d not in {'.git', 'node_modules', INGEST_DIR, '__pycache__', '.pytest_cache'}]
 
                 path = Path(root)
                 level = 0 if path == Path('.') else len(path.parts)
@@ -94,8 +99,21 @@ def run_ingest(is_delta=False):
     prune_ingests()
 
 def prune_ingests():
+    digests = []
+    deltas = []
+    try:
+        with os.scandir(INGEST_DIR) as it:
+            for entry in it:
+                if entry.is_file():
+                    name = entry.name
+                    if name.startswith(DIGEST_PREFIX) and name.endswith(INGEST_FILE_SUFFIX):
+                        digests.append(entry.path)
+                    elif name.startswith(DELTA_PREFIX) and name.endswith(INGEST_FILE_SUFFIX):
+                        deltas.append(entry.path)
+    except FileNotFoundError:
+        return
+
     # Prune Golden Snapshots (Keep last 3)
-    digests = glob.glob(os.path.join(INGEST_DIR, "digest_*.txt"))
     digests.sort()
     if len(digests) > 3:
         to_delete = digests[:-3]
@@ -104,7 +122,6 @@ def prune_ingests():
             os.remove(f)
 
     # Prune Deltas (Keep last 1)
-    deltas = glob.glob(os.path.join(INGEST_DIR, "delta_*.txt"))
     deltas.sort()
     if len(deltas) > 1:
         to_delete = deltas[:-1]
@@ -121,7 +138,7 @@ def main():
     commit_count = get_commit_count()
 
     # Check if ingest directory is empty (of digests)
-    has_digests = glob.glob(os.path.join(INGEST_DIR, "digest_*.txt"))
+    has_digests = glob.glob(os.path.join(INGEST_DIR, "digest_*.md"))
     is_empty = not os.path.exists(INGEST_DIR) or not has_digests
 
     print(f"Commit count: {commit_count}")
