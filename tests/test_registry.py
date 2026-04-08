@@ -87,7 +87,7 @@ def test_concurrency(registry):
     for t in threads:
         t.join()
 
-    assert len(registry._tools) == 100
+    assert len(registry._tools) == 105
     for i in range(100):
         tool_name = f"tool_{i}"
         assert tool_name in registry._tools

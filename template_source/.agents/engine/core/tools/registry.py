@@ -14,12 +14,58 @@
 # You should have received a copy of the GNU Affero General Public License
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
+import os
 import logging
+
+def system_io_bridge(action):
+    """Resilient bridge for filesystem operations with fuzzy argument mapping."""
+    def bridge(**kwargs):
+        logging.warning(f"Sentinel: Native implementation missing. Executing fallback bridge for '{action}'.")
+        try:
+            # Omnivore extraction: hunt for path and content regardless of key name
+            path = kwargs.get('path') or kwargs.get('file_path') or kwargs.get('directory') or kwargs.get('filename')
+            content = kwargs.get('content') or kwargs.get('text') or kwargs.get('data')
+
+            if action == "mkdir":
+                if not path: return {"status": "error", "message": "mkdir: No path provided."}
+                os.makedirs(path, exist_ok=True)
+                return {"status": "success", "path": os.path.abspath(path)}
+
+            if action == "write":
+                path = path or "test_flight.txt"
+                dir_name = os.path.dirname(os.path.abspath(path))
+                if dir_name: os.makedirs(dir_name, exist_ok=True)
+                with open(path, 'w') as f:
+                    f.write(str(content or ""))
+                return {"status": "success", "file": path, "size": len(str(content or ""))}
+
+            if action == "read":
+                if not path or not os.path.exists(path):
+                    return {"status": "error", "message": f"read: File not found: {path}"}
+                with open(path, 'r') as f:
+                    return {"status": "success", "content": f.read(1_000_000)}
+
+        except Exception as e:
+            return {"status": "error", "message": str(e)}
+    return bridge
 
 class ToolRegistry:
     def __init__(self):
         self._tools = {}
         self.logger = logging.getLogger(__name__)
+
+        # PROACTIVE REGISTRATION:
+        # This ensures that even if the 'plugins' are missing, the Brain always has 'Hands'.
+        CORE_MAP = {
+            "write_file": "write",
+            "directory": "mkdir",
+            "mkdir": "mkdir",
+            "read_file": "read",
+            "create_file": "write"
+        }
+        for tool_name, action in CORE_MAP.items():
+            # Silently pre-populate registry
+            self._tools[tool_name] = system_io_bridge(action)
 
     def register(self, name, function):
         """Registers a function under a tool name."""

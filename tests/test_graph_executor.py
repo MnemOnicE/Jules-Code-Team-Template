@@ -22,7 +22,7 @@ from core.tools.graph_executor import GraphExecutor, SecurityError, MaxStepsExce
 @pytest.fixture
 def graph_executor():
     mock_bus = MagicMock()
-    return GraphExecutor(event_bus=mock_bus)
+    return GraphExecutor(bus=mock_bus)
 
 def test_validate_integrity_no_shield(graph_executor):
     """Test validation passes when intent_glyph does not contain shield."""
@@ -42,11 +42,11 @@ def test_dispatch_action_shizuku_active_injects_use_root(graph_executor):
             "args": {"arg1": "val1"}
         }
     }
-    context = {"shizuku_active": True}
+    graph_executor.system_context = {"shizuku_active": True}
 
     graph_executor.registry.invoke = MagicMock(return_value={"status": "success"})
 
-    graph_executor._dispatch_action(node, context)
+    graph_executor._dispatch_action(node, {})
 
     graph_executor.registry.invoke.assert_called_once_with(
         "test_tool",
@@ -84,10 +84,10 @@ def test_dispatch_action_preserves_existing_args(graph_executor):
             "args": {"other": "value"}
         }
     }
-    context = {"shizuku_active": True}
+    graph_executor.system_context = {"shizuku_active": True}
     graph_executor.registry.invoke = MagicMock(return_value={"status": "success"})
 
-    graph_executor._dispatch_action(node, context)
+    graph_executor._dispatch_action(node, {})
 
     graph_executor.registry.invoke.assert_called_once_with(
         "test_tool",
@@ -521,3 +521,20 @@ def test_execute_failure_without_retry(graph_executor, caplog):
     # If retry_on_fail is False, it just sets current_node_id = repair_node and continues.
     assert graph_executor._dispatch_action.call_count == 2
     assert "Triggering Self-Correction Loop..." not in caplog.text
+
+
+def test_execute_raises_security_error_on_context_pollution(graph_executor):
+    """Test that execution halts if graph_state tries to overwrite system_context."""
+    graph_executor.system_context = {"shizuku_active": True}
+    graph = {
+        "entry_point": "node1",
+        "context_delta": {
+            "shizuku_active": True
+        },
+        "nodes": {
+            "node1": {"action": "terminate"}
+        }
+    }
+
+    with pytest.raises(SecurityError, match="Security Violation: Graph attempted to overwrite protected system context keys"):
+        graph_executor.execute(graph)

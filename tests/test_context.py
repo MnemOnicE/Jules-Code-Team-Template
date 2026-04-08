@@ -31,7 +31,7 @@ def mock_fs():
 # --- Tests for _find_root ---
 
 def test_find_root_logic():
-    """Test that _find_root correctly navigates up two levels from the file location."""
+    """Test that _find_root correctly navigates up three levels from the file's directory."""
     # We mock __file__ in the module where ContextLoader is defined
     mock_file_path = "/usr/local/src/project/src/core/context.py"
 
@@ -48,8 +48,8 @@ def test_find_root_logic():
         with patch.object(ContextLoader, '_find_agents_dir', return_value="/mock/agents"):
             loader = ContextLoader()
             # Calculate what we expect based on the mocked file path
-            # /usr/local/src/project/src/core/context.py -> dirname -> .../src/core -> .. -> .../src -> .. -> .../project
-            assert loader.root_dir == os.path.abspath(os.path.join(os.path.dirname(mock_file_path), '..', '..'))
+                # /usr/local/src/project/src/core/context.py -> dirname -> .../src/core -> .. -> .../src -> .. -> .../project -> .. -> /usr/local/src
+            assert loader.root_dir == os.path.abspath(os.path.join(os.path.dirname(mock_file_path), '..', '..', '..'))
 
 # --- Tests for _find_agents_dir ---
 

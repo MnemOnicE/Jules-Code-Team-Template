@@ -5,7 +5,21 @@ from dotenv import load_dotenv, set_key
 class LLMConfigManager:
     def __init__(self, root_dir=None):
         if root_dir is None:
-            self.root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
+            # Dynamically resolve root dir (find .git or .agents)
+            current_dir = os.path.abspath(os.path.dirname(__file__))
+            found_root = None
+
+            while current_dir != os.path.dirname(current_dir):
+                if os.path.exists(os.path.join(current_dir, '.agents')) or os.path.exists(os.path.join(current_dir, '.git')):
+                    found_root = current_dir
+                    break
+                current_dir = os.path.dirname(current_dir)
+
+            if found_root:
+                self.root_dir = found_root
+            else:
+                # Fallback to relative path if not found
+                self.root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
         else:
             self.root_dir = root_dir
 
@@ -86,7 +100,10 @@ def configure_llm_providers():
             mgr = LLMConfigManager()
             mgr.set_api_key('OPENAI_API_KEY', api_key)
         print("Installing openai sdk...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "openai"], check=False)
+        try:
+            subprocess.run([sys.executable, "-m", "pip", "install", "openai"], check=True)
+        except subprocess.CalledProcessError:
+            print("❌ Failed to install openai. Please install it manually.")
 
     if get_input("Use Gemini?", "n").lower() == 'y':
         providers.append('gemini')
@@ -96,7 +113,10 @@ def configure_llm_providers():
             mgr = LLMConfigManager()
             mgr.set_api_key('GEMINI_API_KEY', api_key)
         print("Installing google-genai sdk...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "google-genai"], check=False)
+        try:
+            subprocess.run([sys.executable, "-m", "pip", "install", "google-genai"], check=True)
+        except subprocess.CalledProcessError:
+            print("❌ Failed to install google-genai. Please install it manually.")
 
     if get_input("Use Jules API?", "n").lower() == 'y':
         providers.append('jules')
@@ -112,7 +132,10 @@ def configure_llm_providers():
         mgr = LLMConfigManager()
         mgr.set_api_key('OLLAMA_MODEL', model)
         print("Installing ollama sdk...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "ollama"], check=False)
+        try:
+            subprocess.run([sys.executable, "-m", "pip", "install", "ollama"], check=True)
+        except subprocess.CalledProcessError:
+            print("❌ Failed to install ollama. Please install it manually.")
 
     if get_input("Use Llama.cpp (Local)?", "n").lower() == 'y':
         providers.append('llamacpp')
@@ -120,7 +143,10 @@ def configure_llm_providers():
         mgr = LLMConfigManager()
         mgr.set_api_key('LLAMACPP_MODEL_PATH', model_path)
         print("Installing llama-cpp-python sdk...")
-        subprocess.run([sys.executable, "-m", "pip", "install", "llama-cpp-python"], check=False)
+        try:
+            subprocess.run([sys.executable, "-m", "pip", "install", "llama-cpp-python"], check=True)
+        except subprocess.CalledProcessError:
+            print("❌ Failed to install llama-cpp-python. Please install it manually.")
 
     if providers:
         print(f"\nBrain: Generating llm_config.yaml for active provider...")

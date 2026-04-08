@@ -19,8 +19,6 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: 'package-lock.json'
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -30,11 +28,11 @@ jobs:
           cache-dependency-path: |
             requirements.txt
             tests/verification/requirements.txt
-          cache-hit-var-dir: 'PIP_CACHE_DIR'
 
       - name: Install Node Dependencies
+        working-directory: ./template_source
         run: |
-          npm ci --prefer-offline --no-audit
+          npm install --prefer-offline --no-audit
 
       - name: Install Python Dependencies
         run: |
@@ -48,6 +46,7 @@ jobs:
         continue-on-error: false
 
       - name: Architectural Complexity Check
+        working-directory: ./template_source
         run: npm run check:complexity
 
       - name: Property-Based Verification

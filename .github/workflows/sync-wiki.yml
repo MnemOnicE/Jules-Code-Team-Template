@@ -1,0 +1,77 @@
+name: Sync local docs to Wiki
+
+on:
+  workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          path: main-repo
+
+      - name: Checkout Wiki Repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki-repo
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Generate API Documentation
+        run: |
+          pip install pydoc-markdown
+          cd main-repo
+          mkdir -p generated_docs
+
+          # Generate documentation for core engine and scripts
+          pydoc-markdown -p scripts -I template_source > generated_docs/Scripts_API.md || echo "Failed to generate scripts docs"
+          pydoc-markdown -p core -I template_source/.agents/engine > generated_docs/Engine_API.md || echo "Failed to generate engine docs"
+
+      - name: Sync contents
+        run: |
+          # Ensure the source directory exists
+          if [ ! -d "main-repo/template_source/docs/" ]; then
+            echo "Error: Directory main-repo/template_source/docs/ does not exist."
+            exit 1
+          fi
+
+          # Sync contents from template_source/docs/ to the wiki repository
+          # --delete ensures strict mirroring (deletes files in wiki-repo that are removed from docs/)
+          # --exclude='.git' prevents overwriting the git configuration of the wiki-repo
+          # --exclude='.obsidian' ignores Obsidian metadata/settings folder
+          rsync -av --delete \
+            --exclude='.git' \
+            --exclude='.obsidian' \
+            main-repo/template_source/docs/ wiki-repo/
+
+          # Also copy generated docs to the wiki
+          cp -r main-repo/generated_docs/*.md wiki-repo/ || echo "No generated docs to copy"
+
+      - name: Commit and Push to Wiki
+        run: |
+          cd wiki-repo
+
+          # Check for changes
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes to sync."
+            exit 0
+          fi
+
+          # Setup git config
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Stage, commit and push
+          git add .
+          git commit -m "Auto-sync from main repository docs"
+          git push origin master
