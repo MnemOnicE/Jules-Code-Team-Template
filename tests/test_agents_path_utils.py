@@ -52,7 +52,7 @@ def test_get_repo_root_finds_git(tmp_path):
     root.mkdir()
     (root / ".git").mkdir()
 
-    assert path_utils.get_repo_root(str(root)) == str(root)
+    assert path_utils.get_repo_root(str(root)) == str(root.resolve())
 
 
 def test_get_repo_root_finds_agents(tmp_path):
