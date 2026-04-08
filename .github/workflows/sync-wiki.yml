@@ -1,0 +1,59 @@
+name: Sync local docs to Wiki
+
+on:
+  workflow_dispatch: # Allows manual triggering from the GitHub Actions tab
+
+permissions:
+  contents: write
+
+jobs:
+  sync-wiki:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          path: main-repo
+
+      - name: Checkout Wiki Repository
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki-repo
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Sync contents
+        run: |
+          # Ensure the source directory exists
+          if [ ! -d "main-repo/template_source/docs/" ]; then
+            echo "Error: Directory main-repo/template_source/docs/ does not exist."
+            exit 1
+          fi
+
+          # Sync contents from template_source/docs/ to the wiki repository
+          # --delete ensures strict mirroring (deletes files in wiki-repo that are removed from docs/)
+          # --exclude='.git' prevents overwriting the git configuration of the wiki-repo
+          # --exclude='.obsidian' ignores Obsidian metadata/settings folder
+          rsync -av --delete \
+            --exclude='.git' \
+            --exclude='.obsidian' \
+            main-repo/template_source/docs/ wiki-repo/
+
+      - name: Commit and Push to Wiki
+        run: |
+          cd wiki-repo
+
+          # Check for changes
+          if [ -z "$(git status --porcelain)" ]; then
+            echo "No changes to sync."
+            exit 0
+          fi
+
+          # Setup git config
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+          # Stage, commit and push
+          git add .
+          git commit -m "Auto-sync from main repository docs"
+          git push origin master
