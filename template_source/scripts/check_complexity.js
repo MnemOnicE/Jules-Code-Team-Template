@@ -33,7 +33,7 @@ function getAllMermaidFiles(dir, fileList = []) {
         const stat = fs.statSync(filePath);
 
         if (stat.isDirectory()) {
-            if (file !== 'node_modules' && file !== '.git' && file !== 'ingests') {
+            if (file !== 'node_modules' && file !== '.git' && file !== 'ingests' && file !== 'tests' && file !== 'mocks') {
                 getAllMermaidFiles(filePath, fileList);
             }
         } else {

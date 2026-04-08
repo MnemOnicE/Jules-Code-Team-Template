@@ -56,7 +56,7 @@ def test_update_file_regex_groups(tmp_path):
 def test_dry_run_mode(mock_print_header, mock_clear_screen, mock_input):
     """Test dry run mode exits early without making changes."""
     # Mock user inputs
-    mock_input.side_effect = ['TestProject', 'SaaS', 'Democracy', 'Low']
+    mock_input.side_effect = ['TestProject', 'SaaS', 'Democracy', 'Low', 'Y']
     
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create minimal template structure
@@ -129,7 +129,8 @@ def test_integration_genesis_mode(mock_subprocess, mock_install_hooks, mock_conf
         
         try:
             from init_project import main
-            main()
+            with patch('core.llm_config.configure_llm_providers'):
+                main()
             
             # Verify initialization
             assert os.path.exists('.agents')  # Agents moved
@@ -185,7 +186,8 @@ def test_integration_migration_mode(mock_print_header, mock_clear_screen, mock_i
         
         try:
             from init_project import main
-            main()
+            with patch('core.llm_config.configure_llm_providers'):
+                main()
             
             # Verify migration
             assert os.path.exists('.agents')  # Agents installed
