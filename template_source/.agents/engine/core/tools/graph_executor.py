@@ -18,6 +18,7 @@ import logging
 # Note: Ensure core.bus is implemented as requested previously
 from core.bus import NexusBus
 from core.tools.registry import ToolRegistry
+from core.plugin_manager import plugin_manager
 
 class SecurityError(Exception):
     pass
@@ -32,12 +33,17 @@ class GraphExecutor:
     """
     MAX_STEPS = 1000
 
-    def __init__(self, event_bus: NexusBus, registry=None, system_context=None):
-        self.bus = event_bus
+
+    def __init__(self, bus, system_context=None, registry=None, privileged_tools=None):
+        self.bus = bus
+        self.context = system_context
         from core.tools.registry import default_registry
         self.registry = registry if registry is not None else default_registry
+        import logging
         self.logger = logging.getLogger(__name__)
         self.system_context = system_context or {}
+        self.privileged_tools = privileged_tools if privileged_tools is not None else {"execute_command", "write_file", "update_memory", "delete_file"}
+
 
     def validate_integrity(self, graph: dict):
         """
@@ -86,9 +92,22 @@ class GraphExecutor:
 
             self.logger.info(f"[EXECUTING] Node {current_node_id}: {node['action']}")
 
+            # Telemetry: Node Start
+            plugin_manager.call_plugin_hook('on_node_start', {'id': current_node_id, 'data': node})
+
+            # Telemetry: CoT Thought
+            thought = node.get("reasoning") or node.get("thought") or node.get("description")
+            if thought:
+                plugin_manager.call_plugin_hook('on_cot_thought', thought)
+            else:
+                intent = node.get('action', 'unknown')
+                plugin_manager.call_plugin_hook('on_cot_thought', f"Evaluating node {current_node_id}: {intent}")
+
             # Execute Action via Registry
             try:
                 result = self._dispatch_action(node, graph_state)
+                # Telemetry: Node Complete (Success)
+                plugin_manager.call_plugin_hook('on_node_complete', {'id': current_node_id, 'status': 'success', 'error': None})
 
                 # Determine transition
                 prev_id = current_node_id
@@ -118,6 +137,7 @@ class GraphExecutor:
 
             except Exception as e:
                 self.logger.critical(f"Graph Crash: {e}")
+                plugin_manager.call_plugin_hook('on_node_complete', {'id': current_node_id, 'status': 'failed', 'error': str(e)})
                 break
 
     def _dispatch_action(self, node, graph_state):
@@ -135,7 +155,9 @@ class GraphExecutor:
                 self.logger.error("Missing 'tool' in 'params' for 'run_tool' action.")
                 return {"status": "error", "message": "Missing tool name for run_tool action"}
 
-            return self.registry.invoke(tool_name, **args)
+            result = self.registry.invoke(tool_name, **args)
+            plugin_manager.call_plugin_hook('on_tool_invoke', {'tool': tool_name, 'args': args, 'result': result})
+            return result
 
         if action == 'terminate':
             self.logger.info("[NEXUS] Terminate action reached. Stopping.")

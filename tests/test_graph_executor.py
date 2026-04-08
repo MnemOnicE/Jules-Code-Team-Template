@@ -22,7 +22,7 @@ from core.tools.graph_executor import GraphExecutor, SecurityError, MaxStepsExce
 @pytest.fixture
 def graph_executor():
     mock_bus = MagicMock()
-    return GraphExecutor(event_bus=mock_bus)
+    return GraphExecutor(bus=mock_bus)
 
 def test_validate_integrity_no_shield(graph_executor):
     """Test validation passes when intent_glyph does not contain shield."""

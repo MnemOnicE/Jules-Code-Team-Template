@@ -1,9 +1,32 @@
 #!/bin/sh
+# Sentinel Pre-Push Hook: Precision Fork Protection
+# Blocks pushes to the original upstream repository.
+# Allows pushes to legitimate personal/team forks and custom origins.
+#
+# Configuration:
+#   Set PROTECTED_ORIGIN environment variable to the upstream URL you want to protect.
+#   Example: export PROTECTED_ORIGIN="https://github.com/MnemOnicE/Jules-Code-Team-Template.git"
+
 remote="$1"
 url="$2"
-echo "🛡️ Sentinel Check: Verifying push to $url"
-if echo "$url" | grep -qi "template"; then
-  echo "🚨 ERROR: Push to a repository containing 'template' in the URL is blocked!"
+
+# Get the protected origin from environment, or use default
+PROTECTED_ORIGIN="${PROTECTED_ORIGIN:-https://github.com/MnemOnicE/Jules-Code-Team-Template.git}"
+
+# Normalize URLs for comparison (remove trailing .git for consistency)
+normalized_url="${url%\.git}"
+normalized_protected="${PROTECTED_ORIGIN%\.git}"
+
+printf "🛡️  Sentinel Check: Verifying push to %s (remote: %s)\\n" "$normalized_url" "$remote"
+
+# Exact string matching: only block if URL exactly matches the protected origin
+if [ "$normalized_url" = "$normalized_protected" ]; then
+  printf "🚨 ERROR: Direct push to protected origin '%s' is blocked!\\n" "$PROTECTED_ORIGIN"
+  printf "   To push to your fork, change the remote URL in your git config.\\n"
+  printf "   Example: git remote set-url origin <your-fork-url>\\n"
   exit 1
 fi
+
+# Allow the push
+printf "✅ Push allowed to %s\\n" "$normalized_url"
 exit 0

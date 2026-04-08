@@ -19,23 +19,20 @@ import json
 import os
 import sys
 
+from path_utils import get_session_json_path
+
+
 def sign_state():
     """
     Calculates a SHA-256 hash of the session.json file.
     This creates a cryptographic anchor for the current state, preventing
     drift between the machine state and the human narrative.
     """
-    # Define possible paths for session.json relative to repo root
-    possible_paths = [
-        ".agents/memory/session.json",
-        "template_source/.agents/memory/session.json"
-    ]
-
-    target_file = None
-    for path in possible_paths:
-        if os.path.exists(path):
-            target_file = path
-            break
+    try:
+        target_file = get_session_json_path()
+    except FileNotFoundError:
+        print("ERROR: session.json not found. State cannot be signed.")
+        sys.exit(1)
 
     if not target_file:
         print("ERROR: session.json not found. State cannot be signed.")

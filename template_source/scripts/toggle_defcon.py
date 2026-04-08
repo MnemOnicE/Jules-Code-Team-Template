@@ -20,8 +20,10 @@ import argparse
 import os
 import sys
 
-BOOM_PATH = "template_source/.agents/config/defaults/boom.md"
-BOOM_DISABLED_PATH = "template_source/.agents/config/defaults/boom.disabled"
+from path_utils import get_agent_config_path
+
+BOOM_PATH = get_agent_config_path('defaults/boom.md')
+BOOM_DISABLED_PATH = get_agent_config_path('defaults/boom.disabled')
 
 def main():
     parser = argparse.ArgumentParser(description="Defcon 1 Kill Switch for Boom Persona")
