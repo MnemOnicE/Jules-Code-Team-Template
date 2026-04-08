@@ -49,7 +49,7 @@ class LLMProvider(ABC):
         if isinstance(data, dict):
             sanitized = {}
             for k, v in data.items():
-                if k.lower() in ['api_key', 'key', 'token', 'secret', 'password', 'authorization', 'auth', 'credential', 'secret_key']:
+                if k.lower() in ['api_key', 'key', 'token', 'secret']:
                     sanitized[k] = '***REDACTED***'
                 elif isinstance(v, (dict, list)):
                     sanitized[k] = self._sanitize_payload(v)
@@ -74,12 +74,8 @@ class LLMProvider(ABC):
         if self.raw_return:
             # Attempt to stringify if not string
             if not isinstance(response, str):
-                try:
-                    response_dict = json.loads(json.dumps(response, default=str))
-                    sanitized_response = self._sanitize_payload(response_dict)
-                    response = json.dumps(sanitized_response, indent=2, default=str)
-                except Exception:
-                    response = str(response)
+                sanitized_response = self._sanitize_payload(response)
+                response = json.dumps(sanitized_response, indent=2, default=str)
             else:
                 response = self._sanitize_payload(response)
             logger.info(f"[RAW RETURN]: {response}")
