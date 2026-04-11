@@ -20,6 +20,7 @@ def _is_within_directory(directory, target):
 
 
 def _safe_extract(tar, path='.', members=None):
+    # Manual validation for all versions to ensure absolute paths and symlinks are rejected
     for member in tar.getmembers():
         member_path = os.path.join(path, member.name)
 
@@ -29,7 +30,11 @@ def _safe_extract(tar, path='.', members=None):
         if member.issym() or member.islnk():
             raise Exception(f"Unsupported symlink in archive: {member.name}")
 
-    tar.extractall(path, members)
+    # Use the built-in safe extraction filter if available (Python 3.12+) for additional depth-defense
+    if hasattr(tarfile, 'data_filter'):
+        tar.extractall(path, members, filter='data')
+    else:
+        tar.extractall(path, members)
 
 
 def create_backup(output_path=None):
