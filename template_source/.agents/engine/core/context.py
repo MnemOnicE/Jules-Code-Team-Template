@@ -52,6 +52,9 @@ class ContextLoader:
     @lru_cache(maxsize=128)
     def load_persona(self, agent_name):
         """Reads the corresponding .md file for the agent."""
+        # Normalize name and sanitize to prevent path traversal
+        agent_name = os.path.basename(agent_name.lower())
+        filepath = os.path.join(self.agents_dir, 'config', 'defaults', f'{agent_name}.md')
         # Normalize and sanitize name
         sanitized_name = os.path.basename(agent_name)
         if sanitized_name in {'.', '..', ''}:
