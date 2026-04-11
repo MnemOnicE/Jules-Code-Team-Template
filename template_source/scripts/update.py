@@ -52,7 +52,7 @@ def get_latest_version():
     try:
         req = urllib.request.Request(url, headers={'User-Agent': 'Python/urllib'})
         with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read().decode('utf-8'))
+            data = json.loads(response.read())
             return data.get('tag_name')
     except Exception:
         return None
