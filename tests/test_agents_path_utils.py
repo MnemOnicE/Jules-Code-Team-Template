@@ -60,7 +60,7 @@ def test_get_repo_root_finds_agents(tmp_path):
     root.mkdir()
     (root / ".agents").mkdir()
 
-    assert path_utils.get_repo_root(str(root)) == str(root)
+    assert path_utils.get_repo_root(str(root)) == str(root.resolve())
 
 
 def test_get_repo_root_finds_template_source_agents(tmp_path):
