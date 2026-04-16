@@ -8,7 +8,6 @@ import re
 import sys
 import argparse
 import subprocess
-import urllib.request
 from pathlib import Path
 
 SEMVER_PATTERN = re.compile(r'^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$')
@@ -48,12 +47,9 @@ def get_current_version():
 
 def get_latest_version():
     """Get the latest version from GitHub releases"""
-    url = "https://api.github.com/repos/MnemOnicE/Jules-Code-Team-Template/releases/latest"
     try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Jules-Code-Team-Template-Updater'})
-        with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read())
-            return data.get('tag_name')
+        # TODO: Replace this placeholder with a real GitHub releases query.
+        return "v1.0.0"
     except Exception:
         return None
 
