@@ -50,9 +50,9 @@ def get_latest_version():
     """Get the latest version from GitHub releases"""
     url = "https://api.github.com/repos/MnemOnicE/Jules-Code-Team-Template/releases/latest"
     try:
-        req = urllib.request.Request(url, headers={'User-Agent': 'Jules-Code-Team-Template-Updater'})
+        req = urllib.request.Request(url, headers={'User-Agent': 'Python/urllib'})
         with urllib.request.urlopen(req, timeout=10) as response:
-            data = json.loads(response.read())
+            data = json.loads(response.read().decode('utf-8'))
             return data.get('tag_name')
     except Exception:
         return None

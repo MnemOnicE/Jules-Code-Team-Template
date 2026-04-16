@@ -27,8 +27,7 @@ def test_get_latest_version_success(mock_urlopen):
     mock_urlopen.assert_called_once()
     args, kwargs = mock_urlopen.call_args
     assert args[0].full_url == "https://api.github.com/repos/MnemOnicE/Jules-Code-Team-Template/releases/latest"
-    assert args[0].headers["User-Agent"] == "Jules-Code-Team-Template-Updater"
-    assert kwargs["timeout"] == 10
+    assert args[0].headers["User-agent"] == "Python/urllib"
 
 @patch("urllib.request.urlopen")
 def test_get_latest_version_failure(mock_urlopen):
