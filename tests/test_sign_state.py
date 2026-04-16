@@ -1,6 +1,6 @@
 import pytest
 import hashlib
-from unittest.mock import patch, mock_open
+from unittest.mock import patch
 from sign_state import sign_state
 
 def test_sign_state_file_not_found(capsys):
