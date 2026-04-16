@@ -10,6 +10,8 @@ on:
 jobs:
   quality-gate:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
         with:
@@ -41,6 +43,8 @@ jobs:
 
       - name: Secret Scanning (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
+        with:
+          args: detect --source . --verbose --redact
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: false
