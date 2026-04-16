@@ -4,7 +4,7 @@ import sys
 import os
 
 # Add template_source/scripts to sys.path to import init_project
-sys.path.insert(0, os.path.join(os.getcwd(), 'template_source', 'scripts'))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'template_source', 'scripts')))
 import init_project
 
 class TestGitRemoteSecurity(unittest.TestCase):
