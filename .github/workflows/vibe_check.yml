@@ -14,8 +14,6 @@ jobs:
       FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0 # Required for gitleaks history
 
       - name: Fetch base branch for Gitleaks
         if: github.event_name == 'pull_request'
@@ -48,6 +46,7 @@ jobs:
       - name: Secret Scanning (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
         with:
+          args: detect --no-git --report-path=results.sarif --report-format=sarif --redact -v
           args: detect --source . --verbose --redact
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

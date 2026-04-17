@@ -368,7 +368,6 @@ def main(dry_run=False, force=False):
         os.path.join(ROOT, 'tests', 'verification', '.hypothesis'),
         os.path.join(ROOT, '.hypothesis'),
         os.path.join(ROOT, '__pycache__'),
-        os.path.join(ROOT, '__pycache__'),
         os.path.join(ROOT, 'core', '__pycache__')
     ]
 
