@@ -10,16 +10,10 @@ on:
 jobs:
   quality-gate:
     runs-on: ubuntu-latest
-    env:
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0 # Required for gitleaks history
-
-      - name: Fetch base branch for Gitleaks
-        if: github.event_name == 'pull_request'
-        run: git fetch origin ${{ github.base_ref }}:${{ github.base_ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -57,10 +51,13 @@ jobs:
         working-directory: ./template_source
         run: npm run check:complexity
 
+      - name: Unit Tests
+        run: pytest tests/
+
       - name: Property-Based Verification
         run: |
-          if [ -d tests/verification ]; then
-            pytest tests/verification/
+          if [ -d template_source/tests/verification ]; then
+            pytest template_source/tests/verification/
           else
             echo "No verification tests found. Skipping."
           fi

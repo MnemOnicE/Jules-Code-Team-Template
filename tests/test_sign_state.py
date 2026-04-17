@@ -1,6 +1,6 @@
 import pytest
 import hashlib
-from unittest.mock import patch
+from unittest.mock import patch, mock_open
 from sign_state import sign_state
 
 def test_sign_state_file_not_found(capsys):
@@ -40,7 +40,7 @@ def test_sign_state_happy_path(tmp_path, capsys):
 def test_sign_state_generic_exception(capsys):
     """Test handling of generic exceptions during file reading."""
     with patch("sign_state.get_session_json_path", return_value="fake_path.json"):
-        with patch("sign_state.open", create=True, side_effect=Exception("Read failure")):
+        with patch("builtins.open", side_effect=Exception("Read failure")):
             with pytest.raises(SystemExit) as excinfo:
                 sign_state()
 
