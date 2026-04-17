@@ -10,8 +10,14 @@ on:
 jobs:
   quality-gate:
     runs-on: ubuntu-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
     steps:
       - uses: actions/checkout@v4
+
+      - name: Fetch base branch for Gitleaks
+        if: github.event_name == 'pull_request'
+        run: git fetch origin ${{ github.base_ref }}:${{ github.base_ref }}
 
       - name: Setup Node
         uses: actions/setup-node@v4
@@ -41,6 +47,7 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         with:
           args: detect --no-git --report-path=results.sarif --report-format=sarif --redact -v
+          args: detect --source . --verbose --redact
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: false
