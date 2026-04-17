@@ -27,7 +27,7 @@ class SecurityError(Exception):
 class MaxStepsExceededError(Exception):
     pass
 
-PRIVILEGED_TOOLS = {"execute_command", "write_file", "update_memory"}
+PRIVILEGED_TOOLS = {"execute_command", "write_file", "update_memory", "delete_file"}
 
 class GraphExecutor:
     """
