@@ -114,12 +114,12 @@ def get_imports_from_file(filepath):
     elif ext in ['.js', '.ts', '.vue']:
         # Regex for ES6 import
         # import ... from 'package'
-        es6_matches = re.findall(r'import\s+.*?from\s+[\'"]([@a-zA-Z0-9_/-]+)[\'"]', content)
+        es6_matches = re.findall(r'import\s+.*?from\s+[\'"]([@a-zA-Z0-9_./-]+)[\'"]', content, re.DOTALL)
         imports.update(es6_matches)
 
         # Regex for CommonJS require
         # require('package')
-        cjs_matches = re.findall(r'require\s*\(\s*[\'"]([@a-zA-Z0-9_/-]+)[\'"]\s*\)', content)
+        cjs_matches = re.findall(r'require\s*\(\s*[\'"]([@a-zA-Z0-9_./-]+)[\'"]\s*\)', content)
         imports.update(cjs_matches)
 
         # Filter out relative imports (starting with . or /)
