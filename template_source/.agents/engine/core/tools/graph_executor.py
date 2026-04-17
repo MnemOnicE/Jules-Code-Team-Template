@@ -27,7 +27,7 @@ class SecurityError(Exception):
 class MaxStepsExceededError(Exception):
     pass
 
-PRIVILEGED_TOOLS = {"execute_command", "write_file", "update_memory", "delete_file"}
+PRIVILEGED_TOOLS = {"execute_command", "write_file", "update_memory"}
 
 class GraphExecutor:
     """
@@ -55,13 +55,15 @@ class GraphExecutor:
         """
         glyph = str(graph.get("intent_glyph") or "")
         self.logger.info(f"Validating graph against intent: {glyph}")
+
+        nodes = graph.get("nodes", {})
         # Enforcement of the "Shield" protocol (Source [2])
-        if "🛡️" in glyph and "security_scan" not in str(graph):
+        has_security_scan = any(node.get("action") == "security_scan" for node in nodes.values())
+        if "🛡️" in glyph and not has_security_scan:
             raise SecurityError("Graph deviates from Sentinel Intent! Halting.")
 
         # Structural Traversal (DFS) to enforce security_scan for privileged tools
         entry_point = graph.get("entry_point")
-        nodes = graph.get("nodes", {})
 
         if not entry_point or entry_point not in nodes:
             return
@@ -118,6 +120,8 @@ class GraphExecutor:
         # State Segregation
         system_context = system_context or {}
         context = graph.get("context_delta", {})
+
+        graph_state = graph.get("context_delta", {})
 
         # 3. Privilege Escalation Prevention (The "Captain's Orders" protocol)
         if self.system_context:

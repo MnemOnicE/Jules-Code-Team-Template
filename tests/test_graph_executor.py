@@ -338,18 +338,19 @@ def test_validate_integrity_none_glyph(graph_executor):
     # Should not raise exception
     graph_executor.validate_integrity(graph)
 
-def test_validate_integrity_loose_check(graph_executor):
+def test_validate_integrity_strict_check(graph_executor):
     """
-    Test documents the current loose validation behavior:
-    'security_scan' in a value (not action) satisfies the check.
+    Test documents the strict validation behavior:
+    'security_scan' must be an action in one of the nodes.
     """
     graph = {
         "intent_glyph": "🛡️",
-        "metadata": "security_scan",  # This triggers the check
+        "metadata": "security_scan",  # This should NO LONGER trigger the check
         "nodes": {"start": {"action": "run_tool"}}
     }
-    # Should not raise exception due to str(graph) check
-    graph_executor.validate_integrity(graph)
+    # Should now raise exception as security_scan is not a node action
+    with pytest.raises(SecurityError, match="Graph deviates from Sentinel Intent"):
+        graph_executor.validate_integrity(graph)
 
 def test_validate_integrity_multiple_shields(graph_executor):
     """Test validation handles multiple shields correctly."""
