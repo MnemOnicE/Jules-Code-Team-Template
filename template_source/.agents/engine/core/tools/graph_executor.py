@@ -119,8 +119,6 @@ class GraphExecutor:
         system_context = system_context or {}
         context = graph.get("context_delta", {})
 
-        graph_state = graph.get("context_delta", {})
-
         # 3. Privilege Escalation Prevention (The "Captain's Orders" protocol)
         if self.system_context:
             protected_keys = set(self.system_context.keys())
