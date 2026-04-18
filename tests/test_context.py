@@ -357,6 +357,6 @@ def test_load_persona_path_traversal_prevention(mock_fs):
         with pytest.raises(FileNotFoundError):
             loader.load_persona(traversal_name)
 
-        # Verify that os.path.exists was called with the sanitized path,
-        # proving that the traversal attempt was neutralized.
-        mock_exists.assert_called_once_with(expected_sanitized_path)
+        # Verify that os.path.exists was called with the sanitized path.
+        # It's called twice because of the fallback: first for config/, then for config/defaults/
+        mock_exists.assert_any_call(expected_sanitized_path)
