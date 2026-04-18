@@ -4,7 +4,7 @@ import sys
 import os
 
 # Add template_source/scripts to sys.path to import init_project
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'template_source', 'scripts')))
+sys.path.insert(0, os.path.join(os.getcwd(), 'template_source', 'scripts'))
 import init_project
 
 class TestGitRemoteSecurity(unittest.TestCase):
@@ -34,16 +34,15 @@ class TestGitRemoteSecurity(unittest.TestCase):
 
     @patch('subprocess.run')
     @patch('builtins.input')
-    def test_configure_git_remote_uses_dash_dash(self, mock_input, mock_run):
+    def test_configure_git_remote_execution(self, mock_input, mock_run):
         mock_input.return_value = "https://github.com/user/repo.git"
         init_project.configure_git_remote(is_migration=False)
 
-        # Check if subprocess.run was called with "--"
+        # Check if subprocess.run was called correctly
         # The first call is "git remote remove origin", we want the second one
         calls = [call.args[0] for call in mock_run.call_args_list]
         add_call = [c for c in calls if "add" in c][0]
-        self.assertIn("--", add_call)
-        self.assertEqual(add_call[-1], "https://github.com/user/repo.git")
+        self.assertEqual(add_call, ["git", "remote", "add", "origin", "https://github.com/user/repo.git"])
 
     @patch('subprocess.run')
     @patch('builtins.input')

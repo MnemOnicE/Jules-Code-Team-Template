@@ -158,7 +158,7 @@ def configure_git_remote(is_migration=False):
             return
 
         try:
-            subprocess.run(["git", "remote", "add", "origin", "--", new_remote], check=True)
+            subprocess.run(["git", "remote", "add", "origin", new_remote], check=True)
             print(f"✅ Added new remote 'origin': {new_remote}")
         except Exception as e:
             print(f"⚠️ Failed to add remote: {e}")
@@ -364,6 +364,7 @@ def main(dry_run=False, force=False):
     # Define sanitization targets
     cleanup_targets = [
         os.path.join(ROOT, 'ingests'),
+        os.path.join(ROOT, 'tests', 'verification', 'logs')
         os.path.join(ROOT, 'tests', 'verification', 'logs'),
         os.path.join(ROOT, 'tests', 'verification', '.hypothesis'),
         os.path.join(ROOT, '.hypothesis'),
