@@ -18,8 +18,10 @@ const fs = require('fs');
 const path = require('path');
 
 // Constants
-// Matches Mermaid arrow patterns: A --> B, A -- Label --> B, A -.-> B, A ==F==> G
-const MERMAID_EDGE_RE = /\s*[-=.]{1,4}(?:(?:\|.+?\|)|(?:[^>]+?))?[-=.]{0,3}[>]\s*/;
+// Matches Mermaid arrow patterns: A --> B, A -- Label --> B, A -.-> B, A ==F==> G, A --- B, A <-> B
+// Supports directed, undirected, and bi-directional edges with optional labels.
+// Designed to avoid consuming nodes in chained definitions (e.g., A --- B --> C).
+const MERMAID_EDGE_RE = /\s*((?:--|==|-\.)(?:(?:\|[^|]+\|)|(?:[^-=>.]+))?(?:-->|---|==>|===|\.->|\.-)|<-->|<==>|<-.->|<--|<==|<-.|<->|-->|---|==>|===|-\.->|-.-|->|<-)(?:\|[^|]+\|)?\s*/;
 
 // Configuration
 const CONFIG_FILE = path.join(__dirname, '../.mermaid-sonar.json');
@@ -65,21 +67,35 @@ function handleSubgraph(line, stack) {
 }
 
 function processEdgeParts(parts, nodes, edges, nodeSubgraphs, currentSubgraph) {
-    for (let i = 0; i < parts.length - 1; i++) {
+    // When using capturing split, parts is [nodeGroup0, token0, nodeGroup1, token1, ...]
+    for (let i = 0; i < parts.length - 2; i += 2) {
         const rawSourceGroup = parts[i].trim();
-        const rawTargetGroup = parts[i+1].trim();
+        const token = parts[i+1];
+        const rawTargetGroup = parts[i+2].trim();
 
         if (!rawSourceGroup || !rawTargetGroup) continue;
 
         const sources = expandNodes(rawSourceGroup);
         const targets = expandNodes(rawTargetGroup);
 
+        const hasLeft = token.includes('<');
+        const hasRight = token.includes('>');
+        const isBi = hasLeft && hasRight;
+        const isLeft = hasLeft && !hasRight;
+        const isRight = !hasLeft; // Treat undirected (---) as right-pointing for graph traversal
+
         sources.forEach(source => {
             targets.forEach(target => {
                 if (source && target) {
                     nodes.add(source);
                     nodes.add(target);
-                    edges.push({ from: source, to: target });
+
+                    if (isRight || isBi) {
+                        edges.push({ from: source, to: target });
+                    }
+                    if (isLeft || isBi) {
+                        edges.push({ from: target, to: source });
+                    }
 
                     if (currentSubgraph) {
                         if (!nodeSubgraphs.has(source) || isDefinition(rawSourceGroup)) {
