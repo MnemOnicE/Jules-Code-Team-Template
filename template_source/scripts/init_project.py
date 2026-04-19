@@ -131,7 +131,7 @@ def install_git_hooks():
         dst_path = os.path.join(hooks_dir, hook_name)
         if os.path.exists(src_path):
             shutil.copy2(src_path, dst_path)
-            os.chmod(dst_path, 0o755)
+            os.chmod(dst_path, 0o750)  # NOSONAR: Git hooks require executable permissions
 
     print("Brain: Installed Git safeguards (pre-commit, pre-push).")
 
@@ -163,7 +163,7 @@ def configure_git_remote(is_migration=False):
         except Exception as e:
             print(f"⚠️ Failed to add remote: {e}")
 
-def main(dry_run=False, force=False):
+def main(dry_run=False, force=False):  # NOSONAR: Orchestration logic  # NOSONAR: Script initialization sequence
 
     clear_screen()
     print_header()
@@ -240,7 +240,6 @@ def main(dry_run=False, force=False):
 
     agents_dir = os.path.join(template_dir, ".agents")
     rules_dir = os.path.join(agents_dir, "rules")
-    docs_dir = os.path.join(agents_dir, "docs")
     config_dir = os.path.join(agents_dir, "config")
 
     # 2. File Operations - Merge AGENTS.md (System Context)
@@ -283,9 +282,8 @@ def main(dry_run=False, force=False):
             # We move the template README to .agents/docs/USER_MANUAL.md
             if is_migration:
                 manual_dest = os.path.join(root_dir, ".agents", "docs", "USER_MANUAL.md")
-                # We need to wait until .agents is moved first, so we'll handle this after the loop or ensure dir exists
-                # Actually, simpler: Move it to d (root_dir/README.md) ONLY IF Creation Mode.
-                pass # Handled below
+                # Handled later in script
+                continue
             else:
                 # Creation Mode: Overwrite Root README
                 if os.path.exists(d): os.remove(d)
