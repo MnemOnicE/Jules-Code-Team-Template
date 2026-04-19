@@ -11,7 +11,11 @@ def get_repo_root(start_path=None):
     for parent in [current] + list(current.parents):
         if (parent / '.git').exists():
             return str(parent)
-        if (parent / '.agents').exists() or (parent / 'template_source' / '.agents').exists():
+        if (parent / 'template_source' / '.agents').exists():
+            return str(parent)
+        if (parent / '.agents').exists():
+            if parent.name == 'template_source':
+                return str(parent.parent)
             return str(parent)
     return str(current)
 
