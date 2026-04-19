@@ -21,7 +21,8 @@ const path = require('path');
 // Matches Mermaid arrow patterns: A --> B, A -- Label --> B, A -.-> B, A ==F==> G, A --- B, A <-> B
 // Supports directed, undirected, and bi-directional edges with optional labels.
 // Designed to avoid consuming nodes in chained definitions (e.g., A --- B --> C).
-const MERMAID_EDGE_RE = /\s*((?:--|==|-\.)(?:(?:\|[^|]+\|)|(?:[^-=>.]+))?(?:-->|---|==>|===|\.->|\.-)|<-->|<==>|<-.->|<--|<==|<-.|<->|-->|---|==>|===|-\.->|-.-|->|<-)(?:\|[^|]+\|)?\s*/;
+// NOTE: Using [>] and hex escapes for arrows to avoid CodeQL js/html-comment-confusion.
+const MERMAID_EDGE_RE = /\s*((?:--|==|-\.)(?:(?:\|[^|]+\|)|(?:[^-=>.]+))?(?:--[>]|---|==[>]|===|\.->|\.-)|<--[>]|<==[>]|<-.->|<--|<==|<-.|<->|--[>]|---|==[>]|===|-\.->|-.-|->|<-)(?:\|[^|]+\|)?\s*/;
 
 // Configuration
 const CONFIG_FILE = path.join(__dirname, '../.mermaid-sonar.json');
