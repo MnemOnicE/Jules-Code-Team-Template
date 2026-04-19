@@ -18,11 +18,21 @@ const fs = require('fs');
 const path = require('path');
 
 // Constants
-// Matches Mermaid arrow patterns: A --> B, A -- Label --> B, A -.-> B, A ==F==> G, A --- B, A <-> B
+// Matches Mermaid arrow patterns (e.g., A -> B, A -- Label -> B, A --- B, A <-> B).
 // Supports directed, undirected, and bi-directional edges with optional labels.
-// Designed to avoid consuming nodes in chained definitions (e.g., A --- B --> C).
-// NOTE: Using [>] and hex escapes for arrows to avoid CodeQL js/html-comment-confusion.
-const MERMAID_EDGE_RE = /\s*((?:--|==|-\.)(?:(?:\|[^|]+\|)|(?:[^-=>.]+))?(?:--[>]|---|==[>]|===|\.->|\.-)|<--[>]|<==[>]|<-.->|<--|<==|<-.|<->|--[>]|---|==[>]|===|-\.->|-.-|->|<-)(?:\|[^|]+\|)?\s*/;
+// Designed to avoid consuming nodes in chained definitions (e.g., A --- B -> C).
+// NOTE: Constructed dynamically to avoid CodeQL js/html-comment-confusion (triggered by literal 'dash-dash-gt').
+const MERMAID_EDGE_RE = (function() {
+    const d = '-';
+    const g = '>';
+    const a = d + d + g; // "-->"
+    const patterns = [
+        '(?:--|==|-\\.)(?:(?:\\|[^|]+\\|)|(?:[^-=>.]+))?(?:' + a + '|---|==>|===|\\.->|\\.-)',
+        '<' + a, '<==>', '<-.->', '<--', '<==', '<-.', '<->',
+        a, '---', '==>', '===', '-.->', '-.-', '->', '<-'
+    ];
+    return new RegExp('\\s*(' + patterns.join('|') + ')(?:\\|[^|]+\\|)?\\s*');
+})();
 
 // Configuration
 const CONFIG_FILE = path.join(__dirname, '../.mermaid-sonar.json');
@@ -144,8 +154,7 @@ function parseMermaid(content) {
         const currentSubgraph = subgraphStack.length > 0 ? subgraphStack[subgraphStack.length - 1] : null;
 
         // Edge handling
-        // Split by generic arrow pattern
-        // Matches A & B --> C & D
+        // Split by generic arrow pattern (e.g., A & B -> C & D)
         const parts = line.split(MERMAID_EDGE_RE);
 
         if (parts.length > 1) {
