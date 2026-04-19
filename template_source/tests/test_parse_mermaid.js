@@ -72,9 +72,9 @@ runTest('Test 2: Chained, Undirected, and Bi-directional Edges', () => {
         { from: 'D', to: 'E' }, { from: 'E', to: 'F' },
         { from: 'G', to: 'H' }, { from: 'H', to: 'I' },
         { from: 'J', to: 'K' }, { from: 'K', to: 'L' },
-        { from: 'M', to: 'N' }, { from: 'N', to: 'M' }, { from: 'N', to: 'O' }, { from: 'O', to: 'N' },
+        { from: 'M', to: 'N' }, { from: 'N', to: 'O' },
         { from: 'Q', to: 'P' }, { from: 'Q', to: 'R' },
-        { from: 'S', to: 'T' }, { from: 'T', to: 'S' }
+        { from: 'S', to: 'T' }
     ], 'Edges should match');
 });
 
@@ -84,14 +84,18 @@ runTest('Test 3: Complex Edge Label', () => {
     A -- Label --> B
     C -.-> D
     E ==F==> G
+    H -- my-file.js --> I
+    J -- v1.0.0 --- K
     `;
     const { nodes, edges } = parseMermaid(content);
 
-    assertSetEqual(nodes, ['A', 'B', 'C', 'D', 'E', 'G'], 'Nodes should match');
+    assertSetEqual(nodes, ['A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'J', 'K'], 'Nodes should match');
     assertEdgesEqual(edges, [
         { from: 'A', to: 'B' },
         { from: 'C', to: 'D' },
-        { from: 'E', to: 'G' }
+        { from: 'E', to: 'G' },
+        { from: 'H', to: 'I' },
+        { from: 'J', to: 'K' }
     ], 'Edges should match');
 });
 

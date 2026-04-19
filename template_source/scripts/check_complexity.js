@@ -27,7 +27,7 @@ const MERMAID_EDGE_RE = (function() {
     const g = '>';
     const a = d + d + g; // "-->"
     const patterns = [
-        '(?:--|==|-\\.)(?:(?:\\|[^|]+\\|)|(?:[^-=>.]+))?(?:' + a + '|---|==>|===|\\.->|\\.-)',
+        '(?:--|==|-\\.)(?:(?:\\|[^|]+\\|)|(?:[^->=.|]+?))?(?:' + a + '|---|==>|===|\\.->|\\.-)',
         '<' + a, '<==>', '<-.->', '<--', '<==', '<-.', '<->',
         a, '---', '==>', '===', '-.->', '-.-', '->', '<-'
     ];
@@ -91,9 +91,7 @@ function processEdgeParts(parts, nodes, edges, nodeSubgraphs, currentSubgraph) {
 
         const hasLeft = token.includes('<');
         const hasRight = token.includes('>');
-        const isBi = hasLeft && hasRight;
         const isLeft = hasLeft && !hasRight;
-        const isRight = !hasLeft; // Treat undirected (---) as right-pointing for graph traversal
 
         sources.forEach(source => {
             targets.forEach(target => {
@@ -101,11 +99,14 @@ function processEdgeParts(parts, nodes, edges, nodeSubgraphs, currentSubgraph) {
                     nodes.add(source);
                     nodes.add(target);
 
-                    if (isRight || isBi) {
-                        edges.push({ from: source, to: target });
-                    }
-                    if (isLeft || isBi) {
+                    if (isLeft) {
+                        // Reverse arrow: A <- B
                         edges.push({ from: target, to: source });
+                    } else {
+                        // Forward, undirected, or bi-directional: A -> B, A --- B, A <-> B
+                        // For bi-directional edges, we only add one direction to avoid
+                        // trivial cycles during complexity/depth checks.
+                        edges.push({ from: source, to: target });
                     }
 
                     if (currentSubgraph) {

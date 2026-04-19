@@ -117,7 +117,9 @@ class GraphExecutor:
 
         # State Segregation
         system_context = system_context or {}
-        graph_state = graph.get("context_delta", {}).copy()
+        context = graph.get("context_delta", {})
+
+        graph_state = graph.get("context_delta", {})
 
         # 3. Privilege Escalation Prevention (The "Captain's Orders" protocol)
         if self.system_context:
@@ -152,12 +154,15 @@ class GraphExecutor:
             if any(k in system_context for k in node_delta):
                 raise SecurityError(f"Node '{current_node_id}' attempted to overwrite protected system context keys.")
 
-            # Apply allowed deltas to graph_state
-            graph_state.update(node_delta)
+            # Apply allowed deltas to context
+            context.update(node_delta)
 
             # Create merged view for action execution
-            merged_view = {**graph_state, **system_context}
+            merged_view = {**context, **system_context}
 
+            # Execute Action via Registry
+            try:
+                result = self._dispatch_action(node, merged_view)
             # Telemetry: Node Start
             plugin_manager.call_plugin_hook('on_node_start', {'id': current_node_id, 'data': node})
 
@@ -171,7 +176,7 @@ class GraphExecutor:
 
             # Execute Action via Registry
             try:
-                result = self._dispatch_action(node, merged_view)
+                result = self._dispatch_action(node, graph_state)
                 # Telemetry: Node Complete (Success)
                 plugin_manager.call_plugin_hook('on_node_complete', {'id': current_node_id, 'status': 'success', 'error': None})
 
@@ -207,6 +212,7 @@ class GraphExecutor:
                 break
 
     def _dispatch_action(self, node, merged_view):
+    def _dispatch_action(self, node, graph_state):
         # Maps graph actions to specific tool calls
         action = node['action']
         if action == 'run_tool':
@@ -215,6 +221,7 @@ class GraphExecutor:
             args = params.get('args', {}).copy()
             # Inject context if needed (Source [1])
             if merged_view.get("shizuku_active"):
+            if self.system_context.get("shizuku_active"):
                 args["use_root"] = True
 
             if not tool_name:

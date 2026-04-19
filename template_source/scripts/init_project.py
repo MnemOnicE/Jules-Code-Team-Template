@@ -70,19 +70,6 @@ def validate_governance(value):
 def validate_risk(value):
     return value.lower() in ['high', 'medium', 'low']
 
-def validate_git_remote(url):
-    """
-    Validates the Git remote URL for security.
-    Blocks option injection (starts with -) and dangerous protocols (ext::).
-    """
-    if not url:
-        return True
-    if url.strip().startswith("-"):
-        return False
-    if "ext::" in url.lower():
-        return False
-    return True
-
 def clear_screen():
     print("\033[H\033[J", end="")
 
@@ -153,10 +140,6 @@ def configure_git_remote(is_migration=False):
 
     new_remote = input("Brain: Enter your new Git repository URL (HTTPS or SSH), or leave blank to skip for now: ").strip()
     if new_remote:
-        if not validate_git_remote(new_remote):
-            print(f"❌ Security Error: Invalid or dangerous Git remote URL: {new_remote}")
-            return
-
         try:
             subprocess.run(["git", "remote", "add", "origin", new_remote], check=True)
             print(f"✅ Added new remote 'origin': {new_remote}")
@@ -365,11 +348,6 @@ def main(dry_run=False, force=False):
     cleanup_targets = [
         os.path.join(ROOT, 'ingests'),
         os.path.join(ROOT, 'tests', 'verification', 'logs')
-        os.path.join(ROOT, 'tests', 'verification', 'logs'),
-        os.path.join(ROOT, 'tests', 'verification', '.hypothesis'),
-        os.path.join(ROOT, '.hypothesis'),
-        os.path.join(ROOT, '__pycache__'),
-        os.path.join(ROOT, 'core', '__pycache__')
     ]
 
     # Recursive cleaning for __pycache__

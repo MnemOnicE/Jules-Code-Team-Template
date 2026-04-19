@@ -46,7 +46,7 @@ def test_dispatch_action_shizuku_active_injects_use_root(graph_executor):
 
     graph_executor.registry.invoke = MagicMock(return_value={"status": "success"})
 
-    graph_executor._dispatch_action(node, {"shizuku_active": True})
+    graph_executor._dispatch_action(node, {})
 
     graph_executor.registry.invoke.assert_called_once_with(
         "test_tool",
@@ -87,7 +87,7 @@ def test_dispatch_action_preserves_existing_args(graph_executor):
     graph_executor.system_context = {"shizuku_active": True}
     graph_executor.registry.invoke = MagicMock(return_value={"status": "success"})
 
-    graph_executor._dispatch_action(node, {"shizuku_active": True})
+    graph_executor._dispatch_action(node, {})
 
     graph_executor.registry.invoke.assert_called_once_with(
         "test_tool",
