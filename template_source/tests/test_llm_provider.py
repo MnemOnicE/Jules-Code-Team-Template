@@ -54,7 +54,7 @@ def test_retry_eventual_success():
     def decorated_func():
         return mock_func()
 
-    with patch("time.sleep") as mock_sleep:
+    with patch("core.llm_provider.time.sleep") as mock_sleep:
         result = decorated_func()
         assert result == "success"
         assert mock_func.call_count == 3
@@ -71,7 +71,7 @@ def test_retry_max_retries_exceeded():
     def decorated_func():
         return mock_func()
 
-    with patch("time.sleep") as mock_sleep:
+    with patch("core.llm_provider.time.sleep") as mock_sleep:
         with pytest.raises(Exception, match="429 error"):
             decorated_func()
 
@@ -87,7 +87,7 @@ def test_retry_non_retryable_error():
     def decorated_func():
         return mock_func()
 
-    with patch("time.sleep") as mock_sleep:
+    with patch("core.llm_provider.time.sleep") as mock_sleep:
         with pytest.raises(ValueError, match="Normal error"):
             decorated_func()
 
@@ -102,7 +102,7 @@ def test_retry_case_insensitivity():
     def decorated_func():
         return mock_func()
 
-    with patch("time.sleep") as mock_sleep:
+    with patch("core.llm_provider.time.sleep") as mock_sleep:
         result = decorated_func()
         assert result == "success"
         assert mock_func.call_count == 2
