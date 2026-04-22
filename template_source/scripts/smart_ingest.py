@@ -91,6 +91,7 @@ def run_ingest(is_delta=False):
     else:
         # Golden Snapshot Logic
         try:
+            # Security: Use full path to executable if possible, but gitingest is usually in PATH
             subprocess.run(["gitingest", ".", "-o", filepath], check=True)
         except subprocess.CalledProcessError as e:
             print(f"Error running gitingest: {e}")

@@ -32,6 +32,7 @@ import json
 import subprocess
 import importlib.util
 import argparse
+import stat
 
 def check_dependencies():
     required_packages = {
@@ -83,6 +84,13 @@ def validate_git_remote(url):
         return False
     return True
 
+def _is_safe_path(path):
+    """
+    Prevents path traversal by ensuring the path doesn't contain parent directory references
+    or absolute paths that point outside the intended root.
+    """
+    return ".." not in path and not os.path.isabs(path)
+
 def clear_screen():
     print("\033[H\033[J", end="")
 
@@ -109,10 +117,10 @@ def get_input(prompt, default=None, validator=None):
 def update_file(filepath, search_pattern, replace_value):
     if not os.path.exists(filepath):
         return
-    with open(filepath, 'r') as f:
+    with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
     new_content = re.sub(search_pattern, replace_value, content, flags=re.MULTILINE)
-    with open(filepath, 'w') as f:
+    with open(filepath, 'w', encoding='utf-8') as f:
         f.write(new_content)
 
 
@@ -131,7 +139,7 @@ def install_git_hooks():
         dst_path = os.path.join(hooks_dir, hook_name)
         if os.path.exists(src_path):
             shutil.copy2(src_path, dst_path)
-            os.chmod(dst_path, 0o755)
+            os.chmod(dst_path, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
 
     print("Brain: Installed Git safeguards (pre-commit, pre-push).")
 
@@ -249,14 +257,14 @@ def main(dry_run=False, force=False):
     workflow_rules_md = os.path.join(RULES_DIR, "WORKFLOW_RULES.md")
 
     if os.path.exists(root_agents_md) and os.path.exists(workflow_rules_md):
-        with open(root_agents_md, 'r') as f:
+        with open(root_agents_md, 'r', encoding='utf-8') as f:
             agents_content = f.read()
-        with open(workflow_rules_md, 'r') as f:
+        with open(workflow_rules_md, 'r', encoding='utf-8') as f:
             rules_content = f.read()
 
         # Prepend context to rules
         final_content = f"## 0. System Context & Ingestion\n{agents_content}\n\n{rules_content}"
-        with open(workflow_rules_md, 'w') as f:
+        with open(workflow_rules_md, 'w', encoding='utf-8') as f:
             f.write(final_content)
         os.remove(root_agents_md)
 
@@ -274,6 +282,9 @@ def main(dry_run=False, force=False):
     print("Brain: Unpacking project structure...")
 
     for item in os.listdir(TEMPLATE_DIR):
+        if not _is_safe_path(item):
+            print(f"Brain: ⚠️  Skipping unsafe path '{item}'")
+            continue
         s = os.path.join(TEMPLATE_DIR, item)
         d = os.path.join(ROOT, item)
 
@@ -295,8 +306,8 @@ def main(dry_run=False, force=False):
         # Handle .gitignore (Append vs Overwrite)
         if item == ".gitignore" and os.path.exists(d) and IS_MIGRATION:
             print("Brain: Merging .gitignore...")
-            with open(s, 'r') as fsrc: template_ignore = fsrc.read()
-            with open(d, 'a') as fdst:
+            with open(s, 'r', encoding='utf-8') as fsrc: template_ignore = fsrc.read()
+            with open(d, 'a', encoding='utf-8') as fdst:
                 fdst.write("\n\n# --- JULES CODING SQUAD ---\n")
                 fdst.write(template_ignore)
             os.remove(s)
@@ -306,6 +317,7 @@ def main(dry_run=False, force=False):
         if item == "scripts":
              if os.path.exists(d):
                  for subitem in os.listdir(s):
+                     if not _is_safe_path(subitem): continue
                      shutil.move(os.path.join(s, subitem), os.path.join(d, subitem))
                  os.rmdir(s)
              else:
@@ -319,7 +331,8 @@ def main(dry_run=False, force=False):
         if item == "squad":
             if os.path.exists(d): os.remove(d)
             shutil.move(s, d)
-            os.chmod(d, 0o755)
+            # Security: Use stat constants instead of octal for permissions
+            os.chmod(d, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
             continue
 
         if item == ".agents":
@@ -355,7 +368,7 @@ def main(dry_run=False, force=False):
             # Append Badge to Root README
             root_readme = os.path.join(ROOT, "README.md")
             if os.path.exists(root_readme):
-                with open(root_readme, 'a') as f:
+                with open(root_readme, 'a', encoding='utf-8') as f:
                     f.write("\n\n> 🧠 **This project is now managed by The Coding Squad.**\n> See `.agents/docs/USER_MANUAL.md` for commands.\n")
 
     # 5. The Lift (Runtime Sanitization)
@@ -412,8 +425,13 @@ def main(dry_run=False, force=False):
     ingest_script = os.path.join(ROOT, "scripts", "smart_ingest.py")
     if os.path.exists(ingest_script):
         try:
-            # We run it with python executable
-            subprocess.run([sys.executable, ingest_script], check=False)
+            # Security: Use importlib to avoid subprocess for local script execution
+            spec = importlib.util.spec_from_file_location("smart_ingest", ingest_script)
+            if spec and spec.loader:
+                smart_ingest = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(smart_ingest)
+                if hasattr(smart_ingest, 'main'):
+                    smart_ingest.main()
         except Exception as e:
             print(f"⚠️ Warning: Could not auto-run ingestion: {e}")
 

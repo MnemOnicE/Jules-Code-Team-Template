@@ -9,6 +9,7 @@ import sys
 import argparse
 import subprocess
 import urllib.request
+import importlib.util
 from pathlib import Path
 
 SEMVER_PATTERN = re.compile(r'^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$')
@@ -97,11 +98,14 @@ def apply_update(dry_run=False, force=False):
     # and improve reliability across different execution environments.
     success = False
     try:
-        scripts_dir = Path(__file__).resolve().parent
-        if str(scripts_dir) not in sys.path:
-            sys.path.append(str(scripts_dir))
-        import backup_restore
-        success = backup_restore.create_backup()
+        backup_script = Path(__file__).resolve().parent / 'backup_restore.py'
+        spec = importlib.util.spec_from_file_location("backup_restore", backup_script)
+        if spec and spec.loader:
+            backup_restore = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(backup_restore)
+            success = backup_restore.create_backup()
+        else:
+            print("⚠️  Could not load backup_restore module spec")
     except Exception as e:
         print(f"⚠️  Backup execution failed: {e}")
         success = False
