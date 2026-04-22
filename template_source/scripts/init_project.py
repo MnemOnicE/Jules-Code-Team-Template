@@ -32,6 +32,8 @@ import json
 import subprocess
 import importlib.util
 import argparse
+import stat
+from pathlib import Path
 
 def check_dependencies():
     required_packages = {
@@ -54,9 +56,9 @@ def check_dependencies():
         for pkg in missing:
             print(f"  - {pkg}")
         try:
-            subprocess.run([sys.executable, "-m", "pip", "install"] + missing, check=True)
+            subprocess.run([sys.executable, "-m", "pip", "install", "--"] + missing, check=True, shell=False)
             print("\033[1;32m✅ Dependencies installed successfully.\033[0m\n")
-        except subprocess.CalledProcessError as e:
+        except subprocess.CalledProcessError:
             print("\n\033[1;31m❌ CRITICAL: Failed to auto-install dependencies.\033[0m")
             print("Please ensure you have internet access and the correct permissions, or run:")
             print("\033[1;36m  python3 -m venv venv")
@@ -73,14 +75,28 @@ def validate_risk(value):
 def validate_git_remote(url):
     """
     Validates the Git remote URL for security.
-    Blocks option injection (starts with -) and dangerous protocols (ext::).
+    Blocks option injection (starts with -) and dangerous protocols.
     """
     if not url:
         return True
-    if url.strip().startswith("-"):
+    url = url.strip()
+    # Prevent option injection
+    if url.startswith("-"):
         return False
-    if "ext::" in url.lower():
-        return False
+
+    # Block dangerous protocols
+    blacklist = ['ext::', 'git-remote-']
+    url_lower = url.lower()
+    for pattern in blacklist:
+        if pattern in url_lower:
+            return False
+
+    # Basic scheme validation if it looks like a URL
+    if "://" in url:
+        scheme = url.split("://")[0].lower()
+        if scheme not in ['https', 'http', 'git', 'ssh']:
+            return False
+
     return True
 
 def clear_screen():
@@ -107,46 +123,43 @@ def get_input(prompt, default=None, validator=None):
         return value
 
 def update_file(filepath, search_pattern, replace_value):
-    if not os.path.exists(filepath):
+    path = Path(filepath)
+    if not path.exists():
         return
-    with open(filepath, 'r') as f:
+    with open(path, 'r', encoding='utf-8') as f:
         content = f.read()
     new_content = re.sub(search_pattern, replace_value, content, flags=re.MULTILINE)
-    with open(filepath, 'w') as f:
+    with open(path, 'w', encoding='utf-8') as f:
         f.write(new_content)
 
-
 def install_git_hooks():
-    hooks_dir = os.path.join(os.getcwd(), '.git', 'hooks')
-    if not os.path.exists(hooks_dir):
+    root = Path.cwd()
+    hooks_dir = root / '.git' / 'hooks'
+    if not hooks_dir.is_dir():
         return
 
-    template_hooks_dir = os.path.join(os.path.dirname(__file__), 'hooks_templates')
-    if not os.path.exists(template_hooks_dir):
-        # Fallback for when templates aren't available yet or are missing
+    template_hooks_dir = Path(__file__).resolve().parent / 'hooks_templates'
+    if not template_hooks_dir.is_dir():
         return
 
     for hook_name in ['pre-commit', 'pre-push']:
-        src_path = os.path.join(template_hooks_dir, hook_name)
-        dst_path = os.path.join(hooks_dir, hook_name)
-        if os.path.exists(src_path):
+        src_path = template_hooks_dir / hook_name
+        dst_path = hooks_dir / hook_name
+        if src_path.exists():
             shutil.copy2(src_path, dst_path)
-            os.chmod(dst_path, 0o755)
+            dst_path.chmod(stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
 
     print("Brain: Installed Git safeguards (pre-commit, pre-push).")
 
-
 def configure_git_remote(is_migration=False):
-
     print("\nBrain: Securing Git Endpoints (Non-Negotiable)")
 
-    # Do not wipe the user's remote if this is an integration/migration!
     if is_migration:
         print("Brain: Integration mode detected. Skipping Git remote reconfiguration to protect existing repository.")
         return
 
     try:
-        subprocess.run(["git", "remote", "remove", "origin"], stderr=subprocess.DEVNULL)
+        subprocess.run(["git", "remote", "remove", "origin"], stderr=subprocess.DEVNULL, shell=False)
         print("✅ Removed template remote 'origin'.")
     except Exception:
         pass
@@ -158,39 +171,36 @@ def configure_git_remote(is_migration=False):
             return
 
         try:
-            subprocess.run(["git", "remote", "add", "origin", new_remote], check=True)
+            subprocess.run(["git", "remote", "add", "origin", "--", new_remote], check=True, shell=False)
             print(f"✅ Added new remote 'origin': {new_remote}")
         except Exception as e:
             print(f"⚠️ Failed to add remote: {e}")
 
-def main(dry_run=False, force=False):
+def _is_safe_path(path_str):
+    """Basic path traversal prevention."""
+    return not (".." in path_str or path_str.startswith("/") or path_str.startswith("~"))
 
+def main(dry_run=False, force=False):
     clear_screen()
     print_header()
 
-    ROOT = os.getcwd()
-    TEMPLATE_DIR = os.path.join(ROOT, "template_source")
+    root = Path.cwd()
+    template_dir = root / "template_source"
 
-    # --- [START PATCH] SNAPSHOT SAFETY CHECK ---
-    # Stops the script from destroying the repo if re-run after initialization.
-    if not os.path.exists(TEMPLATE_DIR):
-        print("Brain: System already initialized. Skipping onboarding.")
+    if not template_dir.exists() and not force:
+        print("Brain: System already initialized. Skipping onboarding. Use --force to re-initialize.")
         return
-    # --- [END PATCH] ---------------------------
 
     if dry_run:
         print("🧪 DRY RUN MODE: Simulating initialization without making changes.")
         print("This will show what would happen without actually modifying files.\n")
 
-    # 0. Environment Scan (Migration Detection)
-    # We check for files that are NOT part of the template mechanism
-    # Added src, tests, etc. to ignored list so fresh clones don't trigger Migration Mode
     ignored_items = {'.git', 'template_source', 'README.md', 'LICENSE', 'CONTRIBUTING.md', '.DS_Store', 'tests', 'requirements.txt', 'package.json', 'package-lock.json', '.agents'}
-    existing_items = set(os.listdir(ROOT)) - ignored_items
+    existing_items = set(os.listdir(root)) - ignored_items
 
-    IS_MIGRATION = len(existing_items) > 0
+    is_migration = len(existing_items) > 0
 
-    if IS_MIGRATION:
+    if is_migration:
         print(f"Brain: ⚠️  Existing infrastructure detected ({len(existing_items)} items).")
         print("Brain: Switching to \033[1mINTEGRATION MODE\033[0m. I will join your team, not replace it.")
     else:
@@ -198,26 +208,20 @@ def main(dry_run=False, force=False):
 
     print("\n---------------------------------------------")
 
-    # 1. The Interview
     print("Brain: I am waking up. I need to understand the mission parameters.\n")
     print("💡 Tip: Press Enter to accept defaults in brackets []\n")
 
-    if IS_MIGRATION:
-        project_name = get_input("Brain: What is the name of this existing project?", os.path.basename(ROOT))
+    if is_migration:
+        project_name = get_input("Brain: What is the name of this existing project?", root.name)
         project_context = get_input("Brain: Briefly describe what this code does (for my context)", "Legacy Codebase")
     else:
         project_name = get_input("Brain: First, what is the Project Name?", "MyNewProject")
         project_context = get_input("Brain: What are we building? (SaaS, Game, Library?)", "SaaS")
 
     print("\n🤖 Governance determines how decisions are made:")
-    print("   Democracy: All agents vote on changes")
-    print("   Dictator: Lead agent makes final decisions")
     governance = get_input("Brain: Governance Mode? (Democracy/Dictator)", "Democracy", validate_governance)
     
     print("\n⚠️  Risk tolerance affects security and speed:")
-    print("   High: Fast but less secure")
-    print("   Medium: Balanced approach")
-    print("   Low: Secure but slower")
     risk = get_input("Brain: Risk Tolerance? (High/Medium/Low)", "Low", validate_risk)
 
     print("\nBrain: Configuring squad parameters...")
@@ -227,7 +231,7 @@ def main(dry_run=False, force=False):
     print(f"   Context: {project_context}")
     print(f"   Governance: {governance}")
     print(f"   Risk Level: {risk}")
-    print(f"   Mode: {'INTEGRATION' if IS_MIGRATION else 'GENESIS'}")
+    print(f"   Mode: {'INTEGRATION' if is_migration else 'GENESIS'}")
 
     confirm = get_input("\nBrain: Ready to proceed? (Y/n)", "Y")
     if confirm.lower() not in ['y', 'yes', '']:
@@ -236,192 +240,153 @@ def main(dry_run=False, force=False):
 
     if dry_run:
         print("🧪 Would configure squad parameters...")
-        return  # Exit early for dry run
+        return
 
-    AGENTS_DIR = os.path.join(TEMPLATE_DIR, ".agents")
-    RULES_DIR = os.path.join(AGENTS_DIR, "rules")
-    DOCS_DIR = os.path.join(AGENTS_DIR, "docs")
-    CONFIG_DIR = os.path.join(AGENTS_DIR, "config")
+    agents_dir = template_dir / ".agents"
+    rules_dir = agents_dir / "rules"
+    docs_dir = agents_dir / "docs"
+    config_dir = agents_dir / "config"
 
-    # 2. File Operations - Merge AGENTS.md (System Context)
     print("Brain: absorbing system context...")
-    root_agents_md = os.path.join(ROOT, "AGENTS.md")
-    workflow_rules_md = os.path.join(RULES_DIR, "WORKFLOW_RULES.md")
+    root_agents_md = root / "AGENTS.md"
+    workflow_rules_md = rules_dir / "WORKFLOW_RULES.md"
 
-    if os.path.exists(root_agents_md) and os.path.exists(workflow_rules_md):
-        with open(root_agents_md, 'r') as f:
+    if root_agents_md.exists() and workflow_rules_md.exists():
+        with open(root_agents_md, 'r', encoding='utf-8') as f:
             agents_content = f.read()
-        with open(workflow_rules_md, 'r') as f:
+        with open(workflow_rules_md, 'r', encoding='utf-8') as f:
             rules_content = f.read()
 
-        # Prepend context to rules
         final_content = f"## 0. System Context & Ingestion\n{agents_content}\n\n{rules_content}"
-        with open(workflow_rules_md, 'w') as f:
+        with open(workflow_rules_md, 'w', encoding='utf-8') as f:
             f.write(final_content)
-        os.remove(root_agents_md)
+        root_agents_md.unlink()
 
-    # 3. Update Configurations (Personas)
-    brain_config = os.path.join(CONFIG_DIR, "brain.md")
+    brain_config = config_dir / "brain.md"
     update_file(brain_config, r"\*\*Current Mode:\*\* Democracy", f"**Current Mode:** {governance}")
 
-    sentinel_config = os.path.join(CONFIG_DIR, "sentinel.md")
+    sentinel_config = config_dir / "sentinel.md"
     update_file(sentinel_config, r"\*\*Role:\*\* Security & Compliance\.", f"**Role:** Security & Compliance.\n**Risk Tolerance:** {risk}")
 
-    boom_config = os.path.join(CONFIG_DIR, "boom.md")
+    boom_config = config_dir / "boom.md"
     update_file(boom_config, r"\*\*Role:\*\* Feature Delivery\.", f"**Role:** Feature Delivery.\n**Project Context:** {project_context}")
 
-    # 4. Unpack Template (The Smart Part)
     print("Brain: Unpacking project structure...")
 
-    for item in os.listdir(TEMPLATE_DIR):
-        s = os.path.join(TEMPLATE_DIR, item)
-        d = os.path.join(ROOT, item)
+    for item in os.listdir(template_dir):
+        if not _is_safe_path(item): continue
+        s = template_dir / item
+        d = root / item
 
-        # Handle README (The Manual)
         if item == "README.md":
-            # In Migration Mode, we DON'T overwrite the root README.
-            # We move the template README to .agents/docs/USER_MANUAL.md
-            if IS_MIGRATION:
-                manual_dest = os.path.join(ROOT, ".agents", "docs", "USER_MANUAL.md")
-                # We need to wait until .agents is moved first, so we'll handle this after the loop or ensure dir exists
-                # Actually, simpler: Move it to d (ROOT/README.md) ONLY IF Creation Mode.
-                pass # Handled below
-            else:
-                # Creation Mode: Overwrite Root README
-                if os.path.exists(d): os.remove(d)
-                shutil.move(s, d)
+            if not is_migration:
+                if d.exists(): d.unlink()
+                shutil.move(str(s), str(d))
             continue
 
-        # Handle .gitignore (Append vs Overwrite)
-        if item == ".gitignore" and os.path.exists(d) and IS_MIGRATION:
+        if item == ".gitignore" and d.exists() and is_migration:
             print("Brain: Merging .gitignore...")
-            with open(s, 'r') as fsrc: template_ignore = fsrc.read()
-            with open(d, 'a') as fdst:
+            with open(s, 'r', encoding='utf-8') as fsrc: template_ignore = fsrc.read()
+            with open(d, 'a', encoding='utf-8') as fdst:
                 fdst.write("\n\n# --- JULES CODING SQUAD ---\n")
                 fdst.write(template_ignore)
-            os.remove(s)
+            s.unlink()
             continue
 
-        # Handle Scripts Folder (Merge)
         if item == "scripts":
-             if os.path.exists(d):
+             if d.is_dir():
                  for subitem in os.listdir(s):
-                     shutil.move(os.path.join(s, subitem), os.path.join(d, subitem))
-                 os.rmdir(s)
+                     if _is_safe_path(subitem):
+                         shutil.move(str(s / subitem), str(d / subitem))
+                 shutil.rmtree(s)
              else:
-                 shutil.move(s, d)
+                 shutil.move(str(s), str(d))
              continue
 
-        # Default Move (Overwrite if exists in Creation Mode, Skip/Merge in Migration?)
-        # For .agents/ folder, we always want to install it.
-
-        # Deploy wrapper script to root
         if item == "squad":
-            if os.path.exists(d): os.remove(d)
-            shutil.move(s, d)
-            os.chmod(d, 0o755)
+            if d.exists(): d.unlink()
+            shutil.move(str(s), str(d))
+            d.chmod(stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
             continue
 
         if item == ".agents":
-            if os.path.exists(d): shutil.rmtree(d) # Re-install agents
-            shutil.move(s, d)
+            if d.is_dir(): shutil.rmtree(d)
+            shutil.move(str(s), str(d))
             continue
 
-        # For src/ or other scaffold files, SKIP in Migration Mode
-        if IS_MIGRATION and item in ['src', 'tests', 'package.json', 'requirements.txt']:
+        if is_migration and item in ['src', 'tests', 'package.json', 'requirements.txt']:
             print(f"Brain: Skipping scaffolding file '{item}' (preserving existing).")
-            if os.path.isdir(s): shutil.rmtree(s)
-            else: os.remove(s)
+            if s.is_dir(): shutil.rmtree(s)
+            else: s.unlink()
             continue
 
-        # Fallback for anything else
-        if os.path.exists(d):
-            if os.path.isdir(d): shutil.rmtree(d)
-            else: os.remove(d)
-        shutil.move(s, d)
+        if d.exists():
+            if d.is_dir(): shutil.rmtree(d)
+            else: d.unlink()
+        shutil.move(str(s), str(d))
 
-    # Post-Loop Handling for Manual in Migration Mode
-    if IS_MIGRATION:
-        # The template README is still in TEMPLATE_DIR (we skipped it loop) or deleted?
-        # Wait, if we skipped it, it's still in TEMPLATE_DIR.
-        template_readme = os.path.join(TEMPLATE_DIR, "README.md")
-        manual_dest_dir = os.path.join(ROOT, ".agents", "docs")
-        manual_dest = os.path.join(manual_dest_dir, "USER_MANUAL.md")
+    if is_migration:
+        template_readme = template_dir / "README.md"
+        manual_dest_dir = root / ".agents" / "docs"
+        manual_dest = manual_dest_dir / "USER_MANUAL.md"
 
-        if os.path.exists(template_readme):
-            if not os.path.exists(manual_dest_dir): os.makedirs(manual_dest_dir)
-            shutil.move(template_readme, manual_dest)
+        if template_readme.exists():
+            if not manual_dest_dir.is_dir(): manual_dest_dir.mkdir(parents=True)
+            shutil.move(str(template_readme), str(manual_dest))
 
-            # Append Badge to Root README
-            root_readme = os.path.join(ROOT, "README.md")
-            if os.path.exists(root_readme):
-                with open(root_readme, 'a') as f:
+            root_readme = root / "README.md"
+            if root_readme.exists():
+                with open(root_readme, 'a', encoding='utf-8') as f:
                     f.write("\n\n> 🧠 **This project is now managed by The Coding Squad.**\n> See `.agents/docs/USER_MANUAL.md` for commands.\n")
 
-    # 5. The Lift (Runtime Sanitization)
     print("Brain: Lifting Runtime Engine...")
 
-    # Define sanitization targets
     cleanup_targets = [
-        os.path.join(ROOT, 'ingests'),
-        os.path.join(ROOT, 'tests', 'verification', 'logs')
-        os.path.join(ROOT, 'tests', 'verification', 'logs'),
-        os.path.join(ROOT, 'tests', 'verification', '.hypothesis'),
-        os.path.join(ROOT, '.hypothesis'),
-        os.path.join(ROOT, '__pycache__'),
-        os.path.join(ROOT, 'core', '__pycache__')
+        root / 'ingests',
+        root / 'tests' / 'verification' / 'logs',
+        root / 'tests' / 'verification' / '.hypothesis',
+        root / '.hypothesis',
+        root / '__pycache__',
+        root / 'core' / '__pycache__'
     ]
 
-    # Recursive cleaning for __pycache__
-    for root, dirs, files in os.walk(ROOT):
+    for r, dirs, files in os.walk(root):
         if '__pycache__' in dirs:
-            shutil.rmtree(os.path.join(root, '__pycache__'))
-            dirs.remove('__pycache__') # Stop descending
+            shutil.rmtree(Path(r) / '__pycache__')
+            dirs.remove('__pycache__')
         if '.hypothesis' in dirs:
-             shutil.rmtree(os.path.join(root, '.hypothesis'))
+             shutil.rmtree(Path(r) / '.hypothesis')
              dirs.remove('.hypothesis')
 
-    # Specific targets
     for target in cleanup_targets:
-        if os.path.exists(target):
-            if os.path.isdir(target):
-                shutil.rmtree(target)
-            else:
-                os.remove(target)
+        if target.exists():
+            if target.is_dir(): shutil.rmtree(target)
+            else: target.unlink()
 
-    # 6. Cleanup (Template Source)
     try:
-        if os.path.exists(TEMPLATE_DIR): shutil.rmtree(TEMPLATE_DIR)
+        if template_dir.is_dir(): shutil.rmtree(template_dir)
     except OSError as e:
         print(f"Warning: Failed to cleanup template source: {e}")
 
-    # 7. Git Endpoint Security and Hooks
-    configure_git_remote(IS_MIGRATION)
+    configure_git_remote(is_migration)
     install_git_hooks()
 
-    # 7.5 LLM Configuration
-    # Safe import from core to survive template deletion
-
-
-    import sys
-    sys.path.insert(0, os.path.join(ROOT, ".agents", "engine"))
+    sys.path.insert(0, str(root / ".agents" / "engine"))
     from core.llm_config import configure_llm_providers
     configure_llm_providers()
 
-    # 8. Trigger Smart Ingest (The Awakening)
     print("Brain: Initializing memory systems...")
-    ingest_script = os.path.join(ROOT, "scripts", "smart_ingest.py")
-    if os.path.exists(ingest_script):
+    ingest_script = root / "scripts" / "smart_ingest.py"
+    if ingest_script.exists():
         try:
-            # We run it with python executable
-            subprocess.run([sys.executable, ingest_script], check=False)
+            subprocess.run([sys.executable, str(ingest_script)], check=False, shell=False)
         except Exception as e:
             print(f"⚠️ Warning: Could not auto-run ingestion: {e}")
 
     print("\n---------------------------------------------")
     print(f"✅ Brain: {project_name} initialized.")
-    print(f"✅ Mode: {'INTEGRATION' if IS_MIGRATION else 'GENESIS'}")
-    if IS_MIGRATION:
+    print(f"✅ Mode: {'INTEGRATION' if is_migration else 'GENESIS'}")
+    if is_migration:
         print(f"ℹ️  Manual installed at: .agents/docs/USER_MANUAL.md")
     else:
         print(f"ℹ️  See README.md for instructions.")
@@ -435,32 +400,11 @@ def main(dry_run=False, force=False):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="🧠 Jules Code Team Template Initialization Script",
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog="""
-Examples:
-  python init_project.py                    # Interactive initialization
-  python init_project.py --dry-run         # Preview what would happen
-  python init_project.py --help            # Show this help
-
-Modes:
-  GENESIS: For new projects - creates full project structure
-  INTEGRATION: For existing projects - integrates agents without overwriting
-
-The script will automatically detect the appropriate mode based on existing files.
-        """
+        formatter_class=argparse.RawDescriptionHelpFormatter
     )
-    parser.add_argument(
-        '--dry-run',
-        action='store_true',
-        help='Simulate initialization without making changes'
-    )
-    parser.add_argument(
-        '--force',
-        action='store_true',
-        help='Force initialization even if already initialized'
-    )
+    parser.add_argument('--dry-run', action='store_true')
+    parser.add_argument('--force', action='store_true')
 
     args = parser.parse_args()
-
     check_dependencies()
     main(dry_run=args.dry_run, force=args.force)

@@ -5,26 +5,40 @@ from pathlib import Path
 def get_repo_root(start_path=None):
     """Returns the repository root containing either .git or template_source/.agents."""
     if start_path is None:
-        start_path = os.getcwd()
+        start_path = Path.cwd()
+    else:
+        start_path = Path(start_path).resolve()
 
-    current = Path(start_path).resolve()
-    for parent in [current] + list(current.parents):
-        if (parent / '.git').exists():
-            return str(parent)
-        if (parent / '.agents').exists() or (parent / 'template_source' / '.agents').exists():
-            return str(parent)
-    return str(current)
+    # First pass: look for strong indicators (.git or template_source/.agents)
+    temp = start_path
+    while True:
+        if (temp / '.git').is_dir() or (temp / 'template_source' / '.agents').is_dir():
+            return str(temp)
+        if temp.parent == temp: # Reached root
+            break
+        temp = temp.parent
+
+    # Second pass: look for production indicator (.agents at root)
+    temp = start_path
+    while True:
+        if (temp / '.agents').is_dir():
+            return str(temp)
+        if temp.parent == temp: # Reached root
+            break
+        temp = temp.parent
+
+    return str(start_path)
 
 
 def get_agents_dir(root=None):
     """Resolves the active .agents directory in production or development mode."""
-    root = Path(root or get_repo_root())
-    prod_path = root / '.agents'
-    if prod_path.exists():
+    root_path = Path(root or get_repo_root())
+    prod_path = root_path / '.agents'
+    if prod_path.is_dir():
         return str(prod_path)
 
-    dev_path = root / 'template_source' / '.agents'
-    if dev_path.exists():
+    dev_path = root_path / 'template_source' / '.agents'
+    if dev_path.is_dir():
         return str(dev_path)
 
     raise FileNotFoundError(
