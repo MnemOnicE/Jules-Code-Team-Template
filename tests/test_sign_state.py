@@ -1,6 +1,15 @@
 import pytest
 import hashlib
+import sys
+import os
+from pathlib import Path
 from unittest.mock import patch, mock_open
+
+# Ensure the scripts directory is in sys.path for importing sign_state
+test_scripts_path = Path(__file__).resolve().parents[1] / "template_source" / "scripts"
+if str(test_scripts_path) not in sys.path:
+    sys.path.insert(0, str(test_scripts_path))
+
 from sign_state import sign_state
 
 def test_sign_state_file_not_found(capsys):

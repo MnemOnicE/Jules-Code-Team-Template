@@ -55,9 +55,8 @@ class GraphExecutor:
         """
         glyph = str(graph.get("intent_glyph") or "")
         self.logger.info(f"Validating graph against intent: {glyph}")
-
-        nodes = graph.get("nodes", {})
         # Enforcement of the "Shield" protocol (Source [2])
+        nodes = graph.get("nodes", {})
         has_security_scan = any(node.get("action") == "security_scan" for node in nodes.values())
         if "🛡️" in glyph and not has_security_scan:
             raise SecurityError("Graph deviates from Sentinel Intent! Halting.")
