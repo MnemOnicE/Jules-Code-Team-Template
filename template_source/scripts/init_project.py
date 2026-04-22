@@ -70,6 +70,20 @@ def validate_governance(value):
 def validate_risk(value):
     return value.lower() in ['high', 'medium', 'low']
 
+def validate_git_remote(url):
+    """
+    Basic validation for Git remote URLs.
+    Prevents option injection and restricted protocols.
+    """
+    if not url:
+        return True
+    if url.startswith('-'):
+        return False
+    # Basic regex for SSH/HTTPS git URLs
+    if re.match(r'^(https?://|git@|ssh://)', url):
+        return True
+    return False
+
 def clear_screen():
     print("\033[H\033[J", end="")
 
@@ -138,13 +152,27 @@ def configure_git_remote(is_migration=False):
     except Exception:
         pass
 
-    new_remote = input("Brain: Enter your new Git repository URL (HTTPS or SSH), or leave blank to skip for now: ").strip()
+    new_remote = get_input("Brain: Enter your new Git repository URL (HTTPS or SSH), or leave blank to skip for now", "", validate_git_remote).strip()
     if new_remote:
         try:
-            subprocess.run(["git", "remote", "add", "origin", new_remote], check=True)
+            # Use -- to prevent option injection
+            subprocess.run(["git", "remote", "add", "origin", "--", new_remote], check=True)
             print(f"✅ Added new remote 'origin': {new_remote}")
         except Exception as e:
             print(f"⚠️ Failed to add remote: {e}")
+
+def _is_within_directory(directory, target):
+    abs_directory = os.path.abspath(directory)
+    abs_target = os.path.abspath(target)
+    prefix = os.path.commonpath([abs_directory, abs_target])
+    return prefix == abs_directory
+
+def safe_remove(path, root):
+    if os.path.exists(path) and _is_within_directory(root, path):
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
 
 def main(dry_run=False, force=False):
 
@@ -241,7 +269,7 @@ def main(dry_run=False, force=False):
         final_content = f"## 0. System Context & Ingestion\n{agents_content}\n\n{rules_content}"
         with open(workflow_rules_md, 'w') as f:
             f.write(final_content)
-        os.remove(root_agents_md)
+        safe_remove(root_agents_md, ROOT)
 
     # 3. Update Configurations (Personas)
     brain_config = os.path.join(CONFIG_DIR, "brain.md")
@@ -271,7 +299,7 @@ def main(dry_run=False, force=False):
                 pass # Handled below
             else:
                 # Creation Mode: Overwrite Root README
-                if os.path.exists(d): os.remove(d)
+                safe_remove(d, ROOT)
                 shutil.move(s, d)
             continue
 
@@ -282,7 +310,7 @@ def main(dry_run=False, force=False):
             with open(d, 'a') as fdst:
                 fdst.write("\n\n# --- JULES CODING SQUAD ---\n")
                 fdst.write(template_ignore)
-            os.remove(s)
+            safe_remove(s, ROOT)
             continue
 
         # Handle Scripts Folder (Merge)
@@ -300,27 +328,24 @@ def main(dry_run=False, force=False):
 
         # Deploy wrapper script to root
         if item == "squad":
-            if os.path.exists(d): os.remove(d)
+            safe_remove(d, ROOT)
             shutil.move(s, d)
             os.chmod(d, 0o755)
             continue
 
         if item == ".agents":
-            if os.path.exists(d): shutil.rmtree(d) # Re-install agents
+            safe_remove(d, ROOT) # Re-install agents
             shutil.move(s, d)
             continue
 
         # For src/ or other scaffold files, SKIP in Migration Mode
         if IS_MIGRATION and item in ['src', 'tests', 'package.json', 'requirements.txt']:
             print(f"Brain: Skipping scaffolding file '{item}' (preserving existing).")
-            if os.path.isdir(s): shutil.rmtree(s)
-            else: os.remove(s)
+            safe_remove(s, TEMPLATE_DIR)
             continue
 
         # Fallback for anything else
-        if os.path.exists(d):
-            if os.path.isdir(d): shutil.rmtree(d)
-            else: os.remove(d)
+        safe_remove(d, ROOT)
         shutil.move(s, d)
 
     # Post-Loop Handling for Manual in Migration Mode
@@ -353,19 +378,19 @@ def main(dry_run=False, force=False):
     # Recursive cleaning for __pycache__
     for root, dirs, files in os.walk(ROOT):
         if '__pycache__' in dirs:
-            shutil.rmtree(os.path.join(root, '__pycache__'))
+            pycache_path = os.path.join(root, '__pycache__')
+            if _is_within_directory(ROOT, pycache_path):
+                shutil.rmtree(pycache_path)
             dirs.remove('__pycache__') # Stop descending
         if '.hypothesis' in dirs:
-             shutil.rmtree(os.path.join(root, '.hypothesis'))
+             hypothesis_path = os.path.join(root, '.hypothesis')
+             if _is_within_directory(ROOT, hypothesis_path):
+                 shutil.rmtree(hypothesis_path)
              dirs.remove('.hypothesis')
 
     # Specific targets
     for target in cleanup_targets:
-        if os.path.exists(target):
-            if os.path.isdir(target):
-                shutil.rmtree(target)
-            else:
-                os.remove(target)
+        safe_remove(target, ROOT)
 
     # 6. Cleanup (Template Source)
     try:
