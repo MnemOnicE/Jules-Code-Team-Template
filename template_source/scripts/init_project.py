@@ -32,6 +32,7 @@ import json
 import subprocess
 import importlib.util
 import argparse
+import stat
 
 def check_dependencies():
     required_packages = {
@@ -73,14 +74,28 @@ def validate_risk(value):
 def validate_git_remote(url):
     """
     Validates the Git remote URL for security.
-    Blocks option injection (starts with -) and dangerous protocols (ext::).
+    Blocks option injection (starts with -) and dangerous protocols.
     """
     if not url:
         return True
-    if url.strip().startswith("-"):
+    url = url.strip()
+    # Prevent option injection
+    if url.startswith("-"):
         return False
-    if "ext::" in url.lower():
-        return False
+
+    # Block dangerous protocols
+    blacklist = ['ext::', 'git-remote-']
+    url_lower = url.lower()
+    for pattern in blacklist:
+        if pattern in url_lower:
+            return False
+
+    # Basic scheme validation if it looks like a URL
+    if "://" in url:
+        scheme = url.split("://")[0].lower()
+        if scheme not in ['https', 'http', 'git', 'ssh']:
+            return False
+
     return True
 
 def clear_screen():
@@ -131,7 +146,7 @@ def install_git_hooks():
         dst_path = os.path.join(hooks_dir, hook_name)
         if os.path.exists(src_path):
             shutil.copy2(src_path, dst_path)
-            os.chmod(dst_path, 0o755)
+            os.chmod(dst_path, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
 
     print("Brain: Installed Git safeguards (pre-commit, pre-push).")
 
@@ -173,8 +188,8 @@ def main(dry_run=False, force=False):
 
     # --- [START PATCH] SNAPSHOT SAFETY CHECK ---
     # Stops the script from destroying the repo if re-run after initialization.
-    if not os.path.exists(TEMPLATE_DIR):
-        print("Brain: System already initialized. Skipping onboarding.")
+    if not os.path.exists(TEMPLATE_DIR) and not force:
+        print("Brain: System already initialized. Skipping onboarding. Use --force to re-initialize.")
         return
     # --- [END PATCH] ---------------------------
 
@@ -282,10 +297,8 @@ def main(dry_run=False, force=False):
             # In Migration Mode, we DON'T overwrite the root README.
             # We move the template README to .agents/docs/USER_MANUAL.md
             if IS_MIGRATION:
-                manual_dest = os.path.join(ROOT, ".agents", "docs", "USER_MANUAL.md")
-                # We need to wait until .agents is moved first, so we'll handle this after the loop or ensure dir exists
-                # Actually, simpler: Move it to d (ROOT/README.md) ONLY IF Creation Mode.
-                pass # Handled below
+                # Handled below in post-loop
+                pass
             else:
                 # Creation Mode: Overwrite Root README
                 if os.path.exists(d): os.remove(d)
@@ -319,7 +332,7 @@ def main(dry_run=False, force=False):
         if item == "squad":
             if os.path.exists(d): os.remove(d)
             shutil.move(s, d)
-            os.chmod(d, 0o755)
+            os.chmod(d, stat.S_IRWXU | stat.S_IRGRP | stat.S_IXGRP | stat.S_IROTH | stat.S_IXOTH)
             continue
 
         if item == ".agents":

@@ -8,15 +8,24 @@ def get_repo_root(start_path=None):
         start_path = os.getcwd()
 
     current = Path(start_path).resolve()
+
     # First pass: look for strong indicators (.git or template_source/.agents)
-    for parent in [current] + list(current.parents):
-        if (parent / '.git').exists() or (parent / 'template_source' / '.agents').exists():
-            return str(parent)
+    temp = current
+    while True:
+        if (temp / '.git').exists() or (temp / 'template_source' / '.agents').exists():
+            return str(temp)
+        if temp.parent == temp: # Reached root
+            break
+        temp = temp.parent
 
     # Second pass: look for production indicator (.agents at root)
-    for parent in [current] + list(current.parents):
-        if (parent / '.agents').exists():
-            return str(parent)
+    temp = current
+    while True:
+        if (temp / '.agents').exists():
+            return str(temp)
+        if temp.parent == temp: # Reached root
+            break
+        temp = temp.parent
 
     return str(current)
 
