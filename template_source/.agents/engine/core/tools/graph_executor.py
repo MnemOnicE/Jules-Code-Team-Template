@@ -34,7 +34,7 @@ class GraphExecutor:
     Traverses the Sovereign Execution Graph.
     Acts as the 'Soldier' validating the 'General's' orders.
     """
-    MAX_STEPS = 1000
+    MAX_STEPS = 100
 
 
     def __init__(self, bus, system_context=None, registry=None, privileged_tools=None):
@@ -130,11 +130,19 @@ class GraphExecutor:
                 raise SecurityError(msg)
         current_node_id = graph["entry_point"]
         step_count = 0
+        node_visit_counts = {}
 
         self.logger.info(f"[NEXUS] Starting execution at entry point: {current_node_id}")
 
         while current_node_id and current_node_id != "END":
             step_count += 1
+
+            node_visit_counts[current_node_id] = node_visit_counts.get(current_node_id, 0) + 1
+            if node_visit_counts[current_node_id] > 10:
+                msg = f"Infinite loop detected: Node '{current_node_id}' visited more than 10 times."
+                self.logger.error(msg)
+                raise MaxStepsExceededError(msg)
+
             if step_count > self.MAX_STEPS:
                 msg = f"Max steps ({self.MAX_STEPS}) exceeded. Potential infinite loop."
                 self.logger.error(msg)

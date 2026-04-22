@@ -26,6 +26,14 @@ def system_io_bridge(action):
             path = kwargs.get('path') or kwargs.get('file_path') or kwargs.get('directory') or kwargs.get('filename')
             content = kwargs.get('content') or kwargs.get('text') or kwargs.get('data')
 
+            if path:
+                # Prevent directory traversal by strictly normalizing and verifying path
+                repo_root = os.path.abspath(os.getcwd())
+                abs_path = os.path.abspath(os.path.join(repo_root, path))
+                if not abs_path.startswith(repo_root):
+                    return {"status": "error", "message": f"Security violation: path traversal detected ({path})"}
+                path = abs_path
+
             if action == "mkdir":
                 if not path: return {"status": "error", "message": "mkdir: No path provided."}
                 os.makedirs(path, exist_ok=True)

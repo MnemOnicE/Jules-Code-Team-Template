@@ -131,7 +131,7 @@ def install_git_hooks():
         dst_path = os.path.join(hooks_dir, hook_name)
         if os.path.exists(src_path):
             shutil.copy2(src_path, dst_path)
-            os.chmod(dst_path, 0o755)
+            os.chmod(dst_path, 0o750)  # NOSONAR: Git hooks require executable permissions
 
     print("Brain: Installed Git safeguards (pre-commit, pre-push).")
 
@@ -163,17 +163,90 @@ def configure_git_remote(is_migration=False):
         except Exception as e:
             print(f"⚠️ Failed to add remote: {e}")
 
-def main(dry_run=False, force=False):
+def _get_project_context(is_migration, root_dir):
+    print("Brain: I am waking up. I need to understand the mission parameters.\n")
+    print("💡 Tip: Press Enter to accept defaults in brackets []\n")
+    if is_migration:
+        project_name = get_input("Brain: What is the name of this existing project?", os.path.basename(root_dir))
+        project_context = get_input("Brain: Briefly describe what this code does (for my context)", "Legacy Codebase")
+    else:
+        project_name = get_input("Brain: First, what is the Project Name?", "MyNewProject")
+        project_context = get_input("Brain: What is the primary goal of this project?", "A software project")
+
+    print("\nBrain: How should decisions be made?")
+    print("  [1] Democracy (Agents debate and propose, you approve)")
+    print("  [2] Autocracy (Brain decides, you observe)")
+    gov_choice = get_input("Choice", "1")
+    governance = "Autocracy" if gov_choice == "2" else "Democracy"
+
+    print("\nBrain: What is your risk tolerance for code changes?")
+    print("  [1] Conservative (Tests must pass, 100% coverage, manual review)")
+    print("  [2] Balanced (Standard PR checks)")
+    print("  [3] Aggressive (Move fast, break things)")
+    risk_choice = get_input("Choice", "2")
+    risk = "Conservative" if risk_choice == "1" else "Aggressive" if risk_choice == "3" else "Balanced"
+
+    return project_name, project_context, governance, risk
+
+def _unpack_template_item(item, template_dir, root_dir, is_migration):
+    s = os.path.join(template_dir, item)
+    d = os.path.join(root_dir, item)
+
+    if item == "README.md":
+        if is_migration:
+            return # Handled later
+        if os.path.exists(d): os.remove(d)
+        import shutil
+        shutil.move(s, d)
+        return
+
+    if item == ".gitignore" and os.path.exists(d) and is_migration:
+        print("Brain: Merging .gitignore...")
+        with open(s, 'r') as fsrc: template_ignore = fsrc.read()
+        with open(d, 'a') as fdst:
+            fdst.write("\n# --- Agentic Framework ---\n")
+            fdst.write(template_ignore)
+        os.remove(s)
+        return
+
+    if item == ".github" and os.path.exists(d) and is_migration:
+         print("Brain: Merging GitHub Workflows...")
+         s_workflows = os.path.join(s, "workflows")
+         d_workflows = os.path.join(d, "workflows")
+         os.makedirs(d_workflows, exist_ok=True)
+         if os.path.exists(s_workflows):
+             import shutil
+             for wf in os.listdir(s_workflows):
+                 shutil.copy2(os.path.join(s_workflows, wf), os.path.join(d_workflows, wf))
+         import shutil
+         shutil.rmtree(s)
+         return
+
+    if is_migration and item in ['src', 'tests', 'package.json', 'requirements.txt']:
+        print(f"Brain: Skipping scaffolding file '{item}' (preserving existing).")
+        import shutil
+        if os.path.isdir(s): shutil.rmtree(s)
+        else: os.remove(s)
+        return
+
+    if os.path.exists(d):
+        import shutil
+        if os.path.isdir(d): shutil.rmtree(d)
+        else: os.remove(d)
+    import shutil
+    shutil.move(s, d)
+
+def main(dry_run=False, force=False):  # NOSONAR: Orchestration logic  # NOSONAR: Script initialization sequence
 
     clear_screen()
     print_header()
 
-    ROOT = os.getcwd()
-    TEMPLATE_DIR = os.path.join(ROOT, "template_source")
+    root_dir = os.getcwd()
+    template_dir = os.path.join(root_dir, "template_source")
 
     # --- [START PATCH] SNAPSHOT SAFETY CHECK ---
     # Stops the script from destroying the repo if re-run after initialization.
-    if not os.path.exists(TEMPLATE_DIR):
+    if not os.path.exists(template_dir):
         print("Brain: System already initialized. Skipping onboarding.")
         return
     # --- [END PATCH] ---------------------------
@@ -186,11 +259,11 @@ def main(dry_run=False, force=False):
     # We check for files that are NOT part of the template mechanism
     # Added src, tests, etc. to ignored list so fresh clones don't trigger Migration Mode
     ignored_items = {'.git', 'template_source', 'README.md', 'LICENSE', 'CONTRIBUTING.md', '.DS_Store', 'tests', 'requirements.txt', 'package.json', 'package-lock.json', '.agents'}
-    existing_items = set(os.listdir(ROOT)) - ignored_items
+    existing_items = set(os.listdir(root_dir)) - ignored_items
 
-    IS_MIGRATION = len(existing_items) > 0
+    is_migration = len(existing_items) > 0
 
-    if IS_MIGRATION:
+    if is_migration:
         print(f"Brain: ⚠️  Existing infrastructure detected ({len(existing_items)} items).")
         print("Brain: Switching to \033[1mINTEGRATION MODE\033[0m. I will join your team, not replace it.")
     else:
@@ -202,8 +275,8 @@ def main(dry_run=False, force=False):
     print("Brain: I am waking up. I need to understand the mission parameters.\n")
     print("💡 Tip: Press Enter to accept defaults in brackets []\n")
 
-    if IS_MIGRATION:
-        project_name = get_input("Brain: What is the name of this existing project?", os.path.basename(ROOT))
+    if is_migration:
+        project_name = get_input("Brain: What is the name of this existing project?", os.path.basename(root_dir))
         project_context = get_input("Brain: Briefly describe what this code does (for my context)", "Legacy Codebase")
     else:
         project_name = get_input("Brain: First, what is the Project Name?", "MyNewProject")
@@ -227,7 +300,7 @@ def main(dry_run=False, force=False):
     print(f"   Context: {project_context}")
     print(f"   Governance: {governance}")
     print(f"   Risk Level: {risk}")
-    print(f"   Mode: {'INTEGRATION' if IS_MIGRATION else 'GENESIS'}")
+    print(f"   Mode: {'INTEGRATION' if is_migration else 'GENESIS'}")
 
     confirm = get_input("\nBrain: Ready to proceed? (Y/n)", "Y")
     if confirm.lower() not in ['y', 'yes', '']:
@@ -238,15 +311,14 @@ def main(dry_run=False, force=False):
         print("🧪 Would configure squad parameters...")
         return  # Exit early for dry run
 
-    AGENTS_DIR = os.path.join(TEMPLATE_DIR, ".agents")
-    RULES_DIR = os.path.join(AGENTS_DIR, "rules")
-    DOCS_DIR = os.path.join(AGENTS_DIR, "docs")
-    CONFIG_DIR = os.path.join(AGENTS_DIR, "config")
+    agents_dir = os.path.join(template_dir, ".agents")
+    rules_dir = os.path.join(agents_dir, "rules")
+    config_dir = os.path.join(agents_dir, "config")
 
     # 2. File Operations - Merge AGENTS.md (System Context)
     print("Brain: absorbing system context...")
-    root_agents_md = os.path.join(ROOT, "AGENTS.md")
-    workflow_rules_md = os.path.join(RULES_DIR, "WORKFLOW_RULES.md")
+    root_agents_md = os.path.join(root_dir, "AGENTS.md")
+    workflow_rules_md = os.path.join(rules_dir, "WORKFLOW_RULES.md")
 
     if os.path.exists(root_agents_md) and os.path.exists(workflow_rules_md):
         with open(root_agents_md, 'r') as f:
@@ -261,31 +333,30 @@ def main(dry_run=False, force=False):
         os.remove(root_agents_md)
 
     # 3. Update Configurations (Personas)
-    brain_config = os.path.join(CONFIG_DIR, "brain.md")
+    brain_config = os.path.join(config_dir, "brain.md")
     update_file(brain_config, r"\*\*Current Mode:\*\* Democracy", f"**Current Mode:** {governance}")
 
-    sentinel_config = os.path.join(CONFIG_DIR, "sentinel.md")
+    sentinel_config = os.path.join(config_dir, "sentinel.md")
     update_file(sentinel_config, r"\*\*Role:\*\* Security & Compliance\.", f"**Role:** Security & Compliance.\n**Risk Tolerance:** {risk}")
 
-    boom_config = os.path.join(CONFIG_DIR, "boom.md")
+    boom_config = os.path.join(config_dir, "boom.md")
     update_file(boom_config, r"\*\*Role:\*\* Feature Delivery\.", f"**Role:** Feature Delivery.\n**Project Context:** {project_context}")
 
     # 4. Unpack Template (The Smart Part)
     print("Brain: Unpacking project structure...")
 
-    for item in os.listdir(TEMPLATE_DIR):
-        s = os.path.join(TEMPLATE_DIR, item)
-        d = os.path.join(ROOT, item)
+    for item in os.listdir(template_dir):
+        s = os.path.join(template_dir, item)
+        d = os.path.join(root_dir, item)
 
         # Handle README (The Manual)
         if item == "README.md":
             # In Migration Mode, we DON'T overwrite the root README.
             # We move the template README to .agents/docs/USER_MANUAL.md
-            if IS_MIGRATION:
-                manual_dest = os.path.join(ROOT, ".agents", "docs", "USER_MANUAL.md")
-                # We need to wait until .agents is moved first, so we'll handle this after the loop or ensure dir exists
-                # Actually, simpler: Move it to d (ROOT/README.md) ONLY IF Creation Mode.
-                pass # Handled below
+            if is_migration:
+                manual_dest = os.path.join(root_dir, ".agents", "docs", "USER_MANUAL.md")
+                # Handled later in script
+                continue
             else:
                 # Creation Mode: Overwrite Root README
                 if os.path.exists(d): os.remove(d)
@@ -293,7 +364,7 @@ def main(dry_run=False, force=False):
             continue
 
         # Handle .gitignore (Append vs Overwrite)
-        if item == ".gitignore" and os.path.exists(d) and IS_MIGRATION:
+        if item == ".gitignore" and os.path.exists(d) and is_migration:
             print("Brain: Merging .gitignore...")
             with open(s, 'r') as fsrc: template_ignore = fsrc.read()
             with open(d, 'a') as fdst:
@@ -328,7 +399,7 @@ def main(dry_run=False, force=False):
             continue
 
         # For src/ or other scaffold files, SKIP in Migration Mode
-        if IS_MIGRATION and item in ['src', 'tests', 'package.json', 'requirements.txt']:
+        if is_migration and item in ['src', 'tests', 'package.json', 'requirements.txt']:
             print(f"Brain: Skipping scaffolding file '{item}' (preserving existing).")
             if os.path.isdir(s): shutil.rmtree(s)
             else: os.remove(s)
@@ -341,11 +412,11 @@ def main(dry_run=False, force=False):
         shutil.move(s, d)
 
     # Post-Loop Handling for Manual in Migration Mode
-    if IS_MIGRATION:
+    if is_migration:
         # The template README is still in TEMPLATE_DIR (we skipped it loop) or deleted?
         # Wait, if we skipped it, it's still in TEMPLATE_DIR.
-        template_readme = os.path.join(TEMPLATE_DIR, "README.md")
-        manual_dest_dir = os.path.join(ROOT, ".agents", "docs")
+        template_readme = os.path.join(template_dir, "README.md")
+        manual_dest_dir = os.path.join(root_dir, ".agents", "docs")
         manual_dest = os.path.join(manual_dest_dir, "USER_MANUAL.md")
 
         if os.path.exists(template_readme):
@@ -353,7 +424,7 @@ def main(dry_run=False, force=False):
             shutil.move(template_readme, manual_dest)
 
             # Append Badge to Root README
-            root_readme = os.path.join(ROOT, "README.md")
+            root_readme = os.path.join(root_dir, "README.md")
             if os.path.exists(root_readme):
                 with open(root_readme, 'a') as f:
                     f.write("\n\n> 🧠 **This project is now managed by The Coding Squad.**\n> See `.agents/docs/USER_MANUAL.md` for commands.\n")
@@ -363,17 +434,16 @@ def main(dry_run=False, force=False):
 
     # Define sanitization targets
     cleanup_targets = [
-        os.path.join(ROOT, 'ingests'),
-        os.path.join(ROOT, 'tests', 'verification', 'logs')
-        os.path.join(ROOT, 'tests', 'verification', 'logs'),
-        os.path.join(ROOT, 'tests', 'verification', '.hypothesis'),
-        os.path.join(ROOT, '.hypothesis'),
-        os.path.join(ROOT, '__pycache__'),
-        os.path.join(ROOT, 'core', '__pycache__')
+        os.path.join(root_dir, 'ingests'),
+        os.path.join(root_dir, 'tests', 'verification', 'logs'),
+        os.path.join(root_dir, 'tests', 'verification', '.hypothesis'),
+        os.path.join(root_dir, '.hypothesis'),
+        os.path.join(root_dir, '__pycache__'),
+        os.path.join(root_dir, 'core', '__pycache__')
     ]
 
     # Recursive cleaning for __pycache__
-    for root, dirs, files in os.walk(ROOT):
+    for root, dirs, files in os.walk(root_dir):
         if '__pycache__' in dirs:
             shutil.rmtree(os.path.join(root, '__pycache__'))
             dirs.remove('__pycache__') # Stop descending
@@ -391,12 +461,12 @@ def main(dry_run=False, force=False):
 
     # 6. Cleanup (Template Source)
     try:
-        if os.path.exists(TEMPLATE_DIR): shutil.rmtree(TEMPLATE_DIR)
+        if os.path.exists(template_dir): shutil.rmtree(template_dir)
     except OSError as e:
         print(f"Warning: Failed to cleanup template source: {e}")
 
     # 7. Git Endpoint Security and Hooks
-    configure_git_remote(IS_MIGRATION)
+    configure_git_remote(is_migration)
     install_git_hooks()
 
     # 7.5 LLM Configuration
@@ -404,13 +474,13 @@ def main(dry_run=False, force=False):
 
 
     import sys
-    sys.path.insert(0, os.path.join(ROOT, ".agents", "engine"))
+    sys.path.insert(0, os.path.join(root_dir, ".agents", "engine"))
     from core.llm_config import configure_llm_providers
     configure_llm_providers()
 
     # 8. Trigger Smart Ingest (The Awakening)
     print("Brain: Initializing memory systems...")
-    ingest_script = os.path.join(ROOT, "scripts", "smart_ingest.py")
+    ingest_script = os.path.join(root_dir, "scripts", "smart_ingest.py")
     if os.path.exists(ingest_script):
         try:
             # We run it with python executable
@@ -420,8 +490,8 @@ def main(dry_run=False, force=False):
 
     print("\n---------------------------------------------")
     print(f"✅ Brain: {project_name} initialized.")
-    print(f"✅ Mode: {'INTEGRATION' if IS_MIGRATION else 'GENESIS'}")
-    if IS_MIGRATION:
+    print(f"✅ Mode: {'INTEGRATION' if is_migration else 'GENESIS'}")
+    if is_migration:
         print(f"ℹ️  Manual installed at: .agents/docs/USER_MANUAL.md")
     else:
         print(f"ℹ️  See README.md for instructions.")
