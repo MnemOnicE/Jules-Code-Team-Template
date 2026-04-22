@@ -96,10 +96,10 @@ def get_input(prompt, default=None, validator=None):
 def update_file(filepath, search_pattern, replace_value):
     if not os.path.exists(filepath):
         return
-    with open(filepath, 'r') as f:
+    with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
     new_content = re.sub(search_pattern, replace_value, content, flags=re.MULTILINE)
-    with open(filepath, 'w') as f:
+    with open(filepath, 'w', encoding='utf-8') as f:
         f.write(new_content)
 
 
@@ -123,6 +123,18 @@ def install_git_hooks():
     print("Brain: Installed Git safeguards (pre-commit, pre-push).")
 
 
+def validate_git_remote(url):
+    """Basic validation for git remote URLs to prevent option injection."""
+    if not url:
+        return True
+    # Reject URLs starting with hyphen to prevent option injection
+    if url.startswith('-'):
+        return False
+    # Only allow common protocols
+    allowed_protocols = ('https://', 'git@', 'ssh://')
+    return any(url.startswith(p) for p in allowed_protocols)
+
+
 def configure_git_remote(is_migration=False):
 
     print("\nBrain: Securing Git Endpoints (Non-Negotiable)")
@@ -133,18 +145,29 @@ def configure_git_remote(is_migration=False):
         return
 
     try:
-        subprocess.run(["git", "remote", "remove", "origin"], stderr=subprocess.DEVNULL)
+        # Use -- to prevent option injection from remote name
+        subprocess.run(["git", "remote", "remove", "--", "origin"], stderr=subprocess.DEVNULL)
         print("✅ Removed template remote 'origin'.")
     except Exception:
         pass
 
-    new_remote = input("Brain: Enter your new Git repository URL (HTTPS or SSH), or leave blank to skip for now: ").strip()
-    if new_remote:
+    while True:
+        new_remote = input("Brain: Enter your new Git repository URL (HTTPS or SSH), or leave blank to skip for now: ").strip()
+        if not new_remote:
+            break
+
+        if not validate_git_remote(new_remote):
+            print("❌ Invalid Git URL. Please use HTTPS or SSH formats and avoid leading hyphens.")
+            continue
+
         try:
-            subprocess.run(["git", "remote", "add", "origin", new_remote], check=True)
+            # Use -- to prevent option injection from remote URL
+            subprocess.run(["git", "remote", "add", "--", "origin", new_remote], check=True)
             print(f"✅ Added new remote 'origin': {new_remote}")
-        except Exception as e:
+            break
+        except subprocess.CalledProcessError as e:
             print(f"⚠️ Failed to add remote: {e}")
+            break
 
 def main(dry_run=False, force=False):
 
@@ -232,14 +255,14 @@ def main(dry_run=False, force=False):
     workflow_rules_md = os.path.join(RULES_DIR, "WORKFLOW_RULES.md")
 
     if os.path.exists(root_agents_md) and os.path.exists(workflow_rules_md):
-        with open(root_agents_md, 'r') as f:
+        with open(root_agents_md, 'r', encoding='utf-8') as f:
             agents_content = f.read()
-        with open(workflow_rules_md, 'r') as f:
+        with open(workflow_rules_md, 'r', encoding='utf-8') as f:
             rules_content = f.read()
 
         # Prepend context to rules
         final_content = f"## 0. System Context & Ingestion\n{agents_content}\n\n{rules_content}"
-        with open(workflow_rules_md, 'w') as f:
+        with open(workflow_rules_md, 'w', encoding='utf-8') as f:
             f.write(final_content)
         os.remove(root_agents_md)
 
@@ -278,8 +301,8 @@ def main(dry_run=False, force=False):
         # Handle .gitignore (Append vs Overwrite)
         if item == ".gitignore" and os.path.exists(d) and IS_MIGRATION:
             print("Brain: Merging .gitignore...")
-            with open(s, 'r') as fsrc: template_ignore = fsrc.read()
-            with open(d, 'a') as fdst:
+            with open(s, 'r', encoding='utf-8') as fsrc: template_ignore = fsrc.read()
+            with open(d, 'a', encoding='utf-8') as fdst:
                 fdst.write("\n\n# --- JULES CODING SQUAD ---\n")
                 fdst.write(template_ignore)
             os.remove(s)
@@ -338,7 +361,7 @@ def main(dry_run=False, force=False):
             # Append Badge to Root README
             root_readme = os.path.join(ROOT, "README.md")
             if os.path.exists(root_readme):
-                with open(root_readme, 'a') as f:
+                with open(root_readme, 'a', encoding='utf-8') as f:
                     f.write("\n\n> 🧠 **This project is now managed by The Coding Squad.**\n> See `.agents/docs/USER_MANUAL.md` for commands.\n")
 
     # 5. The Lift (Runtime Sanitization)
@@ -350,7 +373,6 @@ def main(dry_run=False, force=False):
         os.path.join(ROOT, 'tests', 'verification', 'logs'),
         os.path.join(ROOT, 'tests', 'verification', '.hypothesis'),
         os.path.join(ROOT, '.hypothesis'),
-        os.path.join(ROOT, '__pycache__'),
         os.path.join(ROOT, '__pycache__'),
         os.path.join(ROOT, 'core', '__pycache__')
     ]

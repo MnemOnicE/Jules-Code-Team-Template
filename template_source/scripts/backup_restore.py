@@ -29,10 +29,7 @@ def _safe_extract(tar, path='.', members=None):
         if member.issym() or member.islnk():
             raise Exception(f"Unsupported symlink in archive: {member.name}")
 
-    if hasattr(tarfile, 'data_filter'):
-        tar.extractall(path, members, filter='data')
-    else:
-        tar.extractall(path, members)
+    tar.extractall(path, members)
 
 
 def create_backup(output_path=None):
