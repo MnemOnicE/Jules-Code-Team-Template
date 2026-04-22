@@ -21,17 +21,24 @@ const path = require('path');
 // Matches Mermaid arrow patterns (e.g., A -> B, A -- Label -> B, A --- B, A <-> B).
 // Supports directed, undirected, and bi-directional edges with optional labels.
 // Designed to avoid consuming nodes in chained definitions (e.g., A --- B -> C).
-// NOTE: Constructed dynamically to avoid CodeQL js/html-comment-confusion (triggered by literal 'dash-dash-gt').
+// Matches Mermaid arrow patterns (e.g., A -> B, A -- Label -> B, A --- B, A <-> B).
+// Supports directed, undirected, and bi-directional edges with optional labels.
+// Designed to avoid consuming nodes in chained definitions (e.g., A --- B -> C).
+// NOTE: Constructed dynamically to avoid CodeQL js/html-comment-confusion.
 const MERMAID_EDGE_RE = (function() {
     const d = '-';
     const g = '>';
     const a = d + d + g; // "-->"
-    const patterns = [
-        '(?:--|==|-\\.)(?:(?:\\|[^|]+\\|)|(?:[^->=.|]+?))?(?:' + a + '|---|==>|===|\\.->|\\.-)',
-        '<' + a, '<==>', '<-.->', '<--', '<==', '<-.', '<->',
-        a, '---', '==>', '===', '-.->', '-.-', '->', '<-'
+    const ab = d + d + '!' + g; // "--!>"
+    const tokens = [
+        '<==>', '<' + a + '>', '<->',
+        ab, a, '---', '==>', '===',
+        '<--', '<==', '<-.',
+        '-.-', '-.->', '->', '<-'
     ];
-    return new RegExp('\\s*(' + patterns.join('|') + ')(?:\\|[^|]+\\|)?\\s*');
+    // Sort by length (longest first) for correct splitting
+    const combined = '(' + tokens.sort((x, y) => y.length - x.length).join('|') + ')';
+    return new RegExp('\\s*' + combined + '\\s*');
 })();
 
 // Configuration
@@ -103,7 +110,7 @@ function processEdgeParts(parts, nodes, edges, nodeSubgraphs, currentSubgraph) {
                         // Reverse arrow: A <- B
                         edges.push({ from: target, to: source });
                     } else {
-                        // Forward, undirected, or bi-directional: A -> B, A --- B, A <-> B
+                        // Forward, undirected, or bi-directional: A -> B, A --- B, A <-> B.
                         // For bi-directional edges, we only add one direction to avoid
                         // trivial cycles during complexity/depth checks.
                         edges.push({ from: source, to: target });
@@ -181,10 +188,17 @@ function expandNodes(rawGroup) {
 }
 
 function cleanNodeId(raw) {
-    // Remove labels: A[Text] -> A, A("Text") -> A, A{Text} -> A
-    // Also remove leading/trailing whitespace
+    // Mermaid nodes can be prefixed/suffixed with labels when splitting by arrows.
+    // e.g., "A -- label" or "|label| B"
+    let id = raw.trim();
+    // Strip leading label brackets/pipes: -->|label| B
+    id = id.replace(/^[|].*?[|]\s*/, '');
+    // Strip trailing label lines: A -- label -->
+    id = id.replace(/\s*[-=]{2,}.*$/, '');
+
+    // Remove shapes: A[Text] -> A, A("Text") -> A, A{Text} -> A
     // Matches start of string, captures ID, stops at start of bracket/paren
-    const match = raw.match(/^([a-zA-Z0-9_\-]+)/);
+    const match = id.match(/^([a-zA-Z0-9_\-]+)/);
     return match ? match[1] : null;
 }
 
