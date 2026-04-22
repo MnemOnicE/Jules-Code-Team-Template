@@ -110,10 +110,10 @@ def get_input(prompt, default=None, validator=None):
 def update_file(filepath, search_pattern, replace_value):
     if not os.path.exists(filepath):
         return
-    with open(filepath, 'r') as f:
+    with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
     new_content = re.sub(search_pattern, replace_value, content, flags=re.MULTILINE)
-    with open(filepath, 'w') as f:
+    with open(filepath, 'w', encoding='utf-8') as f:
         f.write(new_content)
 
 
@@ -260,14 +260,14 @@ def main(dry_run=False, force=False):
     workflow_rules_md = os.path.join(RULES_DIR, "WORKFLOW_RULES.md")
 
     if os.path.exists(root_agents_md) and os.path.exists(workflow_rules_md):
-        with open(root_agents_md, 'r') as f:
+        with open(root_agents_md, 'r', encoding='utf-8') as f:
             agents_content = f.read()
-        with open(workflow_rules_md, 'r') as f:
+        with open(workflow_rules_md, 'r', encoding='utf-8') as f:
             rules_content = f.read()
 
         # Prepend context to rules
         final_content = f"## 0. System Context & Ingestion\n{agents_content}\n\n{rules_content}"
-        with open(workflow_rules_md, 'w') as f:
+        with open(workflow_rules_md, 'w', encoding='utf-8') as f:
             f.write(final_content)
         safe_remove(root_agents_md, ROOT)
 
@@ -306,8 +306,8 @@ def main(dry_run=False, force=False):
         # Handle .gitignore (Append vs Overwrite)
         if item == ".gitignore" and os.path.exists(d) and IS_MIGRATION:
             print("Brain: Merging .gitignore...")
-            with open(s, 'r') as fsrc: template_ignore = fsrc.read()
-            with open(d, 'a') as fdst:
+            with open(s, 'r', encoding='utf-8') as fsrc: template_ignore = fsrc.read()
+            with open(d, 'a', encoding='utf-8') as fdst:
                 fdst.write("\n\n# --- JULES CODING SQUAD ---\n")
                 fdst.write(template_ignore)
             safe_remove(s, ROOT)
@@ -363,7 +363,7 @@ def main(dry_run=False, force=False):
             # Append Badge to Root README
             root_readme = os.path.join(ROOT, "README.md")
             if os.path.exists(root_readme):
-                with open(root_readme, 'a') as f:
+                with open(root_readme, 'a', encoding='utf-8') as f:
                     f.write("\n\n> 🧠 **This project is now managed by The Coding Squad.**\n> See `.agents/docs/USER_MANUAL.md` for commands.\n")
 
     # 5. The Lift (Runtime Sanitization)
