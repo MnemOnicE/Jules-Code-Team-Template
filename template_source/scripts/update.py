@@ -9,6 +9,7 @@ import sys
 import argparse
 import subprocess
 import urllib.request
+import ssl
 from pathlib import Path
 
 SEMVER_PATTERN = re.compile(r'^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$')
@@ -50,8 +51,9 @@ def get_latest_version():
     """Get the latest version from GitHub releases"""
     try:
         url = "https://api.github.com/repos/MnemOnicE/Jules-Code-Team-Template/releases/latest"
-        # Add timeout to prevent hanging
-        with urllib.request.urlopen(url, timeout=10) as response:
+        # Create a secure SSL context and add timeout to prevent hanging/attacks
+        context = ssl.create_default_context()
+        with urllib.request.urlopen(url, timeout=10, context=context) as response:
             data = json.loads(response.read().decode('utf-8'))
             return data.get('tag_name')
     except Exception:

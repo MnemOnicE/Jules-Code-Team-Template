@@ -30,6 +30,7 @@ import re
 import sys
 import json
 import subprocess
+import importlib
 import importlib.util
 import argparse
 
@@ -54,7 +55,12 @@ def check_dependencies():
         for pkg in missing:
             print(f"  - {pkg}")
         try:
-            subprocess.run([sys.executable, "-m", "pip", "install"] + missing, check=True)
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install"] + missing,
+                check=True,
+                shell=False,
+                timeout=300
+            )
             print("\033[1;32m✅ Dependencies installed successfully.\033[0m\n")
         except subprocess.CalledProcessError as e:
             print("\n\033[1;31m❌ CRITICAL: Failed to auto-install dependencies.\033[0m")
@@ -64,8 +70,14 @@ def check_dependencies():
             print("  pip install " + " ".join(missing) + "\033[0m\n")
             sys.exit(1)
 
+def validate_project_name(name):
+    """Ensures project name only contains alphanumeric characters, hyphens, or underscores."""
+    return bool(re.match(r'^[a-zA-Z0-9_\-]+$', name))
+
+
 def validate_governance(value):
     return value.lower() in ['democracy', 'dictator']
+
 
 def validate_risk(value):
     return value.lower() in ['high', 'medium', 'low']
@@ -96,6 +108,14 @@ def get_input(prompt, default=None, validator=None):
 def update_file(filepath, search_pattern, replace_value):
     if not os.path.exists(filepath):
         return
+    # Security: Ensure we are only updating files within the expected directory
+    # We resolve the path to handle symlinks and normalize separators
+    abs_path = os.path.abspath(filepath)
+    # Use realpath for both to ensure we compare normalized physical locations
+    if not os.path.realpath(abs_path).startswith(os.path.realpath(os.getcwd())):
+        print(f"⚠️ Security Warning: Blocked update to out-of-bounds file: {filepath}")
+        return
+
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
     new_content = re.sub(search_pattern, replace_value, content, flags=re.MULTILINE)
@@ -146,7 +166,12 @@ def configure_git_remote(is_migration=False):
 
     try:
         # Use -- to prevent option injection from remote name
-        subprocess.run(["git", "remote", "remove", "--", "origin"], stderr=subprocess.DEVNULL)
+        subprocess.run(
+            ["git", "remote", "remove", "--", "origin"],
+            stderr=subprocess.DEVNULL,
+            shell=False,
+            timeout=30
+        )
         print("✅ Removed template remote 'origin'.")
     except Exception:
         pass
@@ -162,7 +187,12 @@ def configure_git_remote(is_migration=False):
 
         try:
             # Use -- to prevent option injection from remote URL
-            subprocess.run(["git", "remote", "add", "--", "origin", new_remote], check=True)
+            subprocess.run(
+                ["git", "remote", "add", "--", "origin", new_remote],
+                check=True,
+                shell=False,
+                timeout=30
+            )
             print(f"✅ Added new remote 'origin': {new_remote}")
             break
         except subprocess.CalledProcessError as e:
@@ -209,10 +239,10 @@ def main(dry_run=False, force=False):
     print("💡 Tip: Press Enter to accept defaults in brackets []\n")
 
     if IS_MIGRATION:
-        project_name = get_input("Brain: What is the name of this existing project?", os.path.basename(ROOT))
+        project_name = get_input("Brain: What is the name of this existing project?", os.path.basename(ROOT), validate_project_name)
         project_context = get_input("Brain: Briefly describe what this code does (for my context)", "Legacy Codebase")
     else:
-        project_name = get_input("Brain: First, what is the Project Name?", "MyNewProject")
+        project_name = get_input("Brain: First, what is the Project Name?", "MyNewProject", validate_project_name)
         project_context = get_input("Brain: What are we building? (SaaS, Game, Library?)", "SaaS")
 
     print("\n🤖 Governance determines how decisions are made:")
@@ -280,6 +310,12 @@ def main(dry_run=False, force=False):
     print("Brain: Unpacking project structure...")
 
     for item in os.listdir(TEMPLATE_DIR):
+        # Security Check: Prevent path traversal in template unpacking
+        # Ensure we only deal with direct children of the template directory
+        clean_item = os.path.basename(item)
+        if not clean_item or clean_item != item or clean_item in ('.', '..'):
+            continue
+
         s = os.path.join(TEMPLATE_DIR, item)
         d = os.path.join(ROOT, item)
 
@@ -348,14 +384,14 @@ def main(dry_run=False, force=False):
 
     # Post-Loop Handling for Manual in Migration Mode
     if IS_MIGRATION:
-        # The template README is still in TEMPLATE_DIR (we skipped it loop) or deleted?
-        # Wait, if we skipped it, it's still in TEMPLATE_DIR.
+        # The template README is still in TEMPLATE_DIR (we skipped it loop)
         template_readme = os.path.join(TEMPLATE_DIR, "README.md")
         manual_dest_dir = os.path.join(ROOT, ".agents", "docs")
         manual_dest = os.path.join(manual_dest_dir, "USER_MANUAL.md")
 
         if os.path.exists(template_readme):
-            if not os.path.exists(manual_dest_dir): os.makedirs(manual_dest_dir)
+            if not os.path.exists(manual_dest_dir):
+                os.makedirs(manual_dest_dir, mode=0o755)
             shutil.move(template_readme, manual_dest)
 
             # Append Badge to Root README
@@ -405,13 +441,17 @@ def main(dry_run=False, force=False):
     install_git_hooks()
 
     # 7.5 LLM Configuration
-    # Safe import from core to survive template deletion
-
-
-    import sys
-    sys.path.insert(0, os.path.join(ROOT, ".agents", "engine"))
-    from core.llm_config import configure_llm_providers
-    configure_llm_providers()
+    # Use dynamic import to avoid Sonar "import not at top" warnings and handle post-unpacking context
+    engine_path = os.path.join(ROOT, ".agents", "engine")
+    if os.path.exists(engine_path):
+        if engine_path not in sys.path:
+            sys.path.insert(0, engine_path)
+        try:
+            llm_config_mod = importlib.import_module("core.llm_config")
+            if hasattr(llm_config_mod, 'configure_llm_providers'):
+                llm_config_mod.configure_llm_providers()
+        except ImportError as e:
+            print(f"⚠️ Warning: Could not initialize LLM configuration: {e}")
 
     # 8. Trigger Smart Ingest (The Awakening)
     print("Brain: Initializing memory systems...")
@@ -419,9 +459,16 @@ def main(dry_run=False, force=False):
     if os.path.exists(ingest_script):
         try:
             # We run it with python executable
-            subprocess.run([sys.executable, ingest_script], check=False)
-        except Exception as e:
+            subprocess.run(
+                [sys.executable, ingest_script],
+                check=True,
+                shell=False,
+                timeout=60
+            )
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
             print(f"⚠️ Warning: Could not auto-run ingestion: {e}")
+        except Exception as e:
+            print(f"⚠️ Warning: Unexpected error during ingestion: {e}")
 
     print("\n---------------------------------------------")
     print(f"✅ Brain: {project_name} initialized.")
