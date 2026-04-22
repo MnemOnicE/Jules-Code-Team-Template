@@ -55,7 +55,7 @@ def check_dependencies():
         for pkg in missing:
             print(f"  - {pkg}")
         try:
-            subprocess.run([sys.executable, "-m", "pip", "install"] + missing, check=True)
+            subprocess.run([sys.executable, "-m", "pip", "install"] + missing, check=True, shell=False)
             print("\033[1;32m✅ Dependencies installed successfully.\033[0m\n")
         except subprocess.CalledProcessError as e:
             print("\n\033[1;31m❌ CRITICAL: Failed to auto-install dependencies.\033[0m")
@@ -83,6 +83,12 @@ def validate_git_remote(url):
     if "ext::" in url.lower():
         return False
     return True
+
+def is_safe_path(path, base_dir):
+    """Ensures that the path is within the base directory to prevent path traversal."""
+    abs_base = os.path.abspath(base_dir)
+    abs_path = os.path.abspath(path)
+    return os.path.commonpath([abs_base]) == os.path.commonpath([abs_base, abs_path])
 
 def clear_screen():
     print("\033[H\033[J", end="")
@@ -148,7 +154,7 @@ def configure_git_remote(is_migration=False):
         return
 
     try:
-        subprocess.run(["git", "remote", "remove", "origin"], stderr=subprocess.DEVNULL, check=False)
+        subprocess.run(["git", "remote", "remove", "origin"], stderr=subprocess.DEVNULL, check=False, shell=False)
         print("✅ Removed template remote 'origin'.")
     except (subprocess.SubprocessError, OSError):
         pass
@@ -160,7 +166,7 @@ def configure_git_remote(is_migration=False):
             return
 
         try:
-            subprocess.run(["git", "remote", "add", "--", "origin", new_remote], check=True)
+            subprocess.run(["git", "remote", "add", "--", "origin", new_remote], check=True, shell=False)
             print(f"✅ Added new remote 'origin': {new_remote}")
         except (subprocess.SubprocessError, OSError) as e:
             print(f"⚠️ Failed to add remote: {e}")
@@ -240,6 +246,10 @@ def unpack_template(root, template_dir, is_migration):
         s = os.path.join(template_dir, item)
         d = os.path.join(root, item)
 
+        if not is_safe_path(d, root):
+            print(f"⚠️ Warning: Skipping unsafe path: {d}")
+            continue
+
         if item == "README.md":
             if not is_migration:
                 if os.path.exists(d): os.remove(d)
@@ -293,6 +303,10 @@ def handle_migration_manual(root, template_dir):
     manual_dest_dir = os.path.join(root, ".agents", "docs")
     manual_dest = os.path.join(manual_dest_dir, "USER_MANUAL.md")
 
+    if not is_safe_path(manual_dest, root):
+        print(f"⚠️ Warning: Unsafe manual destination: {manual_dest}")
+        return
+
     if os.path.exists(template_readme):
         if not os.path.exists(manual_dest_dir): os.makedirs(manual_dest_dir)
         shutil.move(template_readme, manual_dest)
@@ -321,7 +335,7 @@ def runtime_sanitization(root):
                 dirs.remove(d)
 
     for target in cleanup_targets:
-        if os.path.exists(target):
+        if os.path.exists(target) and is_safe_path(target, root):
             if os.path.isdir(target): shutil.rmtree(target)
             else: os.remove(target)
 
@@ -380,7 +394,7 @@ def main(dry_run=False, force=False):
     ingest_script = os.path.join(ROOT, "scripts", "smart_ingest.py")
     if os.path.exists(ingest_script):
         try:
-            subprocess.run([sys.executable, ingest_script], check=False)
+            subprocess.run([sys.executable, ingest_script], check=False, shell=False)
         except (subprocess.SubprocessError, OSError) as e:
             print(f"⚠️ Warning: Could not auto-run ingestion: {e}")
 
