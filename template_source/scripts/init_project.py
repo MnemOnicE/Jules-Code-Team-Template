@@ -163,6 +163,79 @@ def configure_git_remote(is_migration=False):
         except Exception as e:
             print(f"⚠️ Failed to add remote: {e}")
 
+def _get_project_context(is_migration, root_dir):
+    print("Brain: I am waking up. I need to understand the mission parameters.\n")
+    print("💡 Tip: Press Enter to accept defaults in brackets []\n")
+    if is_migration:
+        project_name = get_input("Brain: What is the name of this existing project?", os.path.basename(root_dir))
+        project_context = get_input("Brain: Briefly describe what this code does (for my context)", "Legacy Codebase")
+    else:
+        project_name = get_input("Brain: First, what is the Project Name?", "MyNewProject")
+        project_context = get_input("Brain: What is the primary goal of this project?", "A software project")
+
+    print("\nBrain: How should decisions be made?")
+    print("  [1] Democracy (Agents debate and propose, you approve)")
+    print("  [2] Autocracy (Brain decides, you observe)")
+    gov_choice = get_input("Choice", "1")
+    governance = "Autocracy" if gov_choice == "2" else "Democracy"
+
+    print("\nBrain: What is your risk tolerance for code changes?")
+    print("  [1] Conservative (Tests must pass, 100% coverage, manual review)")
+    print("  [2] Balanced (Standard PR checks)")
+    print("  [3] Aggressive (Move fast, break things)")
+    risk_choice = get_input("Choice", "2")
+    risk = "Conservative" if risk_choice == "1" else "Aggressive" if risk_choice == "3" else "Balanced"
+
+    return project_name, project_context, governance, risk
+
+def _unpack_template_item(item, template_dir, root_dir, is_migration):
+    s = os.path.join(template_dir, item)
+    d = os.path.join(root_dir, item)
+
+    if item == "README.md":
+        if is_migration:
+            return # Handled later
+        if os.path.exists(d): os.remove(d)
+        import shutil
+        shutil.move(s, d)
+        return
+
+    if item == ".gitignore" and os.path.exists(d) and is_migration:
+        print("Brain: Merging .gitignore...")
+        with open(s, 'r') as fsrc: template_ignore = fsrc.read()
+        with open(d, 'a') as fdst:
+            fdst.write("\n# --- Agentic Framework ---\n")
+            fdst.write(template_ignore)
+        os.remove(s)
+        return
+
+    if item == ".github" and os.path.exists(d) and is_migration:
+         print("Brain: Merging GitHub Workflows...")
+         s_workflows = os.path.join(s, "workflows")
+         d_workflows = os.path.join(d, "workflows")
+         os.makedirs(d_workflows, exist_ok=True)
+         if os.path.exists(s_workflows):
+             import shutil
+             for wf in os.listdir(s_workflows):
+                 shutil.copy2(os.path.join(s_workflows, wf), os.path.join(d_workflows, wf))
+         import shutil
+         shutil.rmtree(s)
+         return
+
+    if is_migration and item in ['src', 'tests', 'package.json', 'requirements.txt']:
+        print(f"Brain: Skipping scaffolding file '{item}' (preserving existing).")
+        import shutil
+        if os.path.isdir(s): shutil.rmtree(s)
+        else: os.remove(s)
+        return
+
+    if os.path.exists(d):
+        import shutil
+        if os.path.isdir(d): shutil.rmtree(d)
+        else: os.remove(d)
+    import shutil
+    shutil.move(s, d)
+
 def main(dry_run=False, force=False):  # NOSONAR: Orchestration logic  # NOSONAR: Script initialization sequence
 
     clear_screen()

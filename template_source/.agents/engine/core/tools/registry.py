@@ -30,7 +30,7 @@ def system_io_bridge(action):
                 # Prevent directory traversal by strictly normalizing and verifying path
                 repo_root = os.path.abspath(os.getcwd())
                 abs_path = os.path.abspath(os.path.join(repo_root, path))
-                if os.path.commonpath([repo_root, abs_path]) != repo_root:
+                if not abs_path.startswith(repo_root):
                     return {"status": "error", "message": f"Security violation: path traversal detected ({path})"}
                 path = abs_path
 
