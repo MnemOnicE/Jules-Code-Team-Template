@@ -27,7 +27,10 @@ def test_get_latest_version_success(mock_urlopen):
     mock_urlopen.assert_called_once()
     args, kwargs = mock_urlopen.call_args
     assert args[0].full_url == "https://api.github.com/repos/MnemOnicE/Jules-Code-Team-Template/releases/latest"
-    assert args[0].headers["User-Agent"] == "Jules-Code-Team-Template-Updater"
+    # urllib.request.Request normalizes header keys to title-case (e.g., 'User-agent')
+    # but the exact key might vary by Python version/implementation.
+    user_agent_header = {k.lower(): v for k, v in args[0].headers.items()}.get('user-agent')
+    assert user_agent_header == "Jules-Code-Team-Template-Updater"
     assert kwargs["timeout"] == 10
 
 @patch("urllib.request.urlopen")

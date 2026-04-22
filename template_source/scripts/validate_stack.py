@@ -85,7 +85,7 @@ def parse_tech_stack(filepath):
         print(f"Warning: {filepath} not found. Skipping stack validation.")
         return set()
 
-    with open(filepath, 'r') as f:
+    with open(filepath, 'r', encoding='utf-8') as f:
         for line in f:
             line = line.strip()
             # Look for lines starting with '# -'

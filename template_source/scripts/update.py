@@ -9,6 +9,7 @@ import sys
 import argparse
 import subprocess
 import urllib.request
+import importlib.util
 from pathlib import Path
 
 SEMVER_PATTERN = re.compile(r'^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$')
@@ -92,13 +93,24 @@ def apply_update(dry_run=False, force=False):
         return True
 
     print("   Creating pre-update backup...")
-    backup_result = subprocess.run([
-        sys.executable, 'scripts/backup_restore.py', 'backup'
-    ], capture_output=True, text=True)
 
-    if backup_result.returncode != 0:
-        stderr = backup_result.stderr.strip()
-        print(f"⚠️  Backup failed: {stderr}")
+    # Safely import and call backup_restore to avoid command injection risks
+    # and improve reliability across different execution environments.
+    success = False
+    try:
+        backup_script = Path(__file__).resolve().parent / 'backup_restore.py'
+        spec = importlib.util.spec_from_file_location("backup_restore", backup_script)
+        if spec and spec.loader:
+            backup_restore = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(backup_restore)
+            success = backup_restore.create_backup()
+        else:
+            print("⚠️  Could not load backup_restore module spec")
+    except Exception as e:
+        print(f"⚠️  Backup execution failed: {e}")
+        success = False
+
+    if not success:
         if not force:
             print("❌ Aborting update because backup could not be created. Use --force to override.")
             return False

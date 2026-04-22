@@ -42,7 +42,8 @@ class TestGitRemoteSecurity(unittest.TestCase):
         # The first call is "git remote remove origin", we want the second one
         calls = [call.args[0] for call in mock_run.call_args_list]
         add_call = [c for c in calls if "add" in c][0]
-        self.assertEqual(add_call, ["git", "remote", "add", "origin", "https://github.com/user/repo.git"])
+        # Updated to include -- security separator
+        self.assertEqual(add_call, ["git", "remote", "add", "origin", "--", "https://github.com/user/repo.git"])
 
     @patch('subprocess.run')
     @patch('builtins.input')
