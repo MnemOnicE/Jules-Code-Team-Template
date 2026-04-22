@@ -92,13 +92,21 @@ def apply_update(dry_run=False, force=False):
         return True
 
     print("   Creating pre-update backup...")
-    backup_result = subprocess.run([
-        sys.executable, 'scripts/backup_restore.py', 'backup'
-    ], capture_output=True, text=True)
 
-    if backup_result.returncode != 0:
-        stderr = backup_result.stderr.strip()
-        print(f"⚠️  Backup failed: {stderr}")
+    # Safely import and call backup_restore to avoid command injection risks
+    # and improve reliability across different execution environments.
+    success = False
+    try:
+        scripts_dir = Path(__file__).resolve().parent
+        if str(scripts_dir) not in sys.path:
+            sys.path.append(str(scripts_dir))
+        import backup_restore
+        success = backup_restore.create_backup()
+    except Exception as e:
+        print(f"⚠️  Backup execution failed: {e}")
+        success = False
+
+    if not success:
         if not force:
             print("❌ Aborting update because backup could not be created. Use --force to override.")
             return False
