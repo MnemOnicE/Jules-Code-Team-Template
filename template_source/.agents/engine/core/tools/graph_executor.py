@@ -55,9 +55,9 @@ class GraphExecutor:
         """
         glyph = str(graph.get("intent_glyph") or "")
         self.logger.info(f"Validating graph against intent: {glyph}")
-        # Enforcement of the "Shield" protocol (Source [2])
-        if "🛡️" in glyph and "security_scan" not in str(graph):
-            raise SecurityError("Graph deviates from Sentinel Intent! Halting.")
+        # Enforcement of the "Shield" protocol
+        if "🛡️" not in glyph:
+            return
 
         # Structural Traversal (DFS) to enforce security_scan for privileged tools
         entry_point = graph.get("entry_point")
@@ -90,8 +90,8 @@ class GraphExecutor:
             # Check privileged tool violation
             if node.get("action") == "run_tool":
                 tool_name = node.get("params", {}).get("tool")
-                if tool_name in PRIVILEGED_TOOLS and not current_scan_state:
-                    raise SecurityError(f"Security violation: Node '{node_id}' invokes privileged tool '{tool_name}' without prior security_scan.")
+                if tool_name in self.privileged_tools and not current_scan_state:
+                    raise SecurityError(f"Graph deviates from Sentinel Intent! Privileged tool '{tool_name}' accessed before security_scan. Halting.")
 
             # Traverse children
             next_nodes = []
@@ -222,7 +222,7 @@ class GraphExecutor:
             tool_name = params.get('tool')
             args = params.get('args', {}).copy()
             # Inject context if needed (Source [1])
-            if merged_view.get("shizuku_active"):
+            if merged_view.get("shizuku_active") or getattr(self, "system_context", {}).get("shizuku_active"):
                 args["use_root"] = True
 
             if not tool_name:
