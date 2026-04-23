@@ -45,19 +45,17 @@ def get_current_version():
             return None
     return None
 
+
 def get_latest_version():
     """Get the latest version from GitHub releases"""
     url = "https://api.github.com/repos/MnemOnicE/Jules-Code-Team-Template/releases/latest"
-    # Identify the specific agent to the GitHub API
-    req = urllib.request.Request(url, headers={'User-Agent': 'Jules-Code-Team-Template-Updater'})
-    
     try:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Jules-Code-Team-Template-Updater'})
         with urllib.request.urlopen(req, timeout=10) as response:
             data = json.loads(response.read())
             return data.get('tag_name')
     except Exception:
         return None
-
 
 def download_update(version=None):
     """Download update from repository"""
