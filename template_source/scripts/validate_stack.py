@@ -116,8 +116,8 @@ def get_imports_from_file(filepath):
     elif ext in ['.js', '.ts', '.vue']:
         # Regex for ES6 import
         # import ... from 'package'
-        # Using [^;\'"]+? instead of .*? to prevent ReDoS by limiting search to string boundaries
-        es6_matches = re.findall(r'import\s+[^;\'"]+?\s+from\s+[\'"]([@a-zA-Z0-9_./-]+)[\'"]', content)
+        # Cap the middle part at 512 characters to prevent ReDoS while allowing multi-line imports
+        es6_matches = re.findall(r'import\s+[^;\'"]{1,512}?\s+from\s+[\'"]([@a-zA-Z0-9_./-]+)[\'"]', content, re.DOTALL)
         imports.update(es6_matches)
 
         # Regex for CommonJS require

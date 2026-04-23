@@ -70,8 +70,17 @@ def check_dependencies():
             print("  pip install " + " ".join(missing) + "\033[0m\n")
             sys.exit(1)
 
+def sanitize_input(text):
+    """Strips potentially dangerous characters from user input."""
+    if text is None:
+        return ""
+    # Allow alphanumeric, spaces, dots, hyphens, underscores
+    return re.sub(r'[^a-zA-Z0-9\s\.\-_]', '', text).strip()
+
+
 def validate_project_name(name):
     """Ensures project name only contains alphanumeric characters, hyphens, or underscores."""
+    # Strict validation to prevent command injection and directory traversal
     return bool(re.match(r'^[a-zA-Z0-9_\-]+$', name))
 
 
@@ -96,23 +105,53 @@ def get_input(prompt, default=None, validator=None):
     while True:
         if default:
             user_input = input(f"{prompt} [{default}]: ")
-            value = user_input if user_input.strip() else default
+            value = sanitize_input(user_input) if user_input.strip() else default
         else:
-            value = input(f"{prompt}: ")
+            user_input = input(f"{prompt}: ")
+            value = sanitize_input(user_input)
         
         if validator and not validator(value):
             print("❌ Invalid input. Please try again.")
             continue
         return value
 
+def is_safe_path(path, root=None):
+    """Checks if a path is safely contained within the specified root directory."""
+    if root is None:
+        root = os.getcwd()
+
+    # Resolve all symbolic links and normalize the paths
+    abs_path = os.path.realpath(os.path.abspath(path))
+    abs_root = os.path.realpath(os.path.abspath(root))
+
+    # Path is safe if it's identical to the root or a child of it
+    return abs_path == abs_root or abs_path.startswith(abs_root + os.sep)
+
+
+def safe_delete(path):
+    """Deletes a file or directory only if it's within the safe project root."""
+    if os.path.exists(path) and is_safe_path(path):
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
+
+
+def safe_move(src, dst):
+    """Moves an item only if both source and destination are within the safe project root."""
+    if is_safe_path(src) and is_safe_path(dst):
+        # Ensure destination directory exists if moving to a nested path
+        dst_dir = os.path.dirname(dst)
+        if not os.path.exists(dst_dir):
+            os.makedirs(dst_dir, mode=0o755)
+        shutil.move(src, dst)
+
+
 def update_file(filepath, search_pattern, replace_value):
     if not os.path.exists(filepath):
         return
-    # Security: Ensure we are only updating files within the expected directory
-    # We resolve the path to handle symlinks and normalize separators
-    abs_path = os.path.abspath(filepath)
-    # Use realpath for both to ensure we compare normalized physical locations
-    if not os.path.realpath(abs_path).startswith(os.path.realpath(os.getcwd())):
+
+    if not is_safe_path(filepath):
         print(f"⚠️ Security Warning: Blocked update to out-of-bounds file: {filepath}")
         return
 
@@ -294,7 +333,7 @@ def main(dry_run=False, force=False):
         final_content = f"## 0. System Context & Ingestion\n{agents_content}\n\n{rules_content}"
         with open(workflow_rules_md, 'w', encoding='utf-8') as f:
             f.write(final_content)
-        os.remove(root_agents_md)
+        safe_delete(root_agents_md)
 
     # 3. Update Configurations (Personas)
     brain_config = os.path.join(CONFIG_DIR, "brain.md")
@@ -319,19 +358,22 @@ def main(dry_run=False, force=False):
         s = os.path.join(TEMPLATE_DIR, item)
         d = os.path.join(ROOT, item)
 
+        # Verify destination is safe
+        if not is_safe_path(d, ROOT):
+            print(f"⚠️ Security Warning: Blocked extraction of out-of-bounds item: {item}")
+            continue
+
         # Handle README (The Manual)
         if item == "README.md":
             # In Migration Mode, we DON'T overwrite the root README.
             # We move the template README to .agents/docs/USER_MANUAL.md
             if IS_MIGRATION:
-                manual_dest = os.path.join(ROOT, ".agents", "docs", "USER_MANUAL.md")
-                # We need to wait until .agents is moved first, so we'll handle this after the loop or ensure dir exists
-                # Actually, simpler: Move it to d (ROOT/README.md) ONLY IF Creation Mode.
-                pass # Handled below
+                # Handled post-loop
+                pass
             else:
                 # Creation Mode: Overwrite Root README
-                if os.path.exists(d): os.remove(d)
-                shutil.move(s, d)
+                safe_delete(d)
+                safe_move(s, d)
             continue
 
         # Handle .gitignore (Append vs Overwrite)
@@ -341,17 +383,19 @@ def main(dry_run=False, force=False):
             with open(d, 'a', encoding='utf-8') as fdst:
                 fdst.write("\n\n# --- JULES CODING SQUAD ---\n")
                 fdst.write(template_ignore)
-            os.remove(s)
+            safe_delete(s)
             continue
 
         # Handle Scripts Folder (Merge)
         if item == "scripts":
              if os.path.exists(d):
                  for subitem in os.listdir(s):
-                     shutil.move(os.path.join(s, subitem), os.path.join(d, subitem))
-                 os.rmdir(s)
+                     src_sub = os.path.join(s, subitem)
+                     dst_sub = os.path.join(d, subitem)
+                     safe_move(src_sub, dst_sub)
+                 safe_delete(s)
              else:
-                 shutil.move(s, d)
+                 safe_move(s, d)
              continue
 
         # Default Move (Overwrite if exists in Creation Mode, Skip/Merge in Migration?)
@@ -359,28 +403,26 @@ def main(dry_run=False, force=False):
 
         # Deploy wrapper script to root
         if item == "squad":
-            if os.path.exists(d): os.remove(d)
-            shutil.move(s, d)
-            os.chmod(d, 0o755)
+            safe_delete(d)
+            safe_move(s, d)
+            if os.path.exists(d):
+                os.chmod(d, 0o755)
             continue
 
         if item == ".agents":
-            if os.path.exists(d): shutil.rmtree(d) # Re-install agents
-            shutil.move(s, d)
+            safe_delete(d) # Re-install agents
+            safe_move(s, d)
             continue
 
         # For src/ or other scaffold files, SKIP in Migration Mode
         if IS_MIGRATION and item in ['src', 'tests', 'package.json', 'requirements.txt']:
             print(f"Brain: Skipping scaffolding file '{item}' (preserving existing).")
-            if os.path.isdir(s): shutil.rmtree(s)
-            else: os.remove(s)
+            safe_delete(s)
             continue
 
         # Fallback for anything else
-        if os.path.exists(d):
-            if os.path.isdir(d): shutil.rmtree(d)
-            else: os.remove(d)
-        shutil.move(s, d)
+        safe_delete(d)
+        safe_move(s, d)
 
     # Post-Loop Handling for Manual in Migration Mode
     if IS_MIGRATION:
@@ -390,9 +432,7 @@ def main(dry_run=False, force=False):
         manual_dest = os.path.join(manual_dest_dir, "USER_MANUAL.md")
 
         if os.path.exists(template_readme):
-            if not os.path.exists(manual_dest_dir):
-                os.makedirs(manual_dest_dir, mode=0o755)
-            shutil.move(template_readme, manual_dest)
+            safe_move(template_readme, manual_dest)
 
             # Append Badge to Root README
             root_readme = os.path.join(ROOT, "README.md")
@@ -416,25 +456,18 @@ def main(dry_run=False, force=False):
     # Recursive cleaning for __pycache__
     for root, dirs, files in os.walk(ROOT):
         if '__pycache__' in dirs:
-            shutil.rmtree(os.path.join(root, '__pycache__'))
+            safe_delete(os.path.join(root, '__pycache__'))
             dirs.remove('__pycache__') # Stop descending
         if '.hypothesis' in dirs:
-             shutil.rmtree(os.path.join(root, '.hypothesis'))
+             safe_delete(os.path.join(root, '.hypothesis'))
              dirs.remove('.hypothesis')
 
     # Specific targets
     for target in cleanup_targets:
-        if os.path.exists(target):
-            if os.path.isdir(target):
-                shutil.rmtree(target)
-            else:
-                os.remove(target)
+        safe_delete(target)
 
     # 6. Cleanup (Template Source)
-    try:
-        if os.path.exists(TEMPLATE_DIR): shutil.rmtree(TEMPLATE_DIR)
-    except OSError as e:
-        print(f"Warning: Failed to cleanup template source: {e}")
+    safe_delete(TEMPLATE_DIR)
 
     # 7. Git Endpoint Security and Hooks
     configure_git_remote(IS_MIGRATION)

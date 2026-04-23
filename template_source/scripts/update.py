@@ -51,6 +51,11 @@ def get_latest_version():
     """Get the latest version from GitHub releases"""
     try:
         url = "https://api.github.com/repos/MnemOnicE/Jules-Code-Team-Template/releases/latest"
+
+        # Security: Validate URL scheme
+        if not url.startswith('https://'):
+            return None
+
         # Create a secure SSL context and add timeout to prevent hanging/attacks
         context = ssl.create_default_context()
         with urllib.request.urlopen(url, timeout=10, context=context) as response:
@@ -92,9 +97,13 @@ def apply_update(dry_run=False, force=False):
         return True
 
     print("   Creating pre-update backup...")
-    backup_result = subprocess.run([
-        sys.executable, 'scripts/backup_restore.py', 'backup'
-    ], capture_output=True, text=True)
+    backup_result = subprocess.run(
+        [sys.executable, 'scripts/backup_restore.py', 'backup'],
+        capture_output=True,
+        text=True,
+        shell=False,
+        timeout=300
+    )
 
     if backup_result.returncode != 0:
         stderr = backup_result.stderr.strip()
