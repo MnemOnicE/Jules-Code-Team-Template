@@ -67,6 +67,10 @@ def check_dependencies():
 def validate_governance(value):
     return value.lower() in ['democracy', 'dictator']
 
+
+def validate_yes_no(value):
+    return value.lower() in ['y', 'yes', 'n', 'no', '']
+
 def validate_risk(value):
     return value.lower() in ['high', 'medium', 'low']
 
@@ -220,6 +224,20 @@ def main(dry_run=False, force=False):
     print("   Low: Secure but slower")
     risk = get_input("Brain: Risk Tolerance? (High/Medium/Low)", "Low", validate_risk)
 
+    print("\n🛡️  Deep Security Settings:")
+    print("   Sentinel Strict Mode: Require human approval for executing commands (e.g., subprocess)?")
+    sentinel_strict = get_input("   Enable Sentinel Strict Mode? (Y/n)", "Y", validate_yes_no).lower() in ['y', 'yes', '']
+
+    print("\n   File Access Restrictions: Limit AI agents to the current project directory only?")
+    file_access_restricted = get_input("   Enable File Access Restrictions? (Y/n)", "Y", validate_yes_no).lower() in ['y', 'yes', '']
+
+    print("\n   Strict Dependency Scanning: Block execution if unpinned or vulnerable dependencies are found?")
+    dependency_scanning = get_input("   Enable Strict Dependency Scanning? (Y/n)", "Y", validate_yes_no).lower() in ['y', 'yes', '']
+
+    print("\n   Security Git Hooks: Install strict pre-commit and pre-push security hooks?")
+    install_hooks_opt = get_input("   Install Security Git Hooks? (Y/n)", "Y", validate_yes_no).lower() in ['y', 'yes', '']
+
+
     print("\nBrain: Configuring squad parameters...")
 
     print("\n📋 Configuration Summary:")
@@ -228,6 +246,11 @@ def main(dry_run=False, force=False):
     print(f"   Governance: {governance}")
     print(f"   Risk Level: {risk}")
     print(f"   Mode: {'INTEGRATION' if IS_MIGRATION else 'GENESIS'}")
+
+    print(f"   Sentinel Strict: {sentinel_strict}")
+    print(f"   File Restrictions: {file_access_restricted}")
+    print(f"   Dependency Scan: {dependency_scanning}")
+    print(f"   Install Hooks: {install_hooks_opt}")
 
     confirm = get_input("\nBrain: Ready to proceed? (Y/n)", "Y")
     if confirm.lower() not in ['y', 'yes', '']:
@@ -269,6 +292,40 @@ def main(dry_run=False, force=False):
 
     boom_config = os.path.join(CONFIG_DIR, "boom.md")
     update_file(boom_config, r"\*\*Role:\*\* Feature Delivery\.", f"**Role:** Feature Delivery.\n**Project Context:** {project_context}")
+
+
+    # Generate security.yaml
+    security_yaml_path = os.path.join(CONFIG_DIR, "security.yaml")
+    security_yaml_content = f"""# Core Security Configuration
+# This file dictates the boundaries of the Jules Code Team Template.
+# These settings can be altered manually later to adjust risk profiles.
+
+sentinel_strict_mode: {str(sentinel_strict).lower()}
+file_access_restrictions: {str(file_access_restricted).lower()}
+strict_dependency_scanning: {str(dependency_scanning).lower()}
+install_security_hooks: {str(install_hooks_opt).lower()}
+
+# Task Privilege Tagging System
+# Agents reference these tags to determine the required level of security oversight.
+tags:
+  default:
+    privilege_level: medium
+    requires_approval: false
+  refactoring:
+    privilege_level: low
+    requires_approval: false
+    description: "Code health improvements that do not change external behavior."
+  infrastructure:
+    privilege_level: high
+    requires_approval: true
+    description: "Changes to CI/CD, deployment scripts, or environment configuration."
+  security:
+    privilege_level: critical
+    requires_approval: true
+    description: "Modifications to auth logic, secrets management, or boundary layers."
+"""
+    with open(security_yaml_path, 'w') as f:
+        f.write(security_yaml_content)
 
     # 4. Unpack Template (The Smart Part)
     print("Brain: Unpacking project structure...")
@@ -364,7 +421,7 @@ def main(dry_run=False, force=False):
     # Define sanitization targets
     cleanup_targets = [
         os.path.join(ROOT, 'ingests'),
-        os.path.join(ROOT, 'tests', 'verification', 'logs')
+        os.path.join(ROOT, 'tests', 'verification', 'logs'),
         os.path.join(ROOT, 'tests', 'verification', 'logs'),
         os.path.join(ROOT, 'tests', 'verification', '.hypothesis'),
         os.path.join(ROOT, '.hypothesis'),
@@ -397,7 +454,8 @@ def main(dry_run=False, force=False):
 
     # 7. Git Endpoint Security and Hooks
     configure_git_remote(IS_MIGRATION)
-    install_git_hooks()
+    if install_hooks_opt:
+        install_git_hooks()
 
     # 7.5 LLM Configuration
     # Safe import from core to survive template deletion
