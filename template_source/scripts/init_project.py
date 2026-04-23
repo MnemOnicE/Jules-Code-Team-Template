@@ -112,7 +112,8 @@ def update_file(filepath, search_pattern, replace_value):
         return
     with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
-    new_content = re.sub(search_pattern, replace_value, content, flags=re.MULTILINE)
+    # Use lambda for literal replacement to avoid backreference interpolation from user input
+    new_content = re.sub(search_pattern, lambda _: replace_value, content, flags=re.MULTILINE)
     with open(filepath, 'w', encoding='utf-8') as f:
         f.write(new_content)
 
@@ -173,6 +174,13 @@ def safe_remove(path, root):
             shutil.rmtree(path)
         else:
             os.remove(path)
+
+def safe_move(src, dst, root):
+    """Safely move files/directories within the project root."""
+    if _is_within_directory(root, src) and _is_within_directory(root, dst):
+        if os.path.exists(dst):
+            safe_remove(dst, root)
+        shutil.move(src, dst)
 
 def main(dry_run=False, force=False):
 
@@ -291,16 +299,9 @@ def main(dry_run=False, force=False):
         # Handle README (The Manual)
         if item == "README.md":
             # In Migration Mode, we DON'T overwrite the root README.
-            # We move the template README to .agents/docs/USER_MANUAL.md
-            if IS_MIGRATION:
-                manual_dest = os.path.join(ROOT, ".agents", "docs", "USER_MANUAL.md")
-                # We need to wait until .agents is moved first, so we'll handle this after the loop or ensure dir exists
-                # Actually, simpler: Move it to d (ROOT/README.md) ONLY IF Creation Mode.
-                pass # Handled below
-            else:
+            if not IS_MIGRATION:
                 # Creation Mode: Overwrite Root README
-                safe_remove(d, ROOT)
-                shutil.move(s, d)
+                safe_move(s, d, ROOT)
             continue
 
         # Handle .gitignore (Append vs Overwrite)
@@ -317,10 +318,11 @@ def main(dry_run=False, force=False):
         if item == "scripts":
              if os.path.exists(d):
                  for subitem in os.listdir(s):
-                     shutil.move(os.path.join(s, subitem), os.path.join(d, subitem))
-                 os.rmdir(s)
+                     safe_move(os.path.join(s, subitem), os.path.join(d, subitem), ROOT)
+                 if _is_within_directory(ROOT, s):
+                     os.rmdir(s)
              else:
-                 shutil.move(s, d)
+                 safe_move(s, d, ROOT)
              continue
 
         # Default Move (Overwrite if exists in Creation Mode, Skip/Merge in Migration?)
@@ -328,14 +330,13 @@ def main(dry_run=False, force=False):
 
         # Deploy wrapper script to root
         if item == "squad":
-            safe_remove(d, ROOT)
-            shutil.move(s, d)
-            os.chmod(d, 0o755)
+            safe_move(s, d, ROOT)
+            if os.path.exists(d):
+                os.chmod(d, 0o755)
             continue
 
         if item == ".agents":
-            safe_remove(d, ROOT) # Re-install agents
-            shutil.move(s, d)
+            safe_move(s, d, ROOT)
             continue
 
         # For src/ or other scaffold files, SKIP in Migration Mode
@@ -345,20 +346,20 @@ def main(dry_run=False, force=False):
             continue
 
         # Fallback for anything else
-        safe_remove(d, ROOT)
-        shutil.move(s, d)
+        safe_move(s, d, ROOT)
 
     # Post-Loop Handling for Manual in Migration Mode
     if IS_MIGRATION:
-        # The template README is still in TEMPLATE_DIR (we skipped it loop) or deleted?
-        # Wait, if we skipped it, it's still in TEMPLATE_DIR.
         template_readme = os.path.join(TEMPLATE_DIR, "README.md")
         manual_dest_dir = os.path.join(ROOT, ".agents", "docs")
         manual_dest = os.path.join(manual_dest_dir, "USER_MANUAL.md")
 
         if os.path.exists(template_readme):
-            if not os.path.exists(manual_dest_dir): os.makedirs(manual_dest_dir)
-            shutil.move(template_readme, manual_dest)
+            if not os.path.exists(manual_dest_dir):
+                os.makedirs(manual_dest_dir)
+            # Use safe_move for final manual placement
+            if _is_within_directory(ROOT, manual_dest):
+                shutil.move(template_readme, manual_dest)
 
             # Append Badge to Root README
             root_readme = os.path.join(ROOT, "README.md")
