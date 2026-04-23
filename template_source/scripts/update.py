@@ -51,6 +51,8 @@ def get_latest_version():
     """Get the latest version from GitHub releases"""
     try:
         url = "https://api.github.com/repos/MnemOnicE/Jules-Code-Team-Template/releases/latest"
+        with urllib.request.urlopen(url) as response:
+            data = json.loads(response.read())
 
         # Security: Validate URL scheme
         if not url.startswith('https://'):
