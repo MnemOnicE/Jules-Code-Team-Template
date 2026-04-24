@@ -37,7 +37,7 @@ def _safe_extract(tar, path='.', members=None):
 def create_backup(output_path=None):
     """Create a backup of the current agent state"""
     if not Path(AGENTS_DIR).exists():
-        print("❌ No .agents directory found. Nothing to backup.")
+        print(f"❌ No {AGENTS_DIR} directory found. Nothing to backup.")
         return False
 
     if output_path is None:
@@ -77,7 +77,7 @@ def restore_backup(backup_path, force=False):
         return False
 
     if Path(AGENTS_DIR).exists() and not force:
-        print("⚠️  .agents directory already exists. Use --force to overwrite.")
+        print(f"⚠️  {AGENTS_DIR} directory already exists. Use --force to overwrite.")
         return False
 
     print(f"📦 Restoring from backup: {backup_path}")
