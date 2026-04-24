@@ -49,9 +49,7 @@ def create_backup(output_path=None):
     try:
         with tarfile.open(output_path, "w:gz") as tar:
             backup_items = [
-                f'{AGENTS_DIR}/config',
-                f'{AGENTS_DIR}/memory',
-                f'{AGENTS_DIR}/rules',
+                AGENTS_DIR,
                 'session.json',
                 'AI_MEMORY.md'
             ]
