@@ -324,7 +324,7 @@ tags:
     requires_approval: true
     description: "Modifications to auth logic, secrets management, or boundary layers."
 """
-    with open(security_yaml_path, 'w') as f:
+    with open(security_yaml_path, 'w', encoding='utf-8') as f:
         f.write(security_yaml_content)
 
     # 4. Unpack Template (The Smart Part)
