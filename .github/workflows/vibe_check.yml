@@ -18,7 +18,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: '18'
+          node-version: '20'
 
       - name: Setup Python
         uses: actions/setup-python@v5
@@ -41,6 +41,8 @@ jobs:
 
       - name: Secret Scanning (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
+        with:
+          args: detect --source . -v --report-format=sarif --report-path=results.sarif
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: false
