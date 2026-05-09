@@ -207,7 +207,7 @@ function cleanNodeId(raw) {
 
     // 3. Remove shapes: A[Text] -> A, A("Text") -> A, A{Text} -> A
     // Matches start of string, captures ID, stops at start of bracket/paren
-    const match = id.match(/^([a-zA-Z0-9_\-]+)/);
+    const match = id.match(/^([a-zA-Z0-9_\-\.]+)/);
     return match ? match[1] : null;
 }
 
