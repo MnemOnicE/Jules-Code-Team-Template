@@ -19,22 +19,17 @@ const path = require('path');
 
 // Constants
 // Matches Mermaid arrow patterns (e.g., A -> B, A -- Label -> B, A --- B, A <-> B).
-// Supports directed, undirected, and bi-directional edges with optional labels.
-// Designed to avoid consuming nodes in chained definitions (e.g., A --- B -> C).
-// Matches Mermaid arrow patterns (e.g., A -> B, A -- Label -> B, A --- B, A <-> B).
-// Supports directed, undirected, and bi-directional edges with optional labels.
-// Designed to avoid consuming nodes in chained definitions (e.g., A --- B -> C).
 // NOTE: Constructed dynamically to avoid CodeQL js/html-comment-confusion.
 const MERMAID_EDGE_RE = (function() {
     const d = '-';
     const g = '>';
     const a = d + d + g; // "-->"
-    const ab = d + d + '!' + g; // "--!>"
     const tokens = [
-        '<==>', '<' + a + '>', '<->',
-        ab, a, '---', '==>', '===',
-        '<--', '<==', '<-.',
-        '-.-', '-.->', '->', '<-'
+        '<-->', '<==>', '<-.->',
+        a, '---', '==>', '===',
+        '-.->', '-.-',
+        '->', '<-', '<->',
+        '<-.', '<--', '<=='
     ];
     // Sort by length (longest first) for correct splitting
     const combined = '(' + tokens.sort((x, y) => y.length - x.length).join('|') + ')';
@@ -162,7 +157,8 @@ function parseMermaid(content) {
         const currentSubgraph = subgraphStack.length > 0 ? subgraphStack[subgraphStack.length - 1] : null;
 
         // Edge handling
-        // Split by generic arrow pattern (e.g., A & B -> C & D)
+        // Split by generic arrow pattern
+        // Matches A & B --> C & D
         const parts = line.split(MERMAID_EDGE_RE);
 
         if (parts.length > 1) {
@@ -191,12 +187,25 @@ function cleanNodeId(raw) {
     // Mermaid nodes can be prefixed/suffixed with labels when splitting by arrows.
     // e.g., "A -- label" or "|label| B"
     let id = raw.trim();
-    // Strip leading label brackets/pipes: -->|label| B
-    id = id.replace(/^[|].*?[|]\s*/, '');
-    // Strip trailing label lines: A -- label -->
-    id = id.replace(/\s*[-=]{2,}.*$/, '');
 
-    // Remove shapes: A[Text] -> A, A("Text") -> A, A{Text} -> A
+    // 1. Strip leading label brackets/pipes: -->|label| B
+    if (id.startsWith('|')) {
+        const lastPipe = id.indexOf('|', 1);
+        if (lastPipe !== -1) {
+            id = id.substring(lastPipe + 1).trim();
+        }
+    }
+
+    // 2. Strip trailing label lines: A -- label -->
+    // We use indexOf/substring to avoid potentially unsafe regex patterns for this stripping
+    const dashStart = id.indexOf('--');
+    if (dashStart !== -1) id = id.substring(0, dashStart).trim();
+    const eqStart = id.indexOf('==');
+    if (eqStart !== -1) id = id.substring(0, eqStart).trim();
+    const dotStart = id.indexOf('-.');
+    if (dotStart !== -1) id = id.substring(0, dotStart).trim();
+
+    // 3. Remove shapes: A[Text] -> A, A("Text") -> A, A{Text} -> A
     // Matches start of string, captures ID, stops at start of bracket/paren
     const match = id.match(/^([a-zA-Z0-9_\-]+)/);
     return match ? match[1] : null;
