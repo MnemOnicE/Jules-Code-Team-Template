@@ -12,6 +12,8 @@ import tempfile
 from pathlib import Path
 from datetime import datetime
 
+AGENTS_DIR = ".agents"
+
 
 def _is_within_directory(directory, target):
     abs_directory = os.path.abspath(directory)
@@ -20,26 +22,21 @@ def _is_within_directory(directory, target):
 
 
 def _safe_extract(tar, path='.', members=None):
-    # Manual validation for all versions to ensure absolute paths and symlinks are rejected
     for member in tar.getmembers():
         member_path = os.path.join(path, member.name)
 
         if not _is_within_directory(path, member_path):
-            raise Exception(f"Unsafe path in archive: {member.name}")
+            raise ValueError(f"Unsafe path in archive: {member.name}")
 
         if member.issym() or member.islnk():
-            raise Exception(f"Unsupported symlink in archive: {member.name}")
+            raise ValueError(f"Unsupported symlink in archive: {member.name}")
 
-    # Use the built-in safe extraction filter if available (Python 3.12+) for additional depth-defense
-    if hasattr(tarfile, 'data_filter'):
-        tar.extractall(path, members, filter='data')
-    else:
-        tar.extractall(path, members)
+    tar.extractall(path, members)
 
 
 def create_backup(output_path=None):
     """Create a backup of the current agent state"""
-    if not Path('.agents').exists():
+    if not Path(AGENTS_DIR).exists():
         print("❌ No .agents directory found. Nothing to backup.")
         return False
 
@@ -52,9 +49,7 @@ def create_backup(output_path=None):
     try:
         with tarfile.open(output_path, "w:gz") as tar:
             backup_items = [
-                '.agents/config',
-                '.agents/memory',
-                '.agents/rules',
+                AGENTS_DIR,
                 'session.json',
                 'AI_MEMORY.md'
             ]
@@ -81,7 +76,7 @@ def restore_backup(backup_path, force=False):
         print(f"❌ Backup file not found: {backup_path}")
         return False
 
-    if Path('.agents').exists() and not force:
+    if Path(AGENTS_DIR).exists() and not force:
         print("⚠️  .agents directory already exists. Use --force to overwrite.")
         return False
 
@@ -93,7 +88,7 @@ def restore_backup(backup_path, force=False):
                 _safe_extract(tar, temp_dir)
 
             temp_path = Path(temp_dir)
-            restore_items = ['.agents', 'session.json', 'AI_MEMORY.md']
+            restore_items = [AGENTS_DIR, 'session.json', 'AI_MEMORY.md']
 
             for item in restore_items:
                 src = temp_path / item
