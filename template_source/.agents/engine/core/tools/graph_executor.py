@@ -21,10 +21,7 @@ from core.tools.registry import ToolRegistry
 from core.plugin_manager import plugin_manager
 
 
-
-
 class SecurityError(Exception):
-
     pass
 
 class MaxStepsExceededError(Exception):
