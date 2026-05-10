@@ -68,8 +68,7 @@ class PluginManager:
 
     def discover_plugins(self):
         """Discover available plugins"""
-        candidates = list(self.allowed_plugins.keys())
-        return [name for name in candidates if self.PLUGIN_NAME_PATTERN.match(name)]
+        return [name for name in (self.allowed_plugins or {}) if self.PLUGIN_NAME_PATTERN.match(name)]
 
     def load_plugin(self, plugin_name):
         """Load a specific plugin"""
