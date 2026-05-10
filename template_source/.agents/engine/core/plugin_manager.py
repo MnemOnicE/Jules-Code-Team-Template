@@ -40,7 +40,7 @@ class PluginManager:
             raise ValueError(f"Failed to parse plugin allowlist: {e}")
 
     def _is_plugin_allowed(self, plugin_name):
-        return plugin_name in self.allowed_plugins
+        return plugin_name in (self.allowed_plugins or {})
 
     def _ensure_valid_plugin_name(self, plugin_name):
         if not self.PLUGIN_NAME_PATTERN.match(plugin_name):
