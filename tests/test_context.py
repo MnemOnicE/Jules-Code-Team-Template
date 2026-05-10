@@ -36,10 +36,9 @@ def test_find_root_logic():
     # We mock __file__ in the module where ContextLoader is defined
     mock_file_path = "/usr/local/src/project/.agents/engine/core/context.py"
 
-    with patch("core.context.__file__", mock_file_path):
-        # We need to mock path existence checks to trigger the fallback
-        with patch("pathlib.Path.exists", return_value=False):
-            with patch.object(ContextLoader, '_find_agents_dir', return_value="/mock/agents"):
+    with patch("core.context.__file__", mock_file_path), \
+         patch("pathlib.Path.exists", return_value=False), \
+         patch.object(ContextLoader, '_find_agents_dir', return_value="/mock/agents"):
                 loader = ContextLoader()
                 # Calculate what we expect based on the mocked file path fallback:
                 # /usr/local/src/project/.agents/engine/core/context.py

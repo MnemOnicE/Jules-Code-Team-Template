@@ -16,6 +16,7 @@
 
 import pytest
 import jsonschema
+import re
 from unittest.mock import MagicMock
 from core.tools.graph_executor import GraphExecutor, SecurityError, MaxStepsExceededError
 
@@ -517,7 +518,7 @@ def test_validate_integrity_shield_missing_scan_before_privileged(graph_executor
             "scan": {"action": "security_scan"}
         }
     }
-    with pytest.raises(SecurityError, match="Graph deviates from Sentinel Intent! Privileged tool 'write_file' accessed before security_scan. Halting."):
+    with pytest.raises(SecurityError, match=re.escape("Graph deviates from Sentinel Intent! Privileged tool 'write_file' accessed before security_scan. Halting.")):
         graph_executor.validate_integrity(graph)
 
 def test_validate_integrity_shield_with_unprivileged_tool(graph_executor):
@@ -549,7 +550,7 @@ def test_validate_integrity_shield_path_branching(graph_executor):
             "unsafe": {"action": "run_tool", "params": {"tool": "delete_file"}}
         }
     }
-    with pytest.raises(SecurityError, match="Graph deviates from Sentinel Intent! Privileged tool 'delete_file' accessed before security_scan. Halting."):
+    with pytest.raises(SecurityError, match=re.escape("Graph deviates from Sentinel Intent! Privileged tool 'delete_file' accessed before security_scan. Halting.")):
         graph_executor.validate_integrity(graph)
 
 def test_validate_integrity_shield_loop_before_scan(graph_executor):
@@ -562,7 +563,7 @@ def test_validate_integrity_shield_loop_before_scan(graph_executor):
             "unsafe": {"action": "run_tool", "params": {"tool": "write_file"}, "next": "loop"}
         }
     }
-    with pytest.raises(SecurityError, match="Graph deviates from Sentinel Intent! Privileged tool 'write_file' accessed before security_scan. Halting."):
+    with pytest.raises(SecurityError, match=re.escape("Graph deviates from Sentinel Intent! Privileged tool 'write_file' accessed before security_scan. Halting.")):
         graph_executor.validate_integrity(graph)
 
 def test_validate_integrity_multiple_shields(graph_executor):
@@ -591,5 +592,5 @@ def test_validate_integrity_loose_check_no_longer_valid(graph_executor):
             "start": {"action": "run_tool", "params": {"tool": "execute_command"}}
         }
     }
-    with pytest.raises(SecurityError, match="Graph deviates from Sentinel Intent! Privileged tool 'execute_command' accessed before security_scan. Halting."):
+    with pytest.raises(SecurityError, match=re.escape("Graph deviates from Sentinel Intent! Privileged tool 'execute_command' accessed before security_scan. Halting.")):
         graph_executor.validate_integrity(graph)

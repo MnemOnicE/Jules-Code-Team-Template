@@ -21,7 +21,10 @@ from core.tools.registry import ToolRegistry
 from core.plugin_manager import plugin_manager
 
 
+
+
 class SecurityError(Exception):
+
     pass
 
 class MaxStepsExceededError(Exception):
@@ -104,7 +107,7 @@ class GraphExecutor:
 
         # 2. Security Validation
         self.validate_integrity(graph)
-        graph_state = graph.get("context_delta", {})
+        graph_state = (graph.get("context_delta") or {}).copy()
 
         # 3. Privilege Escalation Prevention (The "Captain's Orders" protocol)
         if self.system_context:
