@@ -41,8 +41,6 @@ jobs:
 
       - name: Secret Scanning (Gitleaks)
         uses: gitleaks/gitleaks-action@v2
-        with:
-          args: detect --no-git --report-path=results.sarif --report-format=sarif --redact -v
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         continue-on-error: false

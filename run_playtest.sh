@@ -40,7 +40,7 @@ echo "Testing squad wrapper..."
 ./squad --help
 
 echo ""
-echo "Testing missing SDK error messages..." >&2
+echo "Testing missing SDK error messages..."
 ./squad --task "write a script" --llm openai || true
 ./squad --task "write a script" --llm gemini || true
 

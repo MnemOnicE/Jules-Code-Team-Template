@@ -4,9 +4,8 @@ import os
 import shutil
 from init_project import update_file
 
-def test_update_file_success(tmp_path, monkeypatch):
+def test_update_file_success(tmp_path):
     """Test successful file update with search and replace."""
-    monkeypatch.chdir(tmp_path)
     d = tmp_path / "subdir"
     d.mkdir()
     f = d / "test.txt"
@@ -21,9 +20,8 @@ def test_update_file_no_file():
     # Should not raise an exception
     update_file("non_existent_file.txt", r"foo", "bar")
 
-def test_update_file_no_match(tmp_path, monkeypatch):
+def test_update_file_no_match(tmp_path):
     """Test that file content remains unchanged if no match is found."""
-    monkeypatch.chdir(tmp_path)
     f = tmp_path / "test.txt"
     f.write_text("No match here.")
 
@@ -31,9 +29,8 @@ def test_update_file_no_match(tmp_path, monkeypatch):
 
     assert f.read_text() == "No match here."
 
-def test_update_file_multiline(tmp_path, monkeypatch):
+def test_update_file_multiline(tmp_path):
     """Test that re.MULTILINE flag works correctly."""
-    monkeypatch.chdir(tmp_path)
     f = tmp_path / "test.txt"
     content = "Line 1\nLine 2\nLine 3"
     f.write_text(content)
@@ -43,9 +40,8 @@ def test_update_file_multiline(tmp_path, monkeypatch):
 
     assert f.read_text() == "Line 1\nModified\nLine 3"
 
-def test_update_file_regex_groups(tmp_path, monkeypatch):
+def test_update_file_regex_groups(tmp_path):
     """Test that regex groups can be used in the replacement."""
-    monkeypatch.chdir(tmp_path)
     f = tmp_path / "test.txt"
     f.write_text("version: 1.0.0")
 
