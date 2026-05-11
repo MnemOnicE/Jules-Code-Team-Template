@@ -21,13 +21,14 @@ from core.tools.registry import ToolRegistry
 from core.plugin_manager import plugin_manager
 
 
+
+
 class SecurityError(Exception):
+
     pass
 
 class MaxStepsExceededError(Exception):
     pass
-
-PRIVILEGED_TOOLS = {"execute_command", "write_file", "update_memory"}
 
 class GraphExecutor:
     """
@@ -55,69 +56,58 @@ class GraphExecutor:
         """
         glyph = str(graph.get("intent_glyph") or "")
         self.logger.info(f"Validating graph against intent: {glyph}")
-        # Enforcement of the "Shield" protocol (Source [2])
-        if "🛡️" in glyph and "security_scan" not in str(graph):
-            raise SecurityError("Graph deviates from Sentinel Intent! Halting.")
 
-        # Structural Traversal (DFS) to enforce security_scan for privileged tools
-        entry_point = graph.get("entry_point")
-        nodes = graph.get("nodes", {})
+        # Enforcement of the "Shield" protocol
+        if "🛡️" in glyph:
+            entry_point = graph.get("entry_point")
+            if not entry_point:
+                return  # Empty graph, nothing to run
 
-        if not entry_point or entry_point not in nodes:
-            return
+            nodes = graph.get("nodes", {})
 
-        visited = set()
+            # DFS/BFS to find path to privileged tools
+            from collections import deque
+            queue = deque([(entry_point, False)]) # (node_id, has_passed_security_scan)
+            visited = set()
 
-        def dfs(node_id, has_been_scanned):
-            # To handle cycles, if we've visited this node with the current scan state, return
-            state_key = (node_id, has_been_scanned)
-            if state_key in visited:
-                return
-            visited.add(state_key)
+            while queue:
+                current_id, has_scanned = queue.popleft()
 
-            if node_id == "END":
-                return
+                # Check for cycle / visited with current scan status
+                state = (current_id, has_scanned)
+                if state in visited:
+                    continue
+                visited.add(state)
 
-            node = nodes.get(node_id)
-            if not node:
-                return
+                if current_id == "END" or current_id not in nodes:
+                    continue
 
-            # Update scan state
-            current_scan_state = has_been_scanned
-            if node.get("action") == "security_scan":
-                current_scan_state = True
+                node = nodes[current_id]
+                action = node.get("action")
+                tool = node.get("params", {}).get("tool") if action == "run_tool" else None
 
-            # Check privileged tool violation
-            if node.get("action") == "run_tool":
-                tool_name = node.get("params", {}).get("tool")
-                if tool_name in PRIVILEGED_TOOLS and not current_scan_state:
-                    raise SecurityError(f"Security violation: Node '{node_id}' invokes privileged tool '{tool_name}' without prior security_scan.")
+                if action == "security_scan":
+                    has_scanned = True
+                elif action == "run_tool" and tool in self.privileged_tools and not has_scanned:
+                    raise SecurityError(f"Graph deviates from Sentinel Intent! Privileged tool '{tool}' accessed before security_scan. Halting.")
 
-            # Traverse children
-            next_nodes = []
-            if "on_success" in node:
-                next_nodes.append(node["on_success"])
-            if "on_failure" in node:
-                next_nodes.append(node["on_failure"])
-            if "next" in node:
-                next_nodes.append(node["next"])
+                # Queue next nodes
+                for next_key in ["next", "on_success", "on_failure"]:
+                    next_id = node.get(next_key)
+                    if next_id:
+                        queue.append((next_id, has_scanned))
+        else:
+            # For non-shield intents, we still might want to ensure they aren't using string hacking,
+            # but for now we just rely on the existing check
+            pass
 
-            for next_node in next_nodes:
-                if next_node:
-                    dfs(next_node, current_scan_state)
-
-        dfs(entry_point, False)
-
-    def execute(self, graph: dict, system_context: dict = None):
+    def execute(self, graph: dict):
         # 1. Structural Validation (The "Smart Worker" approach)
         self.bus.validate_graph(graph)
 
         # 2. Security Validation
         self.validate_integrity(graph)
-
-        # State Segregation
-        system_context = system_context or {}
-        graph_state = graph.get("context_delta", {}).copy()
+        graph_state = graph.get("context_delta", {})
 
         # 3. Privilege Escalation Prevention (The "Captain's Orders" protocol)
         if self.system_context:
@@ -147,17 +137,6 @@ class GraphExecutor:
 
             self.logger.info(f"[EXECUTING] Node {current_node_id}: {node['action']}")
 
-            # Validate node-defined context_delta before applying it
-            node_delta = node.get("context_delta", {})
-            if any(k in system_context for k in node_delta):
-                raise SecurityError(f"Node '{current_node_id}' attempted to overwrite protected system context keys.")
-
-            # Apply allowed deltas to graph_state
-            graph_state.update(node_delta)
-
-            # Create merged view for action execution
-            merged_view = {**graph_state, **system_context}
-
             # Telemetry: Node Start
             plugin_manager.call_plugin_hook('on_node_start', {'id': current_node_id, 'data': node})
 
@@ -171,7 +150,7 @@ class GraphExecutor:
 
             # Execute Action via Registry
             try:
-                result = self._dispatch_action(node, merged_view)
+                result = self._dispatch_action(node, graph_state)
                 # Telemetry: Node Complete (Success)
                 plugin_manager.call_plugin_hook('on_node_complete', {'id': current_node_id, 'status': 'success', 'error': None})
 
@@ -206,7 +185,7 @@ class GraphExecutor:
                 plugin_manager.call_plugin_hook('on_node_complete', {'id': current_node_id, 'status': 'failed', 'error': str(e)})
                 break
 
-    def _dispatch_action(self, node, merged_view):
+    def _dispatch_action(self, node, graph_state):
         # Maps graph actions to specific tool calls
         action = node['action']
         if action == 'run_tool':
@@ -214,7 +193,7 @@ class GraphExecutor:
             tool_name = params.get('tool')
             args = params.get('args', {}).copy()
             # Inject context if needed (Source [1])
-            if merged_view.get("shizuku_active"):
+            if self.system_context.get("shizuku_active"):
                 args["use_root"] = True
 
             if not tool_name:

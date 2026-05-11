@@ -51,20 +51,25 @@ runTest('Test 1: Basic Edge', () => {
     assert.strictEqual(nodeSubgraphs.size, 0, 'No subgraphs');
 });
 
-// Test 2: Chained Edge
-runTest('Test 2: Chained Edge', () => {
+// Test 2: Chained and Bi-directional Edges
+runTest('Test 2: Chained and Bi-directional Edges', () => {
     const content = `
     A --> B --> C
+    D --- E --- F
+    G <-> H <-> I
+    J <-- K --> L
     `;
     const { nodes, edges } = parseMermaid(content);
 
-    // NOTE: Bug where chained edges with simple arrows caused the middle node
-    // to be consumed by the regex has been fixed.
-    // Expected behavior: A -> B -> C
+    // Verified fix: Chained edges (directed, undirected, or bi-directional) no longer consume middle nodes.
+    assertSetEqual(nodes, ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'], 'Nodes should match');
 
-    assertSetEqual(nodes, ['A', 'B', 'C'], 'Nodes should match');
-
-    assertEdgesEqual(edges, [{ from: 'A', to: 'B' }, { from: 'B', to: 'C' }], 'Edges should match');
+    assertEdgesEqual(edges, [
+        { from: 'A', to: 'B' }, { from: 'B', to: 'C' },
+        { from: 'D', to: 'E' }, { from: 'E', to: 'F' },
+        { from: 'G', to: 'H' }, { from: 'H', to: 'I' },
+        { from: 'K', to: 'J' }, { from: 'K', to: 'L' }
+    ], 'Edges should match');
 });
 
 // Test 3: Complex Edge Label
@@ -73,14 +78,18 @@ runTest('Test 3: Complex Edge Label', () => {
     A -- Label --> B
     C -.-> D
     E ==F==> G
+    H -- my-file.js --> I
+    J -- v1.0.0 --- K
     `;
     const { nodes, edges } = parseMermaid(content);
 
-    assertSetEqual(nodes, ['A', 'B', 'C', 'D', 'E', 'G'], 'Nodes should match');
+    assertSetEqual(nodes, ['A', 'B', 'C', 'D', 'E', 'G', 'H', 'I', 'J', 'K'], 'Nodes should match');
     assertEdgesEqual(edges, [
         { from: 'A', to: 'B' },
         { from: 'C', to: 'D' },
-        { from: 'E', to: 'G' }
+        { from: 'E', to: 'G' },
+        { from: 'H', to: 'I' },
+        { from: 'J', to: 'K' }
     ], 'Edges should match');
 });
 
