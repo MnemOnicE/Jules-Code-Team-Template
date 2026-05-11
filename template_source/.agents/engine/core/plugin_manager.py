@@ -40,7 +40,7 @@ class PluginManager:
             raise ValueError(f"Failed to parse plugin allowlist: {e}")
 
     def _is_plugin_allowed(self, plugin_name):
-        return plugin_name in (self.allowed_plugins or {})
+        return plugin_name in self.allowed_plugins
 
     def _ensure_valid_plugin_name(self, plugin_name):
         if not self.PLUGIN_NAME_PATTERN.match(plugin_name):
@@ -68,7 +68,8 @@ class PluginManager:
 
     def discover_plugins(self):
         """Discover available plugins"""
-        return [name for name in (self.allowed_plugins or {}) if self.PLUGIN_NAME_PATTERN.match(name)]
+        candidates = list(self.allowed_plugins.keys())
+        return [name for name in candidates if self.PLUGIN_NAME_PATTERN.match(name)]
 
     def load_plugin(self, plugin_name):
         """Load a specific plugin"""
