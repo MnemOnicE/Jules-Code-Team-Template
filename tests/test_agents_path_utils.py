@@ -52,7 +52,7 @@ def test_get_repo_root_finds_git(tmp_path):
     root.mkdir()
     (root / ".git").mkdir()
 
-    assert path_utils.get_repo_root(str(root)) == str(root)
+    assert path_utils.get_repo_root(str(root)) == str(root.resolve())
 
 
 def test_get_repo_root_finds_agents(tmp_path):
@@ -60,7 +60,7 @@ def test_get_repo_root_finds_agents(tmp_path):
     root.mkdir()
     (root / ".agents").mkdir()
 
-    assert path_utils.get_repo_root(str(root)) == str(root)
+    assert path_utils.get_repo_root(str(root)) == str(root.resolve())
 
 
 def test_get_repo_root_finds_template_source_agents(tmp_path):
@@ -68,7 +68,12 @@ def test_get_repo_root_finds_template_source_agents(tmp_path):
     root.mkdir()
     (root / "template_source" / ".agents").mkdir(parents=True)
 
-    assert path_utils.get_repo_root(str(root)) == str(root)
+    assert path_utils.get_repo_root(str(root)) == str(root.resolve())
+
+    # Also verify traversal from a nested directory
+    nested = root / "template_source" / "scripts"
+    nested.mkdir(parents=True)
+    assert path_utils.get_repo_root(str(nested)) == str(root.resolve())
 
 
 def test_get_repo_root_traverses_up(tmp_path):
@@ -78,7 +83,7 @@ def test_get_repo_root_traverses_up(tmp_path):
     nested = root / "a" / "b" / "c"
     nested.mkdir(parents=True)
 
-    assert path_utils.get_repo_root(str(nested)) == str(root)
+    assert path_utils.get_repo_root(str(nested)) == str(root.resolve())
 
 
 def test_get_repo_root_no_indicator(tmp_path):

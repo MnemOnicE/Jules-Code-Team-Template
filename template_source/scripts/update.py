@@ -9,7 +9,6 @@ import sys
 import argparse
 import subprocess
 import urllib.request
-import ssl
 from pathlib import Path
 
 SEMVER_PATTERN = re.compile(r'^v?(\d+)\.(\d+)\.(\d+)(?:[-+].*)?$')
@@ -49,19 +48,11 @@ def get_current_version():
 
 def get_latest_version():
     """Get the latest version from GitHub releases"""
+    url = "https://api.github.com/repos/MnemOnicE/Jules-Code-Team-Template/releases/latest"
     try:
-        url = "https://api.github.com/repos/MnemOnicE/Jules-Code-Team-Template/releases/latest"
-        with urllib.request.urlopen(url) as response:
+        req = urllib.request.Request(url, headers={'User-Agent': 'Jules-Code-Team-Template-Updater'})
+        with urllib.request.urlopen(req, timeout=10) as response:
             data = json.loads(response.read())
-
-        # Security: Validate URL scheme
-        if not url.startswith('https://'):
-            return None
-
-        # Create a secure SSL context and add timeout to prevent hanging/attacks
-        context = ssl.create_default_context()
-        with urllib.request.urlopen(url, timeout=10, context=context) as response:
-            data = json.loads(response.read().decode('utf-8'))
             return data.get('tag_name')
     except Exception:
         return None
@@ -99,13 +90,9 @@ def apply_update(dry_run=False, force=False):
         return True
 
     print("   Creating pre-update backup...")
-    backup_result = subprocess.run(
-        [sys.executable, 'scripts/backup_restore.py', 'backup'],
-        capture_output=True,
-        text=True,
-        shell=False,
-        timeout=300
-    )
+    backup_result = subprocess.run([
+        sys.executable, 'scripts/backup_restore.py', 'backup'
+    ], capture_output=True, text=True)
 
     if backup_result.returncode != 0:
         stderr = backup_result.stderr.strip()

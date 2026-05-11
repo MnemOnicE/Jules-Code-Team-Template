@@ -2,7 +2,7 @@
 
 ### A Drop-in Multi-Agent AI Coding Squad
 
-![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg) ![Maintenance: Active](https://img.shields.io/badge/Maintenance-Active-green.svg) ![Agent: System](https://img.shields.io/badge/Agent%20System-V3-blueviolet) [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=MnemOnicE_Jules-Code-Team-Template&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=MnemOnicE_Jules-Code-Team-Template) [![Bugs](https://sonarcloud.io/api/project_badges/measure?project=MnemOnicE_Jules-Code-Team-Template&metric=bugs)](https://sonarcloud.io/summary/new_code?id=MnemOnicE_Jules-Code-Team-Template)
+![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg) ![Maintenance: Active](https://img.shields.io/badge/Maintenance-Active-green.svg) ![Agent: System](https://img.shields.io/badge/Agent%20System-V3-blueviolet)
 
 **Stop coding alone.** This template scaffolds a complete "Coding Squad" architecture into your new project. It turns a standard LLM session into a simulated team of specialized agents who debate, critique, and verify your code before it ships.
 

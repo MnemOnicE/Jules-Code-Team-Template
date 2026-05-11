@@ -26,6 +26,14 @@ from path_utils import get_tech_stack_path
 TECH_STACK_PATH = get_tech_stack_path()
 SRC_DIR = "src"
 
+# Pre-compiled Regex Patterns
+VERSION_STRIP_RE = re.compile(r'\s+\d+(\.\d+)*.*$')
+NORMALIZE_RE = re.compile(r'[^a-z0-9_]')
+NOTE_CLEANUP_RE = re.compile(r'\s*\(.*?\)')
+PY_IMPORT_RE = re.compile(r'^\s*(?:from|import)\s+([a-zA-Z0-9_]+)', re.MULTILINE)
+JS_ES6_IMPORT_RE = re.compile(r'import\s+.*?from\s+[\'"]([@a-zA-Z0-9_./-]+)[\'"]', re.DOTALL)
+JS_CJS_IMPORT_RE = re.compile(r'require\s*\(\s*[\'"]([@a-zA-Z0-9_./-]+)[\'"]\s*\)')
+
 # Hardcoded mapping for discrepancies between Human Name and Package Name
 # This decouples documentation from implementation details.
 PACKAGE_MAPPING = {
@@ -58,8 +66,7 @@ def normalize_name(name):
              'FastAPI' -> 'fastapi'
     """
     # Remove version numbers if present (simple heuristic)
-    # Use non-capturing group and more restrictive match to avoid ReDoS
-    name = re.sub(r'\s+\d+(?:\.\d+)*[^\s]*', '', name)
+    name = VERSION_STRIP_RE.sub('', name)
     # Lowercase
     name = name.lower()
     # Check mapping first
@@ -68,7 +75,7 @@ def normalize_name(name):
 
     # Strip special chars for default normalization
     # We keep underscores as they are common in python packages
-    normalized = re.sub(r'[^a-z0-9_]', '', name)
+    normalized = NORMALIZE_RE.sub('', name)
     return normalized
 
 def parse_tech_stack(filepath):
@@ -78,7 +85,7 @@ def parse_tech_stack(filepath):
         print(f"Warning: {filepath} not found. Skipping stack validation.")
         return set()
 
-    with open(filepath, 'r', encoding='utf-8') as f:
+    with open(filepath, 'r') as f:
         for line in f:
             line = line.strip()
             # Look for lines starting with '# -'
@@ -86,8 +93,7 @@ def parse_tech_stack(filepath):
                 # Strip marker
                 content = line[3:].strip()
                 # Remove parenthetical notes e.g. "(Backend)"
-                # Use [^)]* instead of .*? to avoid ReDoS
-                content = re.sub(r'\s*\([^)]*\)', '', content).strip()
+                content = NOTE_CLEANUP_RE.sub('', content).strip()
 
                 if content:
                     # Handle multiple items? Usually one per line.
@@ -110,19 +116,18 @@ def get_imports_from_file(filepath):
     if ext == '.py':
         # Regex for 'import X' or 'from X import Y'
         # Captures the top-level package name
-        import_matches = re.findall(r'^(?:from|import)\s+([a-zA-Z0-9_]+)', content, re.MULTILINE)
+        import_matches = PY_IMPORT_RE.findall(content)
         imports.update(import_matches)
 
     elif ext in ['.js', '.ts', '.vue']:
         # Regex for ES6 import
         # import ... from 'package'
-        # Cap the middle part at 512 characters to prevent ReDoS while allowing multi-line imports
-        es6_matches = re.findall(r'import\s+[^;\'"]{1,512}?\s+from\s+[\'"]([@a-zA-Z0-9_./-]+)[\'"]', content, re.DOTALL)
+        es6_matches = JS_ES6_IMPORT_RE.findall(content)
         imports.update(es6_matches)
 
         # Regex for CommonJS require
         # require('package')
-        cjs_matches = re.findall(r'require\s*\(\s*[\'"]([@a-zA-Z0-9_./-]+)[\'"]\s*\)', content)
+        cjs_matches = JS_CJS_IMPORT_RE.findall(content)
         imports.update(cjs_matches)
 
         # Filter out relative imports (starting with . or /)
