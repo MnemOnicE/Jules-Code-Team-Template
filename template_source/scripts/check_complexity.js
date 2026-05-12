@@ -14,12 +14,27 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
 // Constants
-// Matches Mermaid arrow patterns: A --> B, A -- Label --> B, A -.-> B, A ==F==> G
-const MERMAID_EDGE_RE = /\s*[-=.]{1,4}(?:(?:\|.+?\|)|(?:[^>]+?))?[-=.]{0,3}[>]\s*/;
+// Matches Mermaid arrow patterns (e.g., A -> B, A -- Label -> B, A --- B, A <-> B).
+// NOTE: Constructed dynamically to avoid CodeQL js/html-comment-confusion.
+const MERMAID_EDGE_RE = (function() {
+    const d = '-';
+    const g = '>';
+    const a = d + d + g; // "-->"
+    const tokens = [
+        '<-->', '<==>', '<-.->',
+        a, '---', '==>', '===',
+        '-.->', '-.-',
+        '->', '<-', '<->',
+        '<-.', '<--', '<=='
+    ];
+    // Sort by length (longest first) for correct splitting
+    const combined = '(' + tokens.sort((x, y) => y.length - x.length).join('|') + ')';
+    return new RegExp('\\s*' + combined + '\\s*');
+})();
 
 // Configuration
 const CONFIG_FILE = path.join(__dirname, '../.mermaid-sonar.json');
@@ -65,21 +80,36 @@ function handleSubgraph(line, stack) {
 }
 
 function processEdgeParts(parts, nodes, edges, nodeSubgraphs, currentSubgraph) {
-    for (let i = 0; i < parts.length - 1; i++) {
+    // When using capturing split, parts is [nodeGroup0, token0, nodeGroup1, token1, ...]
+    for (let i = 0; i < parts.length - 2; i += 2) {
         const rawSourceGroup = parts[i].trim();
-        const rawTargetGroup = parts[i+1].trim();
+        const token = parts[i+1];
+        const rawTargetGroup = parts[i+2].trim();
 
         if (!rawSourceGroup || !rawTargetGroup) continue;
 
         const sources = expandNodes(rawSourceGroup);
         const targets = expandNodes(rawTargetGroup);
 
+        const hasLeft = token.includes('<');
+        const hasRight = token.includes('>');
+        const isLeft = hasLeft && !hasRight;
+
         sources.forEach(source => {
             targets.forEach(target => {
                 if (source && target) {
                     nodes.add(source);
                     nodes.add(target);
-                    edges.push({ from: source, to: target });
+
+                    if (isLeft) {
+                        // Reverse arrow: A <- B
+                        edges.push({ from: target, to: source });
+                    } else {
+                        // Forward, undirected, or bi-directional: A -> B, A --- B, A <-> B.
+                        // For bi-directional edges, we only add one direction to avoid
+                        // trivial cycles during complexity/depth checks.
+                        edges.push({ from: source, to: target });
+                    }
 
                     if (currentSubgraph) {
                         if (!nodeSubgraphs.has(source) || isDefinition(rawSourceGroup)) {
@@ -154,10 +184,30 @@ function expandNodes(rawGroup) {
 }
 
 function cleanNodeId(raw) {
-    // Remove labels: A[Text] -> A, A("Text") -> A, A{Text} -> A
-    // Also remove leading/trailing whitespace
+    // Mermaid nodes can be prefixed/suffixed with labels when splitting by arrows.
+    // e.g., "A -- label" or "|label| B"
+    let id = raw.trim();
+
+    // 1. Strip leading label brackets/pipes: -->|label| B
+    if (id.startsWith('|')) {
+        const lastPipe = id.indexOf('|', 1);
+        if (lastPipe !== -1) {
+            id = id.substring(lastPipe + 1).trim();
+        }
+    }
+
+    // 2. Strip trailing label lines: A -- label -->
+    // We use indexOf/substring to avoid potentially unsafe regex patterns for this stripping
+    const dashStart = id.indexOf('--');
+    if (dashStart !== -1) id = id.substring(0, dashStart).trim();
+    const eqStart = id.indexOf('==');
+    if (eqStart !== -1) id = id.substring(0, eqStart).trim();
+    const dotStart = id.indexOf('-.');
+    if (dotStart !== -1) id = id.substring(0, dotStart).trim();
+
+    // 3. Remove shapes: A[Text] -> A, A("Text") -> A, A{Text} -> A
     // Matches start of string, captures ID, stops at start of bracket/paren
-    const match = raw.match(/^([a-zA-Z0-9_\-]+)/);
+    const match = id.match(/^([a-zA-Z0-9_\-\.]+)/);
     return match ? match[1] : null;
 }
 

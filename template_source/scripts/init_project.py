@@ -30,6 +30,7 @@ import re
 import sys
 import json
 import subprocess
+import importlib
 import importlib.util
 import argparse
 
@@ -54,7 +55,12 @@ def check_dependencies():
         for pkg in missing:
             print(f"  - {pkg}")
         try:
-            subprocess.run([sys.executable, "-m", "pip", "install"] + missing, check=True)
+            subprocess.run(
+                [sys.executable, "-m", "pip", "install"] + missing,
+                check=True,
+                shell=False,
+                timeout=300
+            )
             print("\033[1;32m✅ Dependencies installed successfully.\033[0m\n")
         except subprocess.CalledProcessError as e:
             print("\n\033[1;31m❌ CRITICAL: Failed to auto-install dependencies.\033[0m")
@@ -64,8 +70,23 @@ def check_dependencies():
             print("  pip install " + " ".join(missing) + "\033[0m\n")
             sys.exit(1)
 
+def sanitize_input(text):
+    """Strips potentially dangerous characters from user input."""
+    if text is None:
+        return ""
+    # Allow alphanumeric, spaces, dots, hyphens, underscores
+    return re.sub(r'[^a-zA-Z0-9\s\.\-_]', '', text).strip()
+
+
+def validate_project_name(name):
+    """Ensures project name only contains alphanumeric characters, hyphens, or underscores."""
+    # Strict validation to prevent command injection and directory traversal
+    return bool(re.match(r'^[a-zA-Z0-9_\-]+$', name))
+
+
 def validate_governance(value):
     return value.lower() in ['democracy', 'dictator']
+
 
 def validate_risk(value):
     return value.lower() in ['high', 'medium', 'low']
@@ -84,22 +105,60 @@ def get_input(prompt, default=None, validator=None):
     while True:
         if default:
             user_input = input(f"{prompt} [{default}]: ")
-            value = user_input if user_input.strip() else default
+            value = sanitize_input(user_input) if user_input.strip() else default
         else:
-            value = input(f"{prompt}: ")
+            user_input = input(f"{prompt}: ")
+            value = sanitize_input(user_input)
         
         if validator and not validator(value):
             print("❌ Invalid input. Please try again.")
             continue
         return value
 
+def is_safe_path(path, root=None):
+    """Checks if a path is safely contained within the specified root directory."""
+    if root is None:
+        root = os.getcwd()
+
+    # Resolve all symbolic links and normalize the paths
+    abs_path = os.path.realpath(os.path.abspath(path))
+    abs_root = os.path.realpath(os.path.abspath(root))
+
+    # Path is safe if it's identical to the root or a child of it
+    return abs_path == abs_root or abs_path.startswith(abs_root + os.sep)
+
+
+def safe_delete(path):
+    """Deletes a file or directory only if it's within the safe project root."""
+    if os.path.exists(path) and is_safe_path(path):
+        if os.path.isdir(path):
+            shutil.rmtree(path)
+        else:
+            os.remove(path)
+
+
+def safe_move(src, dst):
+    """Moves an item only if both source and destination are within the safe project root."""
+    if is_safe_path(src) and is_safe_path(dst):
+        # Ensure destination directory exists if moving to a nested path
+        dst_dir = os.path.dirname(dst)
+        if not os.path.exists(dst_dir):
+            os.makedirs(dst_dir, mode=0o755)
+        shutil.move(src, dst)
+
+
 def update_file(filepath, search_pattern, replace_value):
     if not os.path.exists(filepath):
         return
-    with open(filepath, 'r') as f:
+
+    if not is_safe_path(filepath):
+        print(f"⚠️ Security Warning: Blocked update to out-of-bounds file: {filepath}")
+        return
+
+    with open(filepath, 'r', encoding='utf-8') as f:
         content = f.read()
     new_content = re.sub(search_pattern, replace_value, content, flags=re.MULTILINE)
-    with open(filepath, 'w') as f:
+    with open(filepath, 'w', encoding='utf-8') as f:
         f.write(new_content)
 
 
@@ -123,6 +182,18 @@ def install_git_hooks():
     print("Brain: Installed Git safeguards (pre-commit, pre-push).")
 
 
+def validate_git_remote(url):
+    """Basic validation for git remote URLs to prevent option injection."""
+    if not url:
+        return True
+    # Reject URLs starting with hyphen to prevent option injection
+    if url.startswith('-'):
+        return False
+    # Only allow common protocols
+    allowed_protocols = ('https://', 'git@', 'ssh://')
+    return any(url.startswith(p) for p in allowed_protocols)
+
+
 def configure_git_remote(is_migration=False):
 
     print("\nBrain: Securing Git Endpoints (Non-Negotiable)")
@@ -133,18 +204,39 @@ def configure_git_remote(is_migration=False):
         return
 
     try:
-        subprocess.run(["git", "remote", "remove", "origin"], stderr=subprocess.DEVNULL)
+        # Use -- to prevent option injection from remote name
+        subprocess.run(
+            ["git", "remote", "remove", "--", "origin"],
+            stderr=subprocess.DEVNULL,
+            shell=False,
+            timeout=30
+        )
         print("✅ Removed template remote 'origin'.")
     except Exception:
         pass
 
-    new_remote = input("Brain: Enter your new Git repository URL (HTTPS or SSH), or leave blank to skip for now: ").strip()
-    if new_remote:
+    while True:
+        new_remote = input("Brain: Enter your new Git repository URL (HTTPS or SSH), or leave blank to skip for now: ").strip()
+        if not new_remote:
+            break
+
+        if not validate_git_remote(new_remote):
+            print("❌ Invalid Git URL. Please use HTTPS or SSH formats and avoid leading hyphens.")
+            continue
+
         try:
-            subprocess.run(["git", "remote", "add", "origin", new_remote], check=True)
+            # Use -- to prevent option injection from remote URL
+            subprocess.run(
+                ["git", "remote", "add", "--", "origin", new_remote],
+                check=True,
+                shell=False,
+                timeout=30
+            )
             print(f"✅ Added new remote 'origin': {new_remote}")
-        except Exception as e:
+            break
+        except subprocess.CalledProcessError as e:
             print(f"⚠️ Failed to add remote: {e}")
+            break
 
 def main(dry_run=False, force=False):
 
@@ -186,10 +278,10 @@ def main(dry_run=False, force=False):
     print("💡 Tip: Press Enter to accept defaults in brackets []\n")
 
     if IS_MIGRATION:
-        project_name = get_input("Brain: What is the name of this existing project?", os.path.basename(ROOT))
+        project_name = get_input("Brain: What is the name of this existing project?", os.path.basename(ROOT), validate_project_name)
         project_context = get_input("Brain: Briefly describe what this code does (for my context)", "Legacy Codebase")
     else:
-        project_name = get_input("Brain: First, what is the Project Name?", "MyNewProject")
+        project_name = get_input("Brain: First, what is the Project Name?", "MyNewProject", validate_project_name)
         project_context = get_input("Brain: What are we building? (SaaS, Game, Library?)", "SaaS")
 
     print("\n🤖 Governance determines how decisions are made:")
@@ -232,16 +324,16 @@ def main(dry_run=False, force=False):
     workflow_rules_md = os.path.join(RULES_DIR, "WORKFLOW_RULES.md")
 
     if os.path.exists(root_agents_md) and os.path.exists(workflow_rules_md):
-        with open(root_agents_md, 'r') as f:
+        with open(root_agents_md, 'r', encoding='utf-8') as f:
             agents_content = f.read()
-        with open(workflow_rules_md, 'r') as f:
+        with open(workflow_rules_md, 'r', encoding='utf-8') as f:
             rules_content = f.read()
 
         # Prepend context to rules
         final_content = f"## 0. System Context & Ingestion\n{agents_content}\n\n{rules_content}"
-        with open(workflow_rules_md, 'w') as f:
+        with open(workflow_rules_md, 'w', encoding='utf-8') as f:
             f.write(final_content)
-        os.remove(root_agents_md)
+        safe_delete(root_agents_md)
 
     # 3. Update Configurations (Personas)
     brain_config = os.path.join(CONFIG_DIR, "brain.md")
@@ -257,42 +349,53 @@ def main(dry_run=False, force=False):
     print("Brain: Unpacking project structure...")
 
     for item in os.listdir(TEMPLATE_DIR):
+        # Security Check: Prevent path traversal in template unpacking
+        # Ensure we only deal with direct children of the template directory
+        clean_item = os.path.basename(item)
+        if not clean_item or clean_item != item or clean_item in ('.', '..'):
+            continue
+
         s = os.path.join(TEMPLATE_DIR, item)
         d = os.path.join(ROOT, item)
+
+        # Verify destination is safe
+        if not is_safe_path(d, ROOT):
+            print(f"⚠️ Security Warning: Blocked extraction of out-of-bounds item: {item}")
+            continue
 
         # Handle README (The Manual)
         if item == "README.md":
             # In Migration Mode, we DON'T overwrite the root README.
             # We move the template README to .agents/docs/USER_MANUAL.md
             if IS_MIGRATION:
-                manual_dest = os.path.join(ROOT, ".agents", "docs", "USER_MANUAL.md")
-                # We need to wait until .agents is moved first, so we'll handle this after the loop or ensure dir exists
-                # Actually, simpler: Move it to d (ROOT/README.md) ONLY IF Creation Mode.
-                pass # Handled below
+                # Handled post-loop
+                pass
             else:
                 # Creation Mode: Overwrite Root README
-                if os.path.exists(d): os.remove(d)
-                shutil.move(s, d)
+                safe_delete(d)
+                safe_move(s, d)
             continue
 
         # Handle .gitignore (Append vs Overwrite)
         if item == ".gitignore" and os.path.exists(d) and IS_MIGRATION:
             print("Brain: Merging .gitignore...")
-            with open(s, 'r') as fsrc: template_ignore = fsrc.read()
-            with open(d, 'a') as fdst:
+            with open(s, 'r', encoding='utf-8') as fsrc: template_ignore = fsrc.read()
+            with open(d, 'a', encoding='utf-8') as fdst:
                 fdst.write("\n\n# --- JULES CODING SQUAD ---\n")
                 fdst.write(template_ignore)
-            os.remove(s)
+            safe_delete(s)
             continue
 
         # Handle Scripts Folder (Merge)
         if item == "scripts":
              if os.path.exists(d):
                  for subitem in os.listdir(s):
-                     shutil.move(os.path.join(s, subitem), os.path.join(d, subitem))
-                 os.rmdir(s)
+                     src_sub = os.path.join(s, subitem)
+                     dst_sub = os.path.join(d, subitem)
+                     safe_move(src_sub, dst_sub)
+                 safe_delete(s)
              else:
-                 shutil.move(s, d)
+                 safe_move(s, d)
              continue
 
         # Default Move (Overwrite if exists in Creation Mode, Skip/Merge in Migration?)
@@ -300,45 +403,41 @@ def main(dry_run=False, force=False):
 
         # Deploy wrapper script to root
         if item == "squad":
-            if os.path.exists(d): os.remove(d)
-            shutil.move(s, d)
-            os.chmod(d, 0o755)
+            safe_delete(d)
+            safe_move(s, d)
+            if os.path.exists(d):
+                os.chmod(d, 0o755)
             continue
 
         if item == ".agents":
-            if os.path.exists(d): shutil.rmtree(d) # Re-install agents
-            shutil.move(s, d)
+            safe_delete(d) # Re-install agents
+            safe_move(s, d)
             continue
 
         # For src/ or other scaffold files, SKIP in Migration Mode
         if IS_MIGRATION and item in ['src', 'tests', 'package.json', 'requirements.txt']:
             print(f"Brain: Skipping scaffolding file '{item}' (preserving existing).")
-            if os.path.isdir(s): shutil.rmtree(s)
-            else: os.remove(s)
+            safe_delete(s)
             continue
 
         # Fallback for anything else
-        if os.path.exists(d):
-            if os.path.isdir(d): shutil.rmtree(d)
-            else: os.remove(d)
-        shutil.move(s, d)
+        safe_delete(d)
+        safe_move(s, d)
 
     # Post-Loop Handling for Manual in Migration Mode
     if IS_MIGRATION:
-        # The template README is still in TEMPLATE_DIR (we skipped it loop) or deleted?
-        # Wait, if we skipped it, it's still in TEMPLATE_DIR.
+        # The template README is still in TEMPLATE_DIR (we skipped it loop)
         template_readme = os.path.join(TEMPLATE_DIR, "README.md")
         manual_dest_dir = os.path.join(ROOT, ".agents", "docs")
         manual_dest = os.path.join(manual_dest_dir, "USER_MANUAL.md")
 
         if os.path.exists(template_readme):
-            if not os.path.exists(manual_dest_dir): os.makedirs(manual_dest_dir)
-            shutil.move(template_readme, manual_dest)
+            safe_move(template_readme, manual_dest)
 
             # Append Badge to Root README
             root_readme = os.path.join(ROOT, "README.md")
             if os.path.exists(root_readme):
-                with open(root_readme, 'a') as f:
+                with open(root_readme, 'a', encoding='utf-8') as f:
                     f.write("\n\n> 🧠 **This project is now managed by The Coding Squad.**\n> See `.agents/docs/USER_MANUAL.md` for commands.\n")
 
     # 5. The Lift (Runtime Sanitization)
@@ -351,45 +450,41 @@ def main(dry_run=False, force=False):
         os.path.join(ROOT, 'tests', 'verification', '.hypothesis'),
         os.path.join(ROOT, '.hypothesis'),
         os.path.join(ROOT, '__pycache__'),
-        os.path.join(ROOT, '__pycache__'),
         os.path.join(ROOT, 'core', '__pycache__')
     ]
 
     # Recursive cleaning for __pycache__
     for root, dirs, files in os.walk(ROOT):
         if '__pycache__' in dirs:
-            shutil.rmtree(os.path.join(root, '__pycache__'))
+            safe_delete(os.path.join(root, '__pycache__'))
             dirs.remove('__pycache__') # Stop descending
         if '.hypothesis' in dirs:
-             shutil.rmtree(os.path.join(root, '.hypothesis'))
+             safe_delete(os.path.join(root, '.hypothesis'))
              dirs.remove('.hypothesis')
 
     # Specific targets
     for target in cleanup_targets:
-        if os.path.exists(target):
-            if os.path.isdir(target):
-                shutil.rmtree(target)
-            else:
-                os.remove(target)
+        safe_delete(target)
 
     # 6. Cleanup (Template Source)
-    try:
-        if os.path.exists(TEMPLATE_DIR): shutil.rmtree(TEMPLATE_DIR)
-    except OSError as e:
-        print(f"Warning: Failed to cleanup template source: {e}")
+    safe_delete(TEMPLATE_DIR)
 
     # 7. Git Endpoint Security and Hooks
     configure_git_remote(IS_MIGRATION)
     install_git_hooks()
 
     # 7.5 LLM Configuration
-    # Safe import from core to survive template deletion
-
-
-    import sys
-    sys.path.insert(0, os.path.join(ROOT, ".agents", "engine"))
-    from core.llm_config import configure_llm_providers
-    configure_llm_providers()
+    # Use dynamic import to avoid Sonar "import not at top" warnings and handle post-unpacking context
+    engine_path = os.path.join(ROOT, ".agents", "engine")
+    if os.path.exists(engine_path):
+        if engine_path not in sys.path:
+            sys.path.insert(0, engine_path)
+        try:
+            llm_config_mod = importlib.import_module("core.llm_config")
+            if hasattr(llm_config_mod, 'configure_llm_providers'):
+                llm_config_mod.configure_llm_providers()
+        except ImportError as e:
+            print(f"⚠️ Warning: Could not initialize LLM configuration: {e}")
 
     # 8. Trigger Smart Ingest (The Awakening)
     print("Brain: Initializing memory systems...")
@@ -397,9 +492,16 @@ def main(dry_run=False, force=False):
     if os.path.exists(ingest_script):
         try:
             # We run it with python executable
-            subprocess.run([sys.executable, ingest_script], check=False)
-        except Exception as e:
+            subprocess.run(
+                [sys.executable, ingest_script],
+                check=True,
+                shell=False,
+                timeout=60
+            )
+        except (subprocess.CalledProcessError, subprocess.TimeoutExpired) as e:
             print(f"⚠️ Warning: Could not auto-run ingestion: {e}")
+        except Exception as e:
+            print(f"⚠️ Warning: Unexpected error during ingestion: {e}")
 
     print("\n---------------------------------------------")
     print(f"✅ Brain: {project_name} initialized.")

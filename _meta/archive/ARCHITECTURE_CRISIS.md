@@ -13,6 +13,9 @@ The current repository structure fundamentally violates its own "Integration Mod
 
 ### B. The Reality (File Structure)
 
+> "All agent logic is hidden in `.agents/`. Your `src/` folder stays clean."
+
+### B. The Reality (File Structure)
 The "Brain" and "Nexus" logic resides in:
 - `src/main.py` (CLI Entrypoint)
 - `src/core/bus.py` (Nexus Bus)
@@ -23,6 +26,7 @@ The "Brain" and "Nexus" logic resides in:
 
 In **Integration Mode** (when existing files are detected), the script executes:
 
+In **Integration Mode** (when existing files are detected), the script executes:
 ```python
 # For src/ or other scaffold files, SKIP in Migration Mode
 if IS_MIGRATION and item in ['src', 'tests', 'package.json', 'requirements.txt']:
@@ -48,6 +52,9 @@ Since `.agents/` is already treated as "System Infrastructure" by `init_project.
 
 **New Structure:**
 
+Since `.agents/` is already treated as "System Infrastructure" by `init_project.py` (it is always installed/updated), moving the execution logic there solves the distribution problem immediately.
+
+**New Structure:**
 ```text
 .agents/
 ├── config/       # Personas (User editable)
@@ -70,6 +77,10 @@ Python cannot directly import modules from directories starting with a dot (like
 
     The new entrypoint must manipulate `sys.path` to allow absolute imports within the engine without referencing the dot-prefixed root.
 
+Python cannot directly import modules from directories starting with a dot (like `.agents`). We propose a two-part solution:
+
+1.  **Sys.Path Injection in `.agents/engine/main.py`**:
+    The new entrypoint must manipulate `sys.path` to allow absolute imports within the engine without referencing the dot-prefixed root.
     ```python
     import sys
     import os
@@ -81,6 +92,7 @@ Python cannot directly import modules from directories starting with a dot (like
 
     Instead of asking users to run complex Python commands, we drop a lightweight shell script `squad` into the root directory during initialization.
 
+    Instead of asking users to run complex Python commands, we drop a lightweight shell script `squad` into the root directory during initialization.
     ```bash
     #!/bin/bash
     # Simple wrapper to launch the hidden agent engine
