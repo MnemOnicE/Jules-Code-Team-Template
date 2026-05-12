@@ -4,7 +4,7 @@ import os
 import re
 
 # Add the directory to sys.path to import from main
-sys.path.insert(0, os.path.join(os.getcwd(), "template_source", ".agents", "engine"))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "template_source", ".agents", "engine")))
 
 from main import _sanitize_llm_response
 
