@@ -14,6 +14,5 @@
 - [ ] **Context Loading**: `src/core/context.py` correctly falls back to `template_source/.agents`, but this dependency on `template_source` from `src` (the production code) is unusual. Typically `src` should be standalone after initialization.
 
 ## Future Improvements
-
 - [ ] **Refactor `generate_mock_graph`**: Move this logic to a dedicated `tests/mocks/graph_factory.py`.
 - [ ] **Standardize Returns**: Ensure all tool functions return a consistent dictionary format (e.g., `{"status": "...", "data": ...}`).

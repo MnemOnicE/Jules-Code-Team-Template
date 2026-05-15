@@ -35,12 +35,21 @@ class PluginManager:
         try:
             with open(allowlist_path, "r", encoding="utf-8") as f:
                 data = json.load(f)
-            return data.get("plugins", {}) if isinstance(data, dict) else {}
+
+            raw_plugins = data.get("plugins", {}) if isinstance(data, dict) else {}
+            validated_plugins = {}
+            for name, config in raw_plugins.items():
+                if self.PLUGIN_NAME_PATTERN.match(name):
+                    validated_plugins[name] = config
+                else:
+                    print(f"⚠️  Warning: Invalid plugin name in allowlist: {name}")
+
+            return validated_plugins
         except Exception as e:
             raise ValueError(f"Failed to parse plugin allowlist: {e}")
 
     def _is_plugin_allowed(self, plugin_name):
-        return plugin_name in (self.allowed_plugins or {})
+        return plugin_name in self.allowed_plugins
 
     def _ensure_valid_plugin_name(self, plugin_name):
         if not self.PLUGIN_NAME_PATTERN.match(plugin_name):
@@ -68,7 +77,8 @@ class PluginManager:
 
     def discover_plugins(self):
         """Discover available plugins"""
-        return [name for name in (self.allowed_plugins or {}) if self.PLUGIN_NAME_PATTERN.match(name)]
+        candidates = list(self.allowed_plugins.keys())
+        return [name for name in candidates if self.PLUGIN_NAME_PATTERN.match(name)]
 
     def load_plugin(self, plugin_name):
         """Load a specific plugin"""
@@ -125,14 +135,21 @@ class PluginManager:
         return loaded, failed
 
 
-    def register_hook(self, hook_name, callback):
+    # Security Model:
+    # 1. Plugins must be explicitly listed in allowed_plugins.json (Strict Deny-by-Default).
+    # 2. Plugin names must match PLUGIN_NAME_PATTERN.
+    # 3. Dynamic hooks (_register_hook/_deregister_hook) are internal to the framework
+    #    to ensure only trusted components can extend agent behavior at runtime.
+    # 4. All loaded plugins are verified via name and optional SHA-256 hash.
+
+    def _register_hook(self, hook_name, callback):
         """Register a dynamic hook callback"""
         if hook_name not in self._dynamic_hooks:
             self._dynamic_hooks[hook_name] = []
         if callback not in self._dynamic_hooks[hook_name]:
             self._dynamic_hooks[hook_name].append(callback)
 
-    def deregister_hook(self, hook_name, callback):
+    def _deregister_hook(self, hook_name, callback):
         """Deregister a dynamic hook callback"""
         if hook_name in self._dynamic_hooks and callback in self._dynamic_hooks[hook_name]:
             self._dynamic_hooks[hook_name].remove(callback)

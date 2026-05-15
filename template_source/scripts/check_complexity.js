@@ -21,6 +21,9 @@ const path = require('node:path');
 // Matches Mermaid arrow patterns (e.g., A -> B, A -- Label -> B, A --- B, A <-> B).
 // Supports directed, undirected, and bi-directional edges with optional labels.
 // Designed to avoid consuming nodes in chained definitions (e.g., A --- B -> C).
+// Matches Mermaid arrow patterns (e.g., A -> B, A -- Label -> B, A --- B, A <-> B).
+// Supports directed, undirected, and bi-directional edges with optional labels.
+// Designed to avoid consuming nodes in chained definitions (e.g., A --- B -> C).
 // Static regex for Mermaid edges to satisfy security scanners and ensure ReDoS safety.
 // Supports: <==>, <--> , <->, --!>, -->, ---, ==>, ===, <--, <==, <-., -.-, -.->, ->, <-
 // Hex escapes (\x3E for '>', \x2E for '.') are used to avoid CodeQL js/html-comment-confusion.
@@ -186,20 +189,33 @@ function cleanNodeId(raw) {
     }
 
     // Strip trailing label lines: A -- label -->
-    const dashMatch = id.match(/[-=]{2,}/);
-    if (dashMatch) {
-        id = id.substring(0, dashMatch.index).trim();
-    }
+    // Only strip if the marker is preceded by whitespace to avoid breaking IDs like svc--blue.
+    ['--', '=='].forEach(marker => {
+        const idx = id.search(new RegExp('\\s' + marker));
+        if (idx !== -1) {
+            id = id.substring(0, idx).trim();
+        }
+    });
 
     // Remove shapes: A[Text] -> A, A("Text") -> A, A{Text} -> A
-    // Simple anchored match for node ID extraction.
-    const match = /^[a-zA-Z0-9_\-]+/.exec(id);
-    return match ? match[0] : null;
+    // Extract alphanumeric ID by manual traversal to avoid ReDoS hotspots.
+    let cleanId = "";
+    const allowed = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-";
+    for (let i = 0; i < id.length; i++) {
+        const char = id[i];
+        if (allowed.includes(char)) {
+            cleanId += char;
+        } else {
+            break;
+        }
+    }
+
+    return cleanId.length > 0 ? cleanId : null;
 }
 
 function isDefinition(raw) {
     // Check if the raw string contains definition characters like [, (, {
-    return /[\(\[\{]/.test(raw);
+    return raw.includes('(') || raw.includes('[') || raw.includes('{');
 }
 
 function calculateMaxDepth(nodes, edges) {

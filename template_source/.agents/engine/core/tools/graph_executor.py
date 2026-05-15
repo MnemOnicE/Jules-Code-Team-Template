@@ -107,7 +107,6 @@ class GraphExecutor:
 
         # 2. Security Validation
         self.validate_integrity(graph)
-        graph_state = (graph.get("context_delta") or {}).copy()
         graph_state = graph.get("context_delta", {})
 
         # 3. Privilege Escalation Prevention (The "Captain's Orders" protocol)
