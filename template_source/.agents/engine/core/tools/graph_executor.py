@@ -212,7 +212,6 @@ class GraphExecutor:
                 break
 
     def _dispatch_action(self, node, merged_view):
-    def _dispatch_action(self, node, graph_state):
         # Maps graph actions to specific tool calls
         action = node['action']
         if action == 'run_tool':
