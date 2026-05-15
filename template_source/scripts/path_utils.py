@@ -9,12 +9,12 @@ def get_repo_root(start_path=None):
     current = Path(start_path).resolve()
 
     # First pass: strong indicators
-    for parent in [current] + list(current.parents):
+    for parent in [current, *current.parents]:
         if (parent / '.git').exists() or (parent / 'template_source' / '.agents').exists():
             return str(parent)
 
     # Second pass: weak indicators
-    for parent in [current] + list(current.parents):
+    for parent in [current, *current.parents]:
         if (parent / '.agents').exists():
             return str(parent)
 

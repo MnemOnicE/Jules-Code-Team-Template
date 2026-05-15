@@ -149,7 +149,7 @@ def test_integration_genesis_mode(mock_subprocess, mock_install_hooks, mock_conf
 def test_integration_migration_mode(mock_print_header, mock_clear_screen, mock_input):
     """Integration test for migration mode (existing project)."""
     # Mock user inputs
-    mock_input.side_effect = ['ExistingProject', 'Legacy Codebase', 'Dictator', 'High', 'Y', 'Y', 'Y', 'Y', 'Y', '']
+    mock_input.side_effect = ['ExistingProject', 'Legacy Codebase', 'Dictator', 'High', 'Y', 'Y', 'Y', 'Y', 'Y']
     
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create existing project files
