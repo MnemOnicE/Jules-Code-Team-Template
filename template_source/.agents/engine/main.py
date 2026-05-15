@@ -118,34 +118,37 @@ def _extract_json_by_bracket_counting(text):
     return None, -1
 
 
+# Pre-compiled regex patterns for sanitizing LLM responses
+FILLER_PATTERNS = [
+    re.compile(r"^here['\"]?s\s+(?:the\s+)?(?:json|graph|output)[:\s]*", re.IGNORECASE),
+    re.compile(r"^result[:\s]*", re.IGNORECASE),
+    re.compile(r"^output[:\s]*", re.IGNORECASE),
+    re.compile(r"^graph[:\s]*", re.IGNORECASE),
+]
+
+
 def _sanitize_llm_response(response_text):
     """
     Strip markdown, code block indicators, and other conversational filler 
     from LLM response before JSON extraction.
     """
     response_text = response_text.strip()
-    
+
     # Remove markdown code fences
     if response_text.startswith("```json"):
         response_text = response_text[7:]
     elif response_text.startswith("```"):
         response_text = response_text[3:]
-    
+
     if response_text.endswith("```"):
         response_text = response_text[:-3]
-    
+
     response_text = response_text.strip()
-    
+
     # Remove common filler patterns (e.g., "Here's the JSON:" or "Result:")
-    filler_patterns = [
-        r"^here['\"]?s\s+(?:the\s+)?(?:json|graph|output)[:\s]*",
-        r"^result[:\s]*",
-        r"^output[:\s]*",
-        r"^graph[:\s]*",
-    ]
-    for pattern in filler_patterns:
-        response_text = re.sub(pattern, "", response_text, flags=re.IGNORECASE).strip()
-    
+    for pattern in FILLER_PATTERNS:
+        response_text = pattern.sub("", response_text).strip()
+
     return response_text
 
 
