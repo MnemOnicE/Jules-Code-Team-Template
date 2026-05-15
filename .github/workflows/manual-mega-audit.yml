@@ -1,0 +1,71 @@
+name: Manual Mega-Audit
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  mega-audit:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Build and Lint (Placeholder)
+        run: |
+          cargo build
+          cargo clippy --message-format=json > clippy-report.json || true
+        continue-on-error: true
+
+      - name: SonarCloud Scan
+        uses: sonarsource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.sarifReportPaths=sonar-report.sarif
+        continue-on-error: true
+
+      - name: Parse SARIF and Generate Payload
+        id: parse_sarif
+        run: |
+          if [ -f sonar-report.sarif ]; then
+            jq -r '.runs[].results[] | select(.level == "error" or .level == "warning") | "[\(.level)] \(.ruleId): \(.message.text) in \(.locations[0].physicalLocation.artifactLocation.uri) at line \(.locations[0].physicalLocation.region.startLine)"' sonar-report.sarif > audit_payload.txt
+
+            if [ -s audit_payload.txt ]; then
+              echo "issues_found=true" >> "$GITHUB_OUTPUT"
+            else
+              echo "issues_found=false" >> "$GITHUB_OUTPUT"
+            fi
+          else
+            echo "issues_found=false" >> "$GITHUB_OUTPUT"
+            echo "No sonar-report.sarif found."
+          fi
+
+      - name: Dispatch Jules for War Room Issue
+        if: steps.parse_sarif.outputs.issues_found == 'true'
+        run: |
+          npm install -g @google/jules-cli
+
+          cat << 'EOF' > jules_prompt.txt
+          Create a "War Room" GitHub Issue titled "Mega-Audit: Critical Action Items."
+
+          The issue must categorize the findings provided in the following payload by domain (Security, Performance, Logic).
+          It must ask the user for prioritization before writing any code.
+
+          Here are the findings:
+          EOF
+
+          cat audit_payload.txt >> jules_prompt.txt
+
+          cat jules_prompt.txt | jules new
