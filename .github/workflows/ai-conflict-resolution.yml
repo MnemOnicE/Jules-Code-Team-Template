@@ -1,0 +1,115 @@
+name: Semantic Conflict Resolution
+
+on:
+  pull_request:
+    types: [labeled]
+
+permissions:
+  contents: write
+  issues: write
+  pull-requests: write
+
+jobs:
+  ai-conflict-resolution:
+    if: github.event.label.name == 'needs-ai-synthesis'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Extract Overlapping PR Diffs
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Get files changed in current PR
+          gh pr view ${{ github.event.pull_request.number }} --json files -q '.files[].path' > current_pr_files.txt
+
+          # Initialize synthesis context
+          echo "# Semantic Conflict Resolution Context" > synthesis_context.md
+          echo "Current PR: #${{ github.event.pull_request.number }}" >> synthesis_context.md
+          echo "" >> synthesis_context.md
+
+          # Get all other open PRs
+          gh pr list --state open --json number -q '.[].number' | grep -v "^${{ github.event.pull_request.number }}$" > other_prs.txt || true
+
+          while read -r pr_num; do
+            if [ -z "$pr_num" ]; then continue; fi
+
+            # Check if this PR touches any of the current PR's files
+            gh pr view "$pr_num" --json files -q '.files[].path' > pr_${pr_num}_files.txt
+            overlap=$(comm -12 <(sort current_pr_files.txt) <(sort pr_${pr_num}_files.txt))
+
+            if [ -n "$overlap" ]; then
+              echo "## PR #$pr_num Overlap" >> synthesis_context.md
+              echo "Overlapping files: $overlap" >> synthesis_context.md
+              echo "\`\`\`diff" >> synthesis_context.md
+              # Get diff for this PR and filter for overlapping files only
+              gh pr diff "$pr_num" > full_diff.txt
+              # Simple heuristic: Just append the diff, Jules can figure out the context
+              cat full_diff.txt >> synthesis_context.md
+              echo "\`\`\`" >> synthesis_context.md
+              echo "" >> synthesis_context.md
+            fi
+          done < other_prs.txt
+
+      - name: Dispatch Jules for Synthesis
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          npm install -g @google/jules-cli
+
+          cat << 'EOF' > jules_prompt.txt
+          Analyze the competing logic across all PRs provided in the context below.
+          Push a synthesized resolution commit to the current branch.
+
+          Context:
+          EOF
+
+          cat synthesis_context.md >> jules_prompt.txt
+
+          cat jules_prompt.txt | jules new
+
+      - name: Setup Rust toolchain (Verification)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Build and Lint (Verification Placeholder)
+        run: |
+          cargo build
+          cargo clippy --message-format=json > clippy-report.json || true
+        continue-on-error: true
+
+      - name: SonarCloud Scan (Verification)
+        uses: sonarsource/sonarcloud-github-action@master
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.sarifReportPaths=sonar-report-verification.sarif
+        continue-on-error: true
+
+      - name: Verification Circuit Breaker
+        run: |
+          if [ -f sonar-report-verification.sarif ]; then
+            ERROR_COUNT=$(jq '[.runs[].results[] | select(.level == "error")] | length' sonar-report-verification.sarif)
+
+            echo "Found $ERROR_COUNT errors in verification scan."
+            if [ "$ERROR_COUNT" -gt 0 ]; then
+              echo "Circuit Breaker Tripped! Agentic Drift detected with $ERROR_COUNT new errors."
+              exit 1
+            else
+              echo "Verification passed. No new errors detected."
+            fi
+          else
+            echo "Verification scan failed to produce SARIF report."
+            exit 1
+          fi
