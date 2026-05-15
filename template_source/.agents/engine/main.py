@@ -41,10 +41,8 @@ except ImportError as e:
 
 # Optional: pydantic for schema validation (handled gracefully if not installed)
 try:
-    from pydantic import BaseModel, ValidationError as PydanticValidationError
-    PYDANTIC_AVAILABLE = True
+    from pydantic import ValidationError as PydanticValidationError
 except ImportError:
-    PYDANTIC_AVAILABLE = False
     class PydanticValidationError(Exception):  # type: ignore
         """Placeholder when pydantic is not available"""
         pass
