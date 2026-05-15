@@ -27,12 +27,13 @@ TECH_STACK_PATH = get_tech_stack_path()
 SRC_DIR = "src"
 
 # Pre-compiled Regex Patterns
-VERSION_STRIP_RE = re.compile(r'\s+\d+(\.\d+)*.*$')
+# Hardened against ReDoS by avoiding greedy wildcards and using horizontal whitespace anchors
+VERSION_STRIP_RE = re.compile(r'[ \t]+\d+(?:\.\d+)*[^\s]*$')
 NORMALIZE_RE = re.compile(r'[^a-z0-9_]')
-NOTE_CLEANUP_RE = re.compile(r'\s*\(.*?\)')
-PY_IMPORT_RE = re.compile(r'^\s*(?:from|import)\s+([a-zA-Z0-9_]+)', re.MULTILINE)
-JS_ES6_IMPORT_RE = re.compile(r'import\s+.*?from\s+[\'"]([@a-zA-Z0-9_./-]+)[\'"]', re.DOTALL)
-JS_CJS_IMPORT_RE = re.compile(r'require\s*\(\s*[\'"]([@a-zA-Z0-9_./-]+)[\'"]\s*\)')
+NOTE_CLEANUP_RE = re.compile(r'[ \t]*\([^)]*\)')
+PY_IMPORT_RE = re.compile(r'^[ \t]*(?:from|import)[ \t]+([a-zA-Z0-9_]+)', re.MULTILINE)
+JS_ES6_IMPORT_RE = re.compile(r'import[ \t]+[^;]*?from[ \t]+[\'"]([@a-zA-Z0-9_./-]+)[\'"]', re.MULTILINE)
+JS_CJS_IMPORT_RE = re.compile(r'require[ \t]*\([ \t]*[\'"]([@a-zA-Z0-9_./-]+)[\'"]\s*\)')
 
 # Hardcoded mapping for discrepancies between Human Name and Package Name
 # This decouples documentation from implementation details.

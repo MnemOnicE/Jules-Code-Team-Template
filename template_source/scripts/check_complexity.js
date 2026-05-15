@@ -14,8 +14,8 @@
 // You should have received a copy of the GNU Affero General Public License
 // along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
-const fs = require('fs');
-const path = require('path');
+const fs = require('node:fs');
+const path = require('node:path');
 
 // Constants
 // Matches Mermaid arrow patterns (e.g., A -> B, A -- Label -> B, A --- B, A <-> B).
@@ -27,14 +27,16 @@ const MERMAID_EDGE_RE = (function() {
     const g = '>';
     const a = d + d + g; // arrow
     const tokens = [
-        '<==>', '<' + a + '>', '<->',
+        '<-->', '<==>', '<-.->',
         a, '---', '==>', '===',
-        '<--', '<==', '<-.',
-        '-.-', '-.->', '->', '<-'
+        '-.->', '-.-',
+        '->', '<-', '<->',
+        '<-.', '<--', '<=='
     ];
     // Sort by length (longest first) for correct splitting
     const combined = '(' + tokens.sort((x, y) => y.length - x.length).join('|') + ')';
-    return new RegExp('\\s*' + combined + '\\s*');
+    // Hardened with horizontal whitespace anchors to avoid ReDoS
+    return new RegExp('[ \t]*' + combined + '[ \t]*');
 })();
 
 // Configuration
@@ -159,7 +161,7 @@ function parseMermaid(content) {
 
         // Edge handling
         // Split by generic arrow pattern
-        // Matches A & B --[>] C & D
+        // Matches A & B --> C & D
         const parts = line.split(MERMAID_EDGE_RE);
 
         if (parts.length > 1) {
@@ -208,7 +210,7 @@ function cleanNodeId(raw) {
 
     // 3. Remove shapes: A[Text] -> A, A("Text") -> A, A{Text} -> A
     // Matches start of string, captures ID, stops at start of bracket/paren
-    const match = id.match(/^([a-zA-Z0-9_\-\.]+)/);
+    const match = id.match(/^([a-zA-Z0-9_\-]+)/);
     return match ? match[1] : null;
 }
 

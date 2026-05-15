@@ -33,6 +33,12 @@ import subprocess
 import importlib.util
 import argparse
 
+def _is_safe_path(base, target):
+    """
+    Checks if target path is within base directory to prevent path traversal.
+    """
+    return os.path.commonpath([os.path.abspath(base)]) == os.path.commonpath([os.path.abspath(base), os.path.abspath(target)])
+
 def check_dependencies():
     required_packages = {
         'yaml': 'PyYAML',
@@ -271,8 +277,8 @@ def main(dry_run=False, force=False):
                 pass # Handled below
             else:
                 # Creation Mode: Overwrite Root README
-                if os.path.exists(d): os.remove(d)
-                shutil.move(s, d)
+                if os.path.exists(d) and _is_safe_path(ROOT, d): os.remove(d)
+                if _is_safe_path(ROOT, d): shutil.move(s, d)
             continue
 
         # Handle .gitignore (Append vs Overwrite)
@@ -353,15 +359,19 @@ def main(dry_run=False, force=False):
     # Recursive cleaning for __pycache__
     for root, dirs, files in os.walk(ROOT):
         if '__pycache__' in dirs:
-            shutil.rmtree(os.path.join(root, '__pycache__'))
+            target = os.path.join(root, '__pycache__')
+            if _is_safe_path(ROOT, target):
+                shutil.rmtree(target)
             dirs.remove('__pycache__') # Stop descending
         if '.hypothesis' in dirs:
-             shutil.rmtree(os.path.join(root, '.hypothesis'))
-             dirs.remove('.hypothesis')
+            target = os.path.join(root, '.hypothesis')
+            if _is_safe_path(ROOT, target):
+                shutil.rmtree(target)
+            dirs.remove('.hypothesis')
 
     # Specific targets
     for target in cleanup_targets:
-        if os.path.exists(target):
+        if os.path.exists(target) and _is_safe_path(ROOT, target):
             if os.path.isdir(target):
                 shutil.rmtree(target)
             else:
@@ -369,7 +379,8 @@ def main(dry_run=False, force=False):
 
     # 6. Cleanup (Template Source)
     try:
-        if os.path.exists(TEMPLATE_DIR): shutil.rmtree(TEMPLATE_DIR)
+        if os.path.exists(TEMPLATE_DIR) and _is_safe_path(ROOT, TEMPLATE_DIR):
+            shutil.rmtree(TEMPLATE_DIR)
     except OSError as e:
         print(f"Warning: Failed to cleanup template source: {e}")
 

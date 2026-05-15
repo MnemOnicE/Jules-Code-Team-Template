@@ -212,6 +212,7 @@ class GraphExecutor:
                 break
 
     def _dispatch_action(self, node, merged_view):
+    def _dispatch_action(self, node, graph_state):
         # Maps graph actions to specific tool calls
         action = node['action']
         if action == 'run_tool':
@@ -220,6 +221,7 @@ class GraphExecutor:
             args = params.get('args', {}).copy()
             # Inject context if needed (Source [1])
             if merged_view.get("shizuku_active"):
+            if self.system_context.get("shizuku_active"):
                 args["use_root"] = True
 
             if not tool_name:
