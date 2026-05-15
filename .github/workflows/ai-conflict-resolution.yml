@@ -29,15 +29,15 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: |
           # Get files changed in current PR
-          gh pr view ${{ github.event.pull_request.number }} --json files -q '.files[].path' > current_pr_files.txt
+          gh pr view $PR_NUMBER --json files -q '.files[].path' > current_pr_files.txt
 
           # Initialize synthesis context
           echo "# Semantic Conflict Resolution Context" > synthesis_context.md
-          echo "Current PR: #${{ github.event.pull_request.number }}" >> synthesis_context.md
+          echo "Current PR: #$PR_NUMBER" >> synthesis_context.md
           echo "" >> synthesis_context.md
 
           # Get all other open PRs
-          gh pr list --state open --json number -q '.[].number' | grep -v "^${{ github.event.pull_request.number }}$" > other_prs.txt || true
+          gh pr list --state open --json number -q '.[].number' | grep -v "^$PR_NUMBER$" > other_prs.txt || true
 
           while read -r pr_num; do
             if [ -z "$pr_num" ]; then continue; fi
