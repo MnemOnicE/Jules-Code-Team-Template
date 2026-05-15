@@ -21,9 +21,6 @@ const path = require('node:path');
 // Matches Mermaid arrow patterns (e.g., A -> B, A -- Label -> B, A --- B, A <-> B).
 // Supports directed, undirected, and bi-directional edges with optional labels.
 // Designed to avoid consuming nodes in chained definitions (e.g., A --- B -> C).
-// Matches Mermaid arrow patterns (e.g., A -> B, A -- Label -> B, A --- B, A <-> B).
-// Supports directed, undirected, and bi-directional edges with optional labels.
-// Designed to avoid consuming nodes in chained definitions (e.g., A --- B -> C).
 // Static regex for Mermaid edges to satisfy security scanners and ensure ReDoS safety.
 // Supports: <==>, <--> , <->, --!>, -->, ---, ==>, ===, <--, <==, <-., -.-, -.->, ->, <-
 // Hex escapes (\x3E for '>', \x2E for '.') are used to avoid CodeQL js/html-comment-confusion.
