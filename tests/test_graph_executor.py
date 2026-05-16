@@ -519,7 +519,6 @@ def test_validate_integrity_shield_missing_scan_before_privileged(graph_executor
         }
     }
     with pytest.raises(SecurityError, match=re.escape("Graph deviates from Sentinel Intent! Privileged tool 'write_file' accessed before security_scan. Halting.")):
-    with pytest.raises(SecurityError, match="Graph deviates from Sentinel Intent! Privileged tool 'write_file' accessed before security_scan. Halting."):
         graph_executor.validate_integrity(graph)
 
 def test_validate_integrity_shield_with_unprivileged_tool(graph_executor):
@@ -552,7 +551,6 @@ def test_validate_integrity_shield_path_branching(graph_executor):
         }
     }
     with pytest.raises(SecurityError, match=re.escape("Graph deviates from Sentinel Intent! Privileged tool 'delete_file' accessed before security_scan. Halting.")):
-    with pytest.raises(SecurityError, match="Graph deviates from Sentinel Intent! Privileged tool 'delete_file' accessed before security_scan. Halting."):
         graph_executor.validate_integrity(graph)
 
 def test_validate_integrity_shield_loop_before_scan(graph_executor):
@@ -566,7 +564,6 @@ def test_validate_integrity_shield_loop_before_scan(graph_executor):
         }
     }
     with pytest.raises(SecurityError, match=re.escape("Graph deviates from Sentinel Intent! Privileged tool 'write_file' accessed before security_scan. Halting.")):
-    with pytest.raises(SecurityError, match="Graph deviates from Sentinel Intent! Privileged tool 'write_file' accessed before security_scan. Halting."):
         graph_executor.validate_integrity(graph)
 
 def test_validate_integrity_multiple_shields(graph_executor):
@@ -596,5 +593,4 @@ def test_validate_integrity_loose_check_no_longer_valid(graph_executor):
         }
     }
     with pytest.raises(SecurityError, match=re.escape("Graph deviates from Sentinel Intent! Privileged tool 'execute_command' accessed before security_scan. Halting.")):
-    with pytest.raises(SecurityError, match="Graph deviates from Sentinel Intent! Privileged tool 'execute_command' accessed before security_scan. Halting."):
         graph_executor.validate_integrity(graph)
