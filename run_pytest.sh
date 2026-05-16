@@ -1,1 +1,0 @@
-pytest -v --ignore=tests/template_verification/test_scaffold.py --ignore=tests/template_verification/test_speed.py --ignore=tests/benchmarks/ --ignore=template_source/tests/verification/test_invariants.py
