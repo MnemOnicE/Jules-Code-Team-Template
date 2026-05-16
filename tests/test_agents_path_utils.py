@@ -25,17 +25,6 @@ def test_get_agents_dir_falls_back_to_template_source(tmp_path):
     assert resolved == str(root / "template_source" / ".agents")
 
 
-def test_get_session_json_path_returns_expected_file(tmp_path):
-    root = tmp_path
-    agents_dir = root / ".agents"
-    (agents_dir / "memory").mkdir(parents=True)
-    expected = agents_dir / "memory" / "session.json"
-    expected.write_text('[]', encoding='utf-8')
-
-    result = path_utils.get_session_json_path(str(root))
-    assert result == str(expected)
-
-
 def test_get_tech_stack_path_returns_expected_file(tmp_path):
     root = tmp_path
     agents_dir = root / ".agents"

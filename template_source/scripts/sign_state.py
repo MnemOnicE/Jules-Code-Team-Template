@@ -19,7 +19,7 @@ import json
 import os
 import sys
 
-from path_utils import get_session_json_path
+from path_utils import get_agents_dir
 
 
 def sign_state():
@@ -29,7 +29,7 @@ def sign_state():
     drift between the machine state and the human narrative.
     """
     try:
-        target_file = get_session_json_path()
+        target_file = os.path.join(get_agents_dir(), 'memory', 'session.json')
     except FileNotFoundError:
         print("ERROR: session.json not found. State cannot be signed.")
         sys.exit(1)

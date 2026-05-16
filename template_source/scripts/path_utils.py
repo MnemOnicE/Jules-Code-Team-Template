@@ -36,9 +36,6 @@ def get_tech_stack_path(root=None):
     return os.path.join(get_agents_dir(root), 'config', 'TECH_STACK.md')
 
 
-def get_session_json_path(root=None):
-    return os.path.join(get_agents_dir(root), 'memory', 'session.json')
-
 
 def get_agent_config_path(agent_file, root=None):
     return os.path.join(get_agents_dir(root), 'config', agent_file)
