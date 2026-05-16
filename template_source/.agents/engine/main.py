@@ -32,7 +32,7 @@ try:
     from core.bus import NexusBus
     from core.context import load_context
     from core.tools.graph_executor import GraphExecutor
-    from core.llm_provider import get_llm_provider
+    from core.llm_provider import LLMProviderFactory
     from core.llm_config import LLMConfigManager
     from core.plugin_manager import plugin_manager, initialize_plugins
 except ImportError as e:
@@ -377,7 +377,7 @@ def main():
     initialize_plugins()
     # Test LLM connection
     try:
-        provider = get_llm_provider(
+        provider = LLMProviderFactory.create(
             provider_name=args.llm,
             raw_send=args.raw_send,
             raw_return=args.raw_return

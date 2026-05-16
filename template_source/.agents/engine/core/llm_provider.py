@@ -253,26 +253,29 @@ class LlamaCppProvider(LLMProvider):
 
         return response['choices'][0]['text']
 
-def get_llm_provider(provider_name=None, raw_send=False, raw_return=False):
-    if not provider_name:
-        config_mgr = LLMConfigManager()
-        provider_name = config_mgr.get_active_provider()
+class LLMProviderFactory:
+    PROVIDER_MAP = {
+        'openai': OpenAIProvider,
+        'gemini': GeminiProvider,
+        'jules': JulesProvider,
+        'ollama': OllamaProvider,
+        'llamacpp': LlamaCppProvider
+    }
 
-    if not provider_name:
-        raise ValueError("No LLM provider selected. Please run initialization or pass --llm.")
+    @classmethod
+    def create(cls, provider_name=None, raw_send=False, raw_return=False):
+        if not provider_name:
+            config_mgr = LLMConfigManager()
+            provider_name = config_mgr.get_active_provider()
 
-    provider_name = provider_name.lower()
-    kwargs = {"raw_send": raw_send, "raw_return": raw_return}
+        if not provider_name:
+            raise ValueError("No LLM provider selected. Please run initialization or pass --llm.")
 
-    if provider_name == 'openai':
-        return OpenAIProvider(**kwargs)
-    elif provider_name == 'gemini':
-        return GeminiProvider(**kwargs)
-    elif provider_name == 'jules':
-        return JulesProvider(**kwargs)
-    elif provider_name == 'ollama':
-        return OllamaProvider(**kwargs)
-    elif provider_name == 'llamacpp':
-        return LlamaCppProvider(**kwargs)
-    else:
-        raise ValueError(f"Unknown LLM provider: {provider_name}")
+        provider_name = provider_name.lower()
+        kwargs = {"raw_send": raw_send, "raw_return": raw_return}
+
+        provider_class = cls.PROVIDER_MAP.get(provider_name)
+        if provider_class:
+            return provider_class(**kwargs)
+        else:
+            raise ValueError(f"Unknown LLM provider: {provider_name}")
