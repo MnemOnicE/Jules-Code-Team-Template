@@ -16,7 +16,6 @@
 
 import hashlib
 import json
-import os
 import sys
 
 from path_utils import get_session_json_path
