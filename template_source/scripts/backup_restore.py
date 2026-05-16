@@ -16,8 +16,8 @@ AGENTS_DIR = ".agents"
 
 
 def _is_within_directory(directory, target):
-    abs_directory = os.path.abspath(directory)
-    abs_target = os.path.abspath(target)
+    abs_directory = os.path.realpath(os.path.abspath(directory))
+    abs_target = os.path.realpath(os.path.abspath(target))
     return os.path.commonpath([abs_directory, abs_target]) == abs_directory
 
 
