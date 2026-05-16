@@ -54,11 +54,8 @@ def generate_city_metrics(root_dir):
     city_data = {"name": "CodeCity", "children": []}
 
     for dirpath, dirnames, filenames in os.walk(root_dir):
-        # Skip hidden directories and build artifacts
-        if any(part.startswith('.') for part in dirpath.split(os.sep)):
-            continue
-        if 'node_modules' in dirpath or '__pycache__' in dirpath:
-            continue
+        # Skip hidden directories and build artifacts directly by pruning dirnames
+        dirnames[:] = [d for d in dirnames if not d.startswith('.') and d not in ('node_modules', '__pycache__')]
 
         for filename in filenames:
             if filename.endswith(('.py', '.js', '.ts', '.md', '.go', '.rs')):
