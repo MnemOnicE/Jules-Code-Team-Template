@@ -101,13 +101,10 @@ def run_ingest(is_delta=False):
 def _prune_files(files, keep_count, file_type):
     files.sort()
     if len(files) > keep_count:
-        to_delete = files[:len(files) - keep_count]
+        to_delete = files[:-keep_count]
         for f in to_delete:
             print(f"Pruning old {file_type}: {f}")
-            try:
-                os.remove(f)
-            except OSError as e:
-                print(f"Error pruning {f}: {e}")
+            os.remove(f)
 
 def prune_ingests():
     digests = []
