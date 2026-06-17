@@ -90,21 +90,25 @@ def parse_tech_stack(filepath):
         for line in f:
             line = line.strip()
             # Look for lines starting with '# -'
-            if line.startswith('# -'):
-                # Strip marker
-                content = line[3:].strip()
-                # Remove parenthetical notes e.g. "(Backend)"
-                # Use [^)]* instead of .*? to avoid ReDoS
-                content = re.sub(r'\s*\([^)]*\)', '', content).strip()
+            if not line.startswith('# -'):
+                continue
 
-                if content:
-                    # Handle multiple items? Usually one per line.
-                    normalized = normalize_name(content)
-                    allowed_packages.add(normalized)
+            # Strip marker
+            content = line[3:].strip()
+            # Remove parenthetical notes e.g. "(Backend)"
+            # Use pre-compiled regex to avoid ReDoS and for performance
+            content = NOTE_CLEANUP_RE.sub('', content).strip()
 
-                    # Also add the raw mapped version if the original input matches a key
-                    if content.lower() in PACKAGE_MAPPING:
-                        allowed_packages.add(PACKAGE_MAPPING[content.lower()])
+            if not content:
+                continue
+
+            # Handle multiple items? Usually one per line.
+            normalized = normalize_name(content)
+            allowed_packages.add(normalized)
+
+            # Also add the raw mapped version if the original input matches a key
+            if content.lower() in PACKAGE_MAPPING:
+                allowed_packages.add(PACKAGE_MAPPING[content.lower()])
 
     return allowed_packages
 
