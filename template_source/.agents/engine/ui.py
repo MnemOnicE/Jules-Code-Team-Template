@@ -2,7 +2,7 @@ import os
 import sys
 from textual.app import App, ComposeResult
 from textual.containers import Grid, Container
-from textual.widgets import Header, Footer, Static, Label, ProgressBar, Tree, RichLog, Input
+from textual.widgets import Label, ProgressBar, Tree, RichLog, Input
 from textual import work
 from textual.message import Message
 
