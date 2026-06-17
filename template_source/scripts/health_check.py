@@ -6,7 +6,6 @@
 import os
 import sys
 import json
-import subprocess
 import importlib.util
 from pathlib import Path
 
