@@ -98,35 +98,36 @@ def run_ingest(is_delta=False):
 
     prune_ingests()
 
-def _prune_files(files, keep_count, file_type):
-    files.sort()
-    if len(files) > keep_count:
-        to_delete = files[:-keep_count]
-        for f in to_delete:
-            print(f"Pruning old {file_type}: {f}")
-            os.remove(f)
-
 def prune_ingests():
     digests = []
     deltas = []
     try:
         with os.scandir(INGEST_DIR) as it:
             for entry in it:
-                if not entry.is_file():
-                    continue
-                name = entry.name
-                if name.startswith(DIGEST_PREFIX) and name.endswith(INGEST_FILE_SUFFIX):
-                    digests.append(entry.path)
-                elif name.startswith(DELTA_PREFIX) and name.endswith(INGEST_FILE_SUFFIX):
-                    deltas.append(entry.path)
+                if entry.is_file():
+                    name = entry.name
+                    if name.startswith(DIGEST_PREFIX) and name.endswith(INGEST_FILE_SUFFIX):
+                        digests.append(entry.path)
+                    elif name.startswith(DELTA_PREFIX) and name.endswith(INGEST_FILE_SUFFIX):
+                        deltas.append(entry.path)
     except FileNotFoundError:
         return
 
     # Prune Golden Snapshots (Keep last 3)
-    _prune_files(digests, 3, "digest")
+    digests.sort()
+    if len(digests) > 3:
+        to_delete = digests[:-3]
+        for f in to_delete:
+            print(f"Pruning old digest: {f}")
+            os.remove(f)
 
     # Prune Deltas (Keep last 1)
-    _prune_files(deltas, 1, "delta")
+    deltas.sort()
+    if len(deltas) > 1:
+        to_delete = deltas[:-1]
+        for f in to_delete:
+            print(f"Pruning old delta: {f}")
+            os.remove(f)
 
 def main():
     # Dependency Check
