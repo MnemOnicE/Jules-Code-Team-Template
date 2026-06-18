@@ -15,6 +15,8 @@
 # along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 import logging
+# Note: Ensure core.bus is implemented as requested previously
+from core.bus import NexusBus
 from core.tools.registry import ToolRegistry
 from core.plugin_manager import plugin_manager
 
