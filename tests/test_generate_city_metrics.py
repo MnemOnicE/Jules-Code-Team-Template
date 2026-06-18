@@ -7,7 +7,7 @@ scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "te
 if scripts_path not in sys.path:
     sys.path.insert(0, scripts_path)
 
-from generate_city_metrics import generate_city_metrics
+from generate_city_metrics import generate_city_metrics, get_complexity
 
 def test_generate_city_metrics_happy_path(tmp_path):
     file1 = tmp_path / "test1.py"
@@ -82,3 +82,14 @@ def test_generate_city_metrics_handles_exceptions(tmp_path):
 
         assert len(metrics["children"]) == 1
         assert metrics["children"][0]["name"] == "valid.py"
+
+
+def test_get_complexity_handles_exceptions():
+    import generate_city_metrics
+    # Mock lizard explicitly since it might be None if not installed
+    lizard_mock = mock.MagicMock()
+    lizard_mock.analyze_file.side_effect = Exception("Test error")
+
+    with mock.patch("generate_city_metrics.lizard", lizard_mock):
+        complexity = generate_city_metrics.get_complexity("test.py")
+        assert complexity == 1
