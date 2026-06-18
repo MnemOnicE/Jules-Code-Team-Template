@@ -150,9 +150,9 @@ class PluginManager:
         # Call static plugins
         for plugin_name in self.loaded_plugins:
             plugin = self.get_plugin(plugin_name)
-            if hasattr(plugin, hook_name):
+            hook_func = getattr(plugin, hook_name, None)
+            if hook_func is not None:
                 try:
-                    hook_func = getattr(plugin, hook_name)
                     results[plugin_name] = hook_func(*args, **kwargs)
                 except Exception as e:
                     results[plugin_name] = f"Error: {e}"
