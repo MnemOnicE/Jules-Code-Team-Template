@@ -1,6 +1,6 @@
 import subprocess
 from unittest.mock import patch, MagicMock
-from smart_ingest import get_commit_count
+from template_source.scripts.smart_ingest import get_commit_count
 
 def test_get_commit_count_success():
     """Test that get_commit_count returns the correct integer on successful subprocess execution."""
