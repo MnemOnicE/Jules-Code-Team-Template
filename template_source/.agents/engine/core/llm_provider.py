@@ -49,7 +49,7 @@ class LLMProvider(ABC):
         if isinstance(data, dict):
             sanitized = {}
             for k, v in data.items():
-                if isinstance(k, str) and k.lower() in {'api_key', 'key', 'token', 'secret'}:
+                if k.lower() in ['api_key', 'key', 'token', 'secret']:
                     sanitized[k] = '***REDACTED***'
                 elif isinstance(v, (dict, list)):
                     sanitized[k] = self._sanitize_payload(v)
