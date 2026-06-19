@@ -42,10 +42,12 @@ jobs:
           if [ -f tests/verification/requirements.txt ]; then pip install --cache-dir ~/.cache/pip -r tests/verification/requirements.txt; fi
 
       - name: Secret Scanning (Gitleaks)
-        uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_ARGS: detect --source . --report-path=results.sarif --report-format=sarif --redact -v
+        run: |
+          wget -q https://github.com/gitleaks/gitleaks/releases/download/v8.21.2/gitleaks_8.21.2_linux_x64.tar.gz
+          tar -xzf gitleaks_8.21.2_linux_x64.tar.gz
+          ./gitleaks detect --source . --report-path=results.sarif --report-format=sarif --redact -v
         continue-on-error: false
 
       - name: Architectural Complexity Check
