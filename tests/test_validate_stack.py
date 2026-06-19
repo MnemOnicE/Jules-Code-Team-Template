@@ -7,7 +7,7 @@ scripts_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "te
 if scripts_path not in sys.path:
     sys.path.insert(0, scripts_path)
 
-from validate_stack import normalize_name, PACKAGE_MAPPING
+from validate_stack import normalize_name
 
 def test_normalize_name_basic():
     """Test basic lowercasing and normalization."""
