@@ -39,7 +39,7 @@ def test_sign_state_empty_target_file(capsys):
 
 def test_sign_state_exception(capsys):
     with patch('sign_state.get_session_json_path', return_value="dummy_path"):
-        with patch('builtins.open', side_effect=Exception("Mocked error")):
+        with patch('sign_state.open', side_effect=Exception("Mocked error")):
             with pytest.raises(SystemExit) as excinfo:
                 sign_state()
 
