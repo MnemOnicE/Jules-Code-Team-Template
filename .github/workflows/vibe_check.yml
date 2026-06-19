@@ -45,7 +45,7 @@ jobs:
         uses: gitleaks/gitleaks-action@v2
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITLEAKS_ARGS: detect --source . --report-path=results.sarif --report-format=sarif --redact -v
+          GITLEAKS_ARGS: detect --source . --report-path=results.sarif --report-format=sarif --redact -v --no-git
         continue-on-error: false
 
       - name: Architectural Complexity Check
