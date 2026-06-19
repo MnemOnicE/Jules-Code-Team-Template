@@ -117,8 +117,4 @@ def test_parse_tech_stack_with_notes(tmp_path):
     # "React (Frontend framework)" -> strip note -> "React" -> "react"
     # "scikit-learn (ML Library)" -> strip note -> "scikit-learn" -> mapping "sklearn"
     # "SomeLib(with space issue)" -> strip note -> "SomeLib" -> "somelib"
-    assert "python" in result
-    assert "react" in result
-    assert "sklearn" in result
-    assert "somelib" in result
-    assert len(result) == 4
+    assert result == {"python", "react", "sklearn", "somelib"}
