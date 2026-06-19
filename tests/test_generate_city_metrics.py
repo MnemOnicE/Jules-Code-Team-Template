@@ -85,11 +85,10 @@ def test_generate_city_metrics_handles_exceptions(tmp_path):
 
 
 def test_get_complexity_handles_exceptions():
-    import generate_city_metrics
     # Mock lizard explicitly since it might be None if not installed
     lizard_mock = mock.MagicMock()
     lizard_mock.analyze_file.side_effect = Exception("Test error")
 
     with mock.patch("generate_city_metrics.lizard", lizard_mock):
-        complexity = generate_city_metrics.get_complexity("test.py")
+        complexity = get_complexity("test.py")
         assert complexity == 1
