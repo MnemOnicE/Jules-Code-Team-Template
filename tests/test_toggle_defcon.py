@@ -7,15 +7,15 @@ from toggle_defcon import main, BOOM_PATH, BOOM_DISABLED_PATH
 @patch('toggle_defcon.os.rename')
 @patch('toggle_defcon.os.path.exists')
 @patch('sys.argv', ['toggle_defcon.py', '--status', 'emergency'])
-@patch('builtins.print')
-def test_emergency_activate(mock_print, mock_exists, mock_rename):
+def test_emergency_activate(mock_exists, mock_rename, capsys):
     """Test emergency mode activates properly when boom.md exists."""
     mock_exists.side_effect = lambda path: path == BOOM_PATH
 
     main()
 
     mock_rename.assert_called_once_with(BOOM_PATH, BOOM_DISABLED_PATH)
-    mock_print.assert_called_once_with("🚨 DEFCON 1 ACTIVATED: Boom persona has been disabled (renamed to boom.disabled).")
+    captured = capsys.readouterr()
+    assert captured.out.strip() == "🚨 DEFCON 1 ACTIVATED: Boom persona has been disabled (renamed to boom.disabled)."
 
 @patch('toggle_defcon.os.rename')
 @patch('toggle_defcon.os.path.exists')
