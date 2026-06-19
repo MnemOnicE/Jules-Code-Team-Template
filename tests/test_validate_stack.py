@@ -11,6 +11,7 @@ if scripts_path not in sys.path:
 
 from validate_stack import normalize_name, parse_tech_stack, PACKAGE_MAPPING
 
+from validate_stack import normalize_name
 
 def test_normalize_name_basic():
     """Test basic lowercasing and normalization."""
