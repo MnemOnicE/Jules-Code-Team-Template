@@ -21,7 +21,7 @@ def test_get_commit_count_success():
 
 def test_get_commit_count_failure():
     """Test that get_commit_count returns 0 when subprocess raises CalledProcessError."""
-    with patch("smart_ingest.subprocess.run", side_effect=subprocess.CalledProcessError(1, "git")) as mock_run:
+    with patch("template_source.scripts.smart_ingest.subprocess.run", side_effect=subprocess.CalledProcessError(1, "git")) as mock_run:
         count = get_commit_count()
 
         mock_run.assert_called_once_with(
