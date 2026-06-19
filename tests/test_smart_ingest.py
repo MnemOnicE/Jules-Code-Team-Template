@@ -1,4 +1,3 @@
-import pytest
 import subprocess
 from unittest.mock import patch, MagicMock
 from smart_ingest import get_commit_count
