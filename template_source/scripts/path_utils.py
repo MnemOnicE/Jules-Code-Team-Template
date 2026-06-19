@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-import itertools
 
 
 def get_repo_root(start_path=None):
@@ -9,7 +8,7 @@ def get_repo_root(start_path=None):
         start_path = os.getcwd()
 
     current = Path(start_path).resolve()
-    for parent in itertools.chain([current], current.parents):
+    for parent in [current] + list(current.parents):
         if (parent / '.git').exists():
             return str(parent)
         if (parent / '.agents').exists() or (parent / 'template_source' / '.agents').exists():
