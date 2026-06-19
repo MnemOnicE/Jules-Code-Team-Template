@@ -7,7 +7,7 @@ def test_get_commit_count_success():
     mock_result = MagicMock()
     mock_result.stdout = "42\n"
 
-    with patch("smart_ingest.subprocess.run", return_value=mock_result) as mock_run:
+    with patch("template_source.scripts.smart_ingest.subprocess.run", return_value=mock_result) as mock_run:
         count = get_commit_count()
 
         mock_run.assert_called_once_with(
