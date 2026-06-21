@@ -27,8 +27,10 @@ def _is_safe_path(path, root=None):
     abs_path = os.path.realpath(os.path.abspath(path))
     abs_root = os.path.realpath(os.path.abspath(root))
 
-    # Path is safe if it's identical to the root or a child of it
-    return abs_path == abs_root or abs_path.startswith(abs_root + os.sep)
+    try:
+        return os.path.commonpath([abs_root, abs_path]) == abs_root
+    except ValueError:
+        return False
 
 def system_io_bridge(action):
     """Resilient bridge for filesystem operations with fuzzy argument mapping."""
