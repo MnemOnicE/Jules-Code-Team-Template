@@ -17,6 +17,21 @@
 import os
 import logging
 
+
+def _is_safe_path(path, root=None):
+    """Checks if a path is safely contained within the specified root directory."""
+    if root is None:
+        root = os.getcwd()
+
+    # Resolve all symbolic links and normalize the paths
+    abs_path = os.path.realpath(os.path.abspath(path))
+    abs_root = os.path.realpath(os.path.abspath(root))
+
+    try:
+        return os.path.commonpath([abs_root, abs_path]) == abs_root
+    except ValueError:
+        return False
+
 def system_io_bridge(action):
     """Resilient bridge for filesystem operations with fuzzy argument mapping."""
     def bridge(**kwargs):
@@ -25,25 +40,32 @@ def system_io_bridge(action):
             # Omnivore extraction: hunt for path and content regardless of key name
             path = kwargs.get('path') or kwargs.get('file_path') or kwargs.get('directory') or kwargs.get('filename')
             content = kwargs.get('content') or kwargs.get('text') or kwargs.get('data')
-
             if action == "mkdir":
                 if not path: return {"status": "error", "message": "mkdir: No path provided."}
+                if not _is_safe_path(path):
+                    return {"status": "error", "message": f"Security Warning: Blocked out-of-bounds path: {path}"}
                 os.makedirs(path, exist_ok=True)
                 return {"status": "success", "path": os.path.abspath(path)}
-
             if action == "write":
                 path = path or "test_flight.txt"
+                if not _is_safe_path(path):
+                    return {"status": "error", "message": f"Security Warning: Blocked out-of-bounds path: {path}"}
                 dir_name = os.path.dirname(os.path.abspath(path))
                 if dir_name: os.makedirs(dir_name, exist_ok=True)
                 with open(path, 'w') as f:
                     f.write(str(content or ""))
                 return {"status": "success", "file": path, "size": len(str(content or ""))}
-
             if action == "read":
-                if not path or not os.path.exists(path):
+                if not path:
+                    return {"status": "error", "message": f"read: No path provided."}
+                if not _is_safe_path(path):
+                    return {"status": "error", "message": f"Security Warning: Blocked out-of-bounds path: {path}"}
+                if not os.path.exists(path):
                     return {"status": "error", "message": f"read: File not found: {path}"}
                 with open(path, 'r') as f:
                     return {"status": "success", "content": f.read(1_000_000)}
+
+
 
         except Exception as e:
             return {"status": "error", "message": str(e)}

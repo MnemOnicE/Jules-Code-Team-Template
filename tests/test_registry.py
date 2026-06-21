@@ -154,3 +154,59 @@ class TestToolRegistry:
         result = registry.invoke("broken")
         assert result["status"] == "error"
         assert "Something went wrong" in result["message"]
+
+    def test_system_io_bridge_write_unsafe_path(self, registry):
+        """Test that writing to an unsafe path outside the root is blocked."""
+        # Using a very long traversal to ensure we break out of current root
+        unsafe_path = "../../../../../tmp/exploit.txt"
+
+        # We need to invoke the write_file tool which uses system_io_bridge("write")
+        result = registry.invoke("write_file", path=unsafe_path, content="exploit payload")
+
+        assert result["status"] == "error"
+        assert "Security Warning: Blocked out-of-bounds path" in result["message"]
+
+    def test_system_io_bridge_read_unsafe_path(self, registry, tmp_path, monkeypatch):
+        """Test that reading from an unsafe path outside the root is blocked."""
+        # Create a file outside the "safe" root (by changing the working directory for the test)
+        outside_file = tmp_path / "outside.txt"
+        outside_file.write_text("secret")
+
+        # Change current working directory to a subdirectory so tmp_path is outside
+        safe_dir = tmp_path / "safe"
+        safe_dir.mkdir()
+        monkeypatch.chdir(safe_dir)
+
+        # Try to read the file outside the safe directory
+        result = registry.invoke("read_file", path=str(outside_file))
+
+        assert result["status"] == "error"
+        assert "Security Warning: Blocked out-of-bounds path" in result["message"]
+
+    def test_system_io_bridge_mkdir_unsafe_path(self, registry):
+        """Test that making a directory outside the root is blocked."""
+        unsafe_path = "../../../../../tmp/exploit_dir"
+
+        result = registry.invoke("mkdir", path=unsafe_path)
+
+        assert result["status"] == "error"
+        assert "Security Warning: Blocked out-of-bounds path" in result["message"]
+
+    def test_system_io_bridge_safe_path(self, registry, tmp_path, monkeypatch):
+        """Test that operations on safe paths within the root succeed."""
+        monkeypatch.chdir(tmp_path)
+
+        # Test mkdir
+        safe_dir = "my_safe_dir"
+        result_mkdir = registry.invoke("mkdir", path=safe_dir)
+        assert result_mkdir["status"] == "success"
+
+        # Test write
+        safe_file = f"{safe_dir}/safe.txt"
+        result_write = registry.invoke("write_file", path=safe_file, content="safe content")
+        assert result_write["status"] == "success"
+
+        # Test read
+        result_read = registry.invoke("read_file", path=safe_file)
+        assert result_read["status"] == "success"
+        assert result_read["content"] == "safe content"
