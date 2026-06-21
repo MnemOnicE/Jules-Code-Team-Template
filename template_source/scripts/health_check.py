@@ -74,7 +74,7 @@ def check_engine_integrity():
             return False, "Cannot load engine module"
 
         # Basic syntax check
-        compile(spec.loader.get_source("main"), str(main_py), 'exec')
+        compile(spec.loader.get_source(spec.name), str(main_py), 'exec')
         return True, "Engine integrity OK"
 
     except Exception as e:
