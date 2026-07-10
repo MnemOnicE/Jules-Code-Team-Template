@@ -30,11 +30,10 @@ def sign_state():
     """
     try:
         target_file = get_session_json_path()
+        if not target_file:
+            print("ERROR: session.json not found. State cannot be signed.")
+            sys.exit(1)
     except FileNotFoundError:
-        print("ERROR: session.json not found. State cannot be signed.")
-        sys.exit(1)
-
-    if not target_file:
         print("ERROR: session.json not found. State cannot be signed.")
         sys.exit(1)
 
