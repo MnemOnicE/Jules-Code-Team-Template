@@ -47,11 +47,8 @@ class PluginManager:
             raise ValueError(f"Invalid plugin name: {plugin_name}")
 
     def _compute_file_hash(self, path):
-        sha256 = hashlib.sha256()
         with open(path, "rb") as f:
-            for chunk in iter(lambda: f.read(8192), b""):
-                sha256.update(chunk)
-        return sha256.hexdigest()
+            return hashlib.file_digest(f, "sha256").hexdigest()
 
     def _verify_plugin_file(self, plugin_name, plugin_file):
         if not self._is_plugin_allowed(plugin_name):
