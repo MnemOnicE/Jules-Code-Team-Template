@@ -36,8 +36,8 @@ class LLMConfigManager:
     def set_api_key(self, key_name, key_value):
         # Create .env if it doesn't exist
         if not os.path.exists(self.env_path):
-            fd = os.open(self.env_path, os.O_CREAT | os.O_WRONLY | os.O_TRUNC, 0o600)
-            os.close(fd)
+            with open(self.env_path, 'w') as f:
+                pass
 
         set_key(self.env_path, key_name, key_value)
         os.environ[key_name] = key_value
